@@ -1,0 +1,6 @@
+[submodule "imgui"]
+	path = imgui
+	url = git@github.com:ocornut/imgui.git
+[submodule "OALWrapper"]
+	path = OALWrapper
+	url = git@github.com:Strife-AI/OALWrapper.git

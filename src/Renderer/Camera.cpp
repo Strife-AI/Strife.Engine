@@ -1,0 +1,43 @@
+#include "Camera.hpp"
+#include "glm/glm.hpp"
+#include <glm/gtc/matrix_transform.hpp>
+
+using namespace  glm;
+
+void Camera::RebuildViewMatrix()
+{
+    mat4 translation = translate(mat4(1), vec3(-Position().x + ScreenSize().x / 2, -Position().y + ScreenSize().y / 2, 0));
+    mat4 scale = glm::scale(mat4x4(1), vec3(2.0f / _viewport.x, 2.0f / _viewport.y, 1));
+    mat4 centerInScreen = translate(mat4(1), vec3(-1, -1, 0));
+    mat4 zoom = glm::scale(mat4x4(1), vec3(_zoom, -_zoom, 1.0f));
+
+    _viewMatrix = zoom * centerInScreen * scale * translation;
+}
+
+Vector2 Camera::ScreenToWorld(Vector2 screenPoint) const
+{
+    return (screenPoint - _viewport / 2) / _zoom + _position;
+}
+
+Vector2 Camera::WorldToScreen(Vector2 worldPoint) const
+{
+    return (worldPoint - _position) * _zoom + _viewport / 2;
+}
+
+void Camera::SetScreenSize(Vector2 size)
+{
+    _viewport = size;
+}
+
+void Camera::SetPosition(Vector2 position)
+{
+    _position = position;
+
+   //_position.x = round(_position.x);
+   // _position.y = round(_position.y);
+}
+
+void Camera::SetZoom(float zoom)
+{
+    _zoom = floor(zoom * 8) / 8;
+}
