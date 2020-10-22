@@ -54,9 +54,9 @@ public:
     ConsoleExecuteResult ExecuteFile(const char* fileName);
     void ShowHelpForCommand(const std::string& command);
 
-    static void SerializeVariables();
-    void LoadVariables();
-    void RunUserConfig();
+    static void SerializeVariables(const char* fileName);
+    void LoadVariables(const char* fileName);
+    void RunUserConfig(const char* fileName);
 
     void Log(const char* format, ...) PRINTF_ARGS(2, 3);
     void VLog(const char* format, va_list list);

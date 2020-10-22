@@ -37,11 +37,19 @@ extern ConsoleVar<bool> g_developerMode("developer-mode", true, true);
 ConsoleVar<bool> g_stressTest("stress-test", false, false);
 int stressCount = 0;
 
-Engine* Engine::Initialize()
+Engine* Engine::Initialize(const EngineConfig& config)
 {
     InitializeLogging("log.txt");
 
     Engine* engine = &_instance;
+
+    if (engine->isInitialized)
+    {
+        FatalError("Engine::Initialize() called more than once");
+    }
+
+    engine->_config = config;
+    engine->_defaultBlockAllocator = new BlockAllocator(config.blockAllocatorSizeBytes);
 
     BlockAllocator::SetDefaultAllocator(engine->GetDefaultBlockAllocator());
 
@@ -50,15 +58,13 @@ Engine* Engine::Initialize()
 
     // Load variables from vars.cfg
     // This is needed to be done here for loading up configurations for resolution and fullscreen
-    engine->_console->LoadVariables();
+    if (config.consoleVarsFile.has_value())
+    {
+        engine->_console->LoadVariables(config.consoleVarsFile.value().c_str());
+    }
 
     Log("==============================================================\n");
     Log("Initializing engine\n");
-
-    if (engine->isInitialized)
-    {
-        FatalError("Engine::Initialize() called more than once");
-    }
 
     engine->isInitialized = true;
 
@@ -78,17 +84,13 @@ Engine* Engine::Initialize()
     Log("Initializing sound\n");
     engine->_soundManager = new SoundManager;
 
+    engine->_sceneManager = new SceneManager(engine);
+
     UiCanvas::Initialize(engine->_soundManager);
 
     WindowSizeChangedEvent(engine->_sdlManager->WindowSize().x, engine->_sdlManager->WindowSize().y).Send();
 
     return &_instance;
-}
-
-Engine::Engine()
-    : _defaultBlockAllocator(32 * 1024 * 1024)
-{
-
 }
 
 Engine::~Engine()
@@ -98,6 +100,11 @@ Engine::~Engine()
         Log("Shutting down engine...\n");
         try
         {
+            if (_config.consoleVarsFile.has_value())
+            {
+                _console->SerializeVariables(_config.consoleVarsFile.value().c_str());
+            }
+
             delete _renderer;
             delete _metricsManager;
             delete _plotManager;
@@ -198,8 +205,6 @@ void Engine::RunFrame()
 
     scene->deltaTime = renderDeltaTime;
 
-    _game->PreUpdate();
-
     _soundManager->UpdateActiveSoundEmitters(scene->deltaTime);
 
     Entity* soundListener;
@@ -239,7 +244,6 @@ void Engine::RunFrame()
         isPaused = false;
     }
 
-    _game->PreRender();
     Render(scene, realDeltaTime, renderDeltaTime);
 
     if (frameCount % 60 == 0)

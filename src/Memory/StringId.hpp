@@ -5,7 +5,6 @@
 
 
 #include "Crc32.hpp"
-
 #define DEBUG_STRINGID
 
 #if !defined(NDEBUG)
