@@ -1,16 +1,35 @@
 #include "IGame.hpp"
 #include "Engine.hpp"
-
-IGame::IGame(Engine* engine, SceneManager* sceneManager)
-    : _engine(engine)
-{
-	_engine->SetGame(this, sceneManager);
-}
+#include "SceneManager.hpp"
+#include "Tools/Console.hpp"
 
 void IGame::Run()
 {
-    while(_engine->ActiveGame())
+    // Configuration
     {
-		_engine->RunFrame();
-	}
+        EngineConfig config;
+        ConfigureEngine(config);
+        _engine = Engine::Initialize(config);
+        _engine->SetGame(this);
+
+        ConfigureGame(_config);
+
+        if (_config.userConfigFile.has_value())
+        {
+            _engine->GetConsole()->RunUserConfig(_config.userConfigFile.value().c_str());
+        }
+
+        _engine->GetSceneManager()->TrySwitchScene(_config.defaultScene);
+    }
+
+    // Run the game
+    {
+        while (_engine->ActiveGame())
+        {
+            _engine->RunFrame();
+        }
+    }
+
+    // FIXME
+    _engine->~Engine();
 }

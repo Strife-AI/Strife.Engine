@@ -1,5 +1,7 @@
 #pragma once
 #include <functional>
+#include <optional>
+
 
 #include "Memory/BlockAllocator.hpp"
 #include "Tools/ConsoleCmd.hpp"
@@ -16,14 +18,25 @@ class Renderer;
 class SceneManager;
 class SoundManager;
 
+struct EngineConfig
+{
+    EngineConfig& SaveConsoleVarsToFile(const std::string& fileName)
+    {
+        consoleVarsFile = fileName;
+        return *this;
+    }
+
+    int blockAllocatorSizeBytes = 32 * 1024 * 1024;
+    std::optional<std::string> consoleVarsFile = "vars.cfg";
+};
+
 class Engine
 {
 public:
-    Engine();
     ~Engine();
 
     static Engine* GetInstance() { return &_instance; }
-    static Engine* Initialize();
+    static Engine* Initialize(const EngineConfig& config);
 
     Input* GetInput() { return _input; }
     SdlManager* GetSdlManager() { return _sdlManager; }
@@ -32,17 +45,18 @@ public:
     MetricsManager* GetMetricsManager() { return _metricsManager; }
     Renderer* GetRenderer() { return _renderer; }
     SceneManager* GetSceneManager() { return _sceneManager; }
-    BlockAllocator* GetDefaultBlockAllocator() { return &_defaultBlockAllocator; }
+    BlockAllocator* GetDefaultBlockAllocator() { return _defaultBlockAllocator; }
     SoundManager* GetSoundManager() { return _soundManager; }
 
     bool ActiveGame() { return _activeGame; }
     void QuitGame() { _activeGame = false; }
 
-    void SetGame(IGame* game, SceneManager* sceneManager)
+    void SetGame(IGame* game)
     {
         _game = game;
-        _sceneManager = sceneManager;
     }
+
+    IGame* Game() { return _game; }
 
     void RunFrame();
 
@@ -66,6 +80,8 @@ public:
     }
 
 private:
+    Engine() = default;
+
     void Render(Scene* scene, float deltaTime, float renderDeltaTime);
 
     bool isPaused = false;
@@ -78,11 +94,12 @@ private:
     MetricsManager* _metricsManager = nullptr;
     Renderer* _renderer = nullptr;
     SceneManager* _sceneManager = nullptr;
-    BlockAllocator _defaultBlockAllocator;
+    BlockAllocator* _defaultBlockAllocator;
     SoundManager* _soundManager;
 
     IGame* _game = nullptr;
     bool _activeGame = true;
+    EngineConfig _config;
 
     std::function<void()> _loadResources;
 };

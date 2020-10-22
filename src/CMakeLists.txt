@@ -4,7 +4,6 @@ find_package(SDL2 REQUIRED)
 find_package(SDL2-image REQUIRED)
 find_package(unofficial-box2d CONFIG REQUIRED)
 
-
 add_library(Engine STATIC
         Engine.cpp
         Math/Rectangle.cpp

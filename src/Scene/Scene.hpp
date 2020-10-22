@@ -41,6 +41,7 @@ struct ISceneService
     virtual ~ISceneService() = default;
 
     int flags = 0;
+    Scene* scene = nullptr;
 
 private:
     virtual void ReceiveEvent(const IEntityEvent& ev) = 0;
@@ -122,10 +123,12 @@ public:
     void RenderHud(Renderer* renderer);
 
     template <typename TService, typename ... Args>
-    TService* RegisterService(Args&& ...args)
+    TService* AddService(Args&& ...args)
     {
         auto service = std::make_unique<TService>(std::forward<Args>(args)...);
         auto servicePtr = service.get();
+
+        service->scene = this;
 
         _services.push_back(std::move(service));
         return servicePtr;

@@ -125,9 +125,9 @@ void Console::ShowHelpForCommand(const std::string& command)
     }
 }
 
-void Console::SerializeVariables()
+void Console::SerializeVariables(const char* fileName)
 {
-    std::ofstream varFile("vars.cfg");
+    std::ofstream varFile(fileName);
 
     for (auto var : GetAllConsoleVars())
     {
@@ -140,14 +140,14 @@ void Console::SerializeVariables()
     varFile.close();
 }
 
-void Console::LoadVariables()
+void Console::LoadVariables(const char* fileName)
 {
-    ExecuteFile("vars.cfg");
+    ExecuteFile(fileName);
 }
 
-void Console::RunUserConfig()
+void Console::RunUserConfig(const char* fileName)
 {
-    ExecuteFile("user.cfg");
+    ExecuteFile(fileName);
 }
 
 ConsoleExecuteResult Console::ExecuteSplitInput(const std::vector<std::string>& terms, const std::string& containingAlias)

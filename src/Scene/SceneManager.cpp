@@ -3,6 +3,8 @@
 #include "Engine.hpp"
 
 #include "SceneManager.hpp"
+
+#include "IGame.hpp"
 #include "Scene.hpp"
 #include "SdlManager.hpp"
 
@@ -40,17 +42,13 @@ void SegmentCmd(ConsoleCommandBinder& binder)
 }
 ConsoleCmd segmentCmd("segment", SegmentCmd);
 
-void RestartMapCmd(ConsoleCommandBinder& binder)
-{
-    Engine::GetInstance()->GetSceneManager()->StartNewScene();
-}
-ConsoleCmd restartMapCmd("restart", RestartMapCmd);
-
 SceneManager::SceneManager(Engine* engine)
     : _engine(engine),
     _scene(new Scene(engine, ""_sid))
 {
-
+    auto emptyMapSegment = new MapSegment;
+    emptyMapSegment->name = "empty-map"_sid;
+    ResourceManager::AddResource("empty-map"_sid, emptyMapSegment);
 }
 
 void SceneManager::DoSceneTransition()
@@ -89,7 +87,7 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
 {
     delete _newScene;
 
-    _newScene = BuildScene(mapSegment->name);
+    _newScene = new Scene(_engine, mapSegment->name);
     _newScene->SetLightManager(_engine->GetRenderer()->GetLightManager());
 
     auto screenSize = _engine->GetSdlManager()->WindowSize().AsVectorOfType<float>();
@@ -98,20 +96,20 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
 
     _newScene->LoadMapSegment(*mapSegment);
 
-    PostBuildScene(_newScene);
 
     int levelId;
     if (mapSegment->properties.TryGetProperty("levelId", levelId))
     {
         _newScene->levelId = levelId;
     }
+
+    _engine->Game()->BuildScene(_newScene);
 }
 
 void SceneManager::DestroyScene()
 {
     if(_scene != nullptr)
     {
-        PreDestroyScene(_scene);
         delete _scene;
         _scene = nullptr;
     }

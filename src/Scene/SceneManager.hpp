@@ -16,18 +16,15 @@ public:
     Scene* GetScene() const { return _scene; }
     Scene* GetNewScene() const { return _newScene; }
     bool TrySwitchScene(StringId name);
-    virtual void StartNewScene() = 0;
-
-    void DoSceneTransition();
 
 protected:
-    virtual Scene* BuildScene(StringId name) = 0;
-    virtual void PostBuildScene(Scene* scene) { }
-    virtual void PreDestroyScene(Scene* scene) { }
 
     Engine* _engine;
 
 private:
+    friend class Engine;
+
+    void DoSceneTransition();
     void BuildNewScene(const MapSegment* map);
     void DestroyScene();
 
