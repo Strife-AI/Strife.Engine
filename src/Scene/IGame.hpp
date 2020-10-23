@@ -1,6 +1,8 @@
 #pragma once
 #include <memory>
 #include <optional>
+#include <vector>
+
 
 #include "Memory/StringId.hpp"
 
@@ -35,10 +37,24 @@ struct GameConfig
         return *this;
     }
 
+    GameConfig& EnableDevConsole(const std::string& consoleFont)
+    {
+        devConsoleFont = consoleFont;
+        return *this;
+    }
+
+    GameConfig& AddResourcePack(const std::string& resourcePackFileName)
+    {
+        resourcePacks.push_back(resourcePackFileName);
+        return *this;
+    }
+
     StringId defaultScene = "empty-map"_sid;
     std::string gameName;
     std::string windowCaption;
     std::optional<std::string> userConfigFile;
+    std::optional<std::string> devConsoleFont;
+    std::vector<std::string> resourcePacks;
 };
 
 class IGame

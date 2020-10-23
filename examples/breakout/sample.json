@@ -1,0 +1,15 @@
+{
+    "projectName": "sample",
+    "resourceDirectory": "./assets",
+    "resources": [
+        {
+            "type": "spritefont",
+            "name": "console-font",
+            "data": {
+                "spritePath": "Sprites/Spritesheets/font.png",
+                "rows": 16,
+                "cols": 16
+            }
+        }
+    ]
+}
