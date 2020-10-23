@@ -4,3 +4,6 @@
 [submodule "OALWrapper"]
 	path = OALWrapper
 	url = git@github.com:Strife-AI/OALWrapper.git
+[submodule "tmxlite"]
+	path = tmxlite
+	url = git@github.com:fallahn/tmxlite.git
