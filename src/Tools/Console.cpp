@@ -437,7 +437,7 @@ void Console::Render(Renderer* renderer, float deltaTime)
     float yOffset = -(1.0f - _openAmount) * consoleBounds.Height();
     consoleBounds.SetPosition(Vector2(0, yOffset));
 
-    renderer->RenderRectangle(consoleBounds, backgroundColor, 0);// FIXME MW ConsoleRenderLayer + 0.0001);
+    renderer->RenderRectangle(consoleBounds, backgroundColor, renderLayer + 0.0001);
 
     int y = textHeight;
 
@@ -457,7 +457,7 @@ void Console::Render(Renderer* renderer, float deltaTime)
         auto wrappedLine = WrapLine(_lines[lineIndex].c_str(), maxCharsPerLine);
         auto stringSize = _fontSettings.spriteFont->MeasureStringWithNewlines(wrappedLine.c_str(), _fontSettings.scale);
         y -= stringSize.y;
-        renderer->RenderString(_fontSettings, wrappedLine.c_str(), Vector2(0, y + yOffset), 0);// FIXME ML ConsoleRenderLayer);
+        renderer->RenderString(_fontSettings, wrappedLine.c_str(), Vector2(0, y + yOffset), renderLayer);
         --lineIndex;
     }
 
@@ -498,7 +498,7 @@ void Console::Render(Renderer* renderer, float deltaTime)
         displayString[_cursorPosition - _cursorScroll + 2] = '\x84';    // Cursor char
     }
 
-    renderer->RenderString(_fontSettings, displayString.c_str(), Vector2(0, textHeight + yOffset), 0); // FIXME MW ConsoleRenderLayer);
+    renderer->RenderString(_fontSettings, displayString.c_str(), Vector2(0, textHeight + yOffset), renderLayer);
 }
 
 void Console::SetFont(const FontSettings& fontSettings)

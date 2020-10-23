@@ -29,7 +29,9 @@ struct BreakoutGame : IGame
             .SetDefaultScene("empty-map"_sid)
             .SetWindowCaption("Breakout")
             .SetGameName("breakout")
-            .ExecuteUserConfig("user.cfg");
+            .ExecuteUserConfig("user.cfg")
+            .EnableDevConsole("console-font")
+            .AddResourcePack("sample.x2rp");
     }
 
     void BuildScene(Scene* scene) override

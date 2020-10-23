@@ -69,6 +69,7 @@ public:
     void Update();
 
     ConcurrentQueue<std::string> logItems;
+    float renderLayer = -0.99;
 
 private:
     enum { MaxConsoleLines = 200 };
