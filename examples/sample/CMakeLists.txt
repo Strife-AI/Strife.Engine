@@ -1,0 +1,30 @@
+cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
+
+add_executable(Sample
+	main.cpp
+	"PlayerEntity.hpp"
+	"PlayerEntity.cpp"
+	"InputService.hpp"
+	"InputService.cpp"
+	"CastleEntity.cpp"
+)
+
+find_package(torch REQUIRED)
+
+set_property(TARGET Sample PROPERTY CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -DNOGDI -DWIN32")
+
+target_link_libraries(Sample Strife.Engine Strife.ML torch)
+
+# Copy torch dlls
+if (MSVC)
+  file(GLOB TORCH_DLLS "${TORCH_DIR}/lib/*.dll")
+
+  message(================ ${TORCH_DIR})
+
+  add_custom_command(TARGET Sample
+                     POST_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                     ${TORCH_DLLS}
+                     $<TARGET_FILE_DIR:Sample>)
+endif()
