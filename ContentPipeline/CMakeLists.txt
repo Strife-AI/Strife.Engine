@@ -1,7 +1,10 @@
 add_executable(ContentPipeline ContentPipeline.cpp "TexturePacker.cpp")
 find_package(nlohmann_json CONFIG REQUIRED)
 
-target_link_libraries(ContentPipeline PUBLIC Engine)
+find_package(torch REQUIRED)
+target_link_libraries(ContentPipeline PUBLIC torch)
+
+target_link_libraries(ContentPipeline PUBLIC Strife.Engine)
 target_link_libraries(ContentPipeline PUBLIC tmxlite)
 target_link_libraries(ContentPipeline PRIVATE nlohmann_json nlohmann_json::nlohmann_json)
 

@@ -10,7 +10,9 @@ add_executable(Breakout
 	
 )
 
+find_package(torch REQUIRED)
+
 set_property(TARGET Breakout PROPERTY CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -DNOGDI -DWIN32")
 
-target_link_libraries(Breakout Engine)
+target_link_libraries(Breakout Strife.Engine Strife.ML torch)
