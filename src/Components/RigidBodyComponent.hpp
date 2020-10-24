@@ -1,19 +1,20 @@
 #pragma once
 #include <box2d/b2_body.h>
 
-
 #include "Math/Vector2.hpp"
 #include "Scene/EntityComponent.hpp"
 
 DEFINE_COMPONENT(RigidBodyComponent)
 {
+    RigidBodyComponent(b2BodyType type = b2_staticBody);
+    void OnAdded() override;
+
     void OnOwnerMoved() override;
     void OnRemoved() override;
 
     b2Body* CreateBody(b2BodyDef& bodyDef, bool createAtCurrentPosition = true);
-    b2Body* CreateBody();
 
-    void RemoveBody();
+    void ResetBody();
 
     void SetVelocity(const Vector2& velocity);
     Vector2 GetVelocity() const;
@@ -26,4 +27,5 @@ DEFINE_COMPONENT(RigidBodyComponent)
     b2Fixture* CreateFixture(b2FixtureDef& fixtureDef);
 
     b2Body* body = nullptr;
+    b2BodyType type;
 };

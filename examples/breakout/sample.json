@@ -10,6 +10,11 @@
                 "rows": 16,
                 "cols": 16
             }
+        },
+        {
+            "type": "tilemap",
+            "name": "isengard",
+            "path": "Tilemaps/Isengard.tmx"
         }
     ]
 }

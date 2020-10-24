@@ -1,22 +1,27 @@
 #include "RigidBodyComponent.hpp"
 
-
 #include <box2d/b2_circle_shape.h>
 #include <box2d/b2_edge_shape.h>
 #include <box2d/b2_polygon_shape.h>
 
-
 #include "Scene/Scene.hpp"
 
+RigidBodyComponent::RigidBodyComponent(b2BodyType type)
+{
+    this->type = type;
+}
+
+void RigidBodyComponent::OnAdded()
+{
+    b2BodyDef bodyDef;
+    bodyDef.type = type;
+    CreateBody(bodyDef);
+}
 
 void RigidBodyComponent::SetVelocity(const Vector2& velocity)
 {
     auto scaled = velocity * Scene::PixelsToBox2DRatio;
-
-    if (body != nullptr)
-    {
-        body->SetLinearVelocity(b2Vec2(scaled.x, scaled.y));
-    }
+    body->SetLinearVelocity(b2Vec2(scaled.x, scaled.y));
 }
 
 Vector2 RigidBodyComponent::GetVelocity() const
@@ -27,21 +32,15 @@ Vector2 RigidBodyComponent::GetVelocity() const
 
 void RigidBodyComponent::ApplyForce(const Vector2& force)
 {
-    if (body != nullptr)
-    {
-        auto box2dForce = b2Vec2(force.x * Scene::PixelsToBox2DRatio.x, force.y * Scene::PixelsToBox2DRatio.y);
-        body->ApplyForceToCenter(box2dForce, true);
-    }
+    auto box2dForce = b2Vec2(force.x * Scene::PixelsToBox2DRatio.x, force.y * Scene::PixelsToBox2DRatio.y);
+    body->ApplyForceToCenter(box2dForce, true);
 }
 
 void RigidBodyComponent::ApplyForce(const Vector2& force, const Vector2& position)
 {
-    if (body != nullptr)
-    {
-        auto box2dForce = b2Vec2(force.x * Scene::PixelsToBox2DRatio.x, force.y * Scene::PixelsToBox2DRatio.y);
-        auto box2dPosition = b2Vec2(position.x * Scene::PixelsToBox2DRatio.x, position.y * Scene::PixelsToBox2DRatio.y);
-        body->ApplyForce(box2dForce, body->GetWorldPoint(box2dPosition), true);
-    }
+    auto box2dForce = b2Vec2(force.x * Scene::PixelsToBox2DRatio.x, force.y * Scene::PixelsToBox2DRatio.y);
+    auto box2dPosition = b2Vec2(position.x * Scene::PixelsToBox2DRatio.x, position.y * Scene::PixelsToBox2DRatio.y);
+    body->ApplyForce(box2dForce, body->GetWorldPoint(box2dPosition), true);
 }
 
 void ScaleToBox2D(b2Vec2& v)
@@ -51,12 +50,9 @@ void ScaleToBox2D(b2Vec2& v)
 
 void RigidBodyComponent::OnOwnerMoved()
 {
-    if(body != nullptr)
-    {
-        body->SetTransform(
-            Scene::PixelToBox2D(owner->Center()),
-            owner->Rotation());
-    }
+    body->SetTransform(
+        Scene::PixelToBox2D(owner->Center()),
+        owner->Rotation());
 }
 
 void RigidBodyComponent::OnRemoved()
@@ -68,7 +64,7 @@ b2Body* RigidBodyComponent::CreateBody(b2BodyDef& bodyDef, bool createAtCurrentP
 {
     if (body != nullptr)
     {
-        FatalError("Entities can only have one rigid body");
+        GetScene()->GetWorld()->DestroyBody(body);
     }
 
     if (createAtCurrentPosition)
@@ -87,19 +83,19 @@ b2Body* RigidBodyComponent::CreateBody(b2BodyDef& bodyDef, bool createAtCurrentP
     return body;
 }
 
-b2Body* RigidBodyComponent::CreateBody()
+void RigidBodyComponent::ResetBody()
 {
-    b2BodyDef def;
-    return CreateBody(def, true);
-}
+    b2BodyType oldType = b2_staticBody;
 
-void RigidBodyComponent::RemoveBody()
-{
     if (body != nullptr)
     {
+        oldType = body->GetType();
         GetScene()->GetWorld()->DestroyBody(body);
-        body = nullptr;
     }
+
+    b2BodyDef bodyDef;
+    bodyDef.type = oldType;
+    CreateBody(bodyDef);
 }
 
 b2Fixture* RigidBodyComponent::CreateBoxCollider(Vector2 size, bool isTrigger, Vector2 offset)
@@ -186,11 +182,6 @@ b2Fixture* RigidBodyComponent::CreateFixture(b2FixtureDef& fixtureDef)
 
     default:
         FatalError("Shape is not supported; bother Michael to add it");
-    }
-
-    if (body == nullptr)
-    {
-        CreateBody();
     }
 
     return body->CreateFixture(&fixtureDef);

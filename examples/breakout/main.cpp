@@ -4,6 +4,7 @@
 #include "Engine.hpp"
 #include "Scene/IGame.hpp"
 #include "Scene/Scene.hpp"
+#include "Tools/Console.hpp"
 
 struct Service : ISceneService
 {
@@ -26,7 +27,7 @@ struct BreakoutGame : IGame
     void ConfigureGame(GameConfig& config) override
     {
         config
-            .SetDefaultScene("empty-map"_sid)
+            .SetDefaultScene("isengard"_sid)
             .SetWindowCaption("Breakout")
             .SetGameName("breakout")
             .ExecuteUserConfig("user.cfg")
@@ -37,6 +38,7 @@ struct BreakoutGame : IGame
     void BuildScene(Scene* scene) override
     {
         scene->AddService<Service>();
+        scene->GetEngine()->GetConsole()->Execute("light 0");
     }
 };
 

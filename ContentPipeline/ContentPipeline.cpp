@@ -24,7 +24,7 @@
 
 using json = nlohmann::json;
 
-const Vector2i TileSize = Vector2i(16, 16);
+const Vector2i TileSize = Vector2i(32, 32);
 
 void CheckForMissingKeys(
         const std::string& resource,
@@ -544,13 +544,13 @@ MapSegment* AddMap(ResourceFileWriter& resourceWriter, const std::string& path, 
     for (auto& tileSet : map.getTilesets())
     {
         auto imagePath = tileSet.getImagePath();
-        auto imageResource = AddTileSet(resourceWriter, imagePath, imagePath, Vector2(16, 16));
+        auto imageResource = AddTileSet(resourceWriter, imagePath, imagePath, Vector2(32, 32));
 
         Vector2i tileSize = Vector2i(tileSet.getTileSize().x, tileSet.getTileSize().y);
 
         for (const auto& tile : tileSet.getTiles())
         {
-            auto tileIndex = Vector2i(tile.imagePosition.x, tile.imagePosition.y) / Vector2i(16, 16);
+            auto tileIndex = Vector2i(tile.imagePosition.x, tile.imagePosition.y) / Vector2i(32, 32);
 
             auto position = Vector2i(tile.imagePosition.x, tile.imagePosition.y) + tileIndex * Vector2i(8, 8);
             Polygoni shape;
