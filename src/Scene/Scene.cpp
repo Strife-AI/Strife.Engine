@@ -65,7 +65,7 @@ Scene::Scene(Engine* engine, StringId mapSegmentName)
     _cameraFollower(&_camera, engine->GetInput()),
     _engine(engine),
     _freeEntityHeaders(_entityHeaders.begin(), MaxEntities),
-    _world(std::make_unique<b2World>(b2Vec2(0, 48))),
+    _world(std::make_unique<b2World>(b2Vec2(0, 0))),
     _collisionManager(_world.get()),
     _freeSegments(_segmentPool, MaxLoadedSegments)
 {

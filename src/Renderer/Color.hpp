@@ -69,6 +69,8 @@ struct Color
         return Color(0, 255, 0);
     }
 
+    static constexpr Color CornflowerBlue() { return Color(0, 162, 232); }
+
     static constexpr Color Blue()
     {
         return Color(0, 0, 255);

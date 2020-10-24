@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <box2d/b2_world.h>
@@ -6,7 +7,6 @@
 #include <Renderer/Camera.hpp>
 #include <memory>
 #include <gsl/span>
-
 
 #include "CameraFollower.hpp"
 #include "Entity.hpp"
@@ -92,7 +92,7 @@ public:
     static constexpr float PhysicsDeltaTime = 1.0f / 240;
     static constexpr Vector2 PixelsToBox2DRatio = Vector2(1.0f / 16, 1.0f / 16);
     static constexpr Vector2 Box2DToPixelsRatio = Vector2(1.0, 1.0) / PixelsToBox2DRatio;
-    static constexpr Vector2 Gravity = Vector2(0, 48) * Box2DToPixelsRatio;
+    static constexpr Vector2 Gravity = Vector2(0, 0) * Box2DToPixelsRatio;
 
     Scene(Engine* engine, StringId mapSegmentName);
     virtual ~Scene();
