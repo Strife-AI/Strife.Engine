@@ -169,7 +169,7 @@ void SdlManager::SetupOpenGl()
 
     auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
         | SDL_WINDOW_INPUT_FOCUS
-        | ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN : 0));
+        | ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS : 0));
 
     _window = SDL_CreateWindow(
         "C.H.A.S.E.R.",
@@ -352,7 +352,7 @@ void SdlManager::EnableFullscreen()
     }
 
     g_FullscreenOnStart.SetValue(true);
-    SDL_SetWindowFullscreen(_window, SDL_WINDOW_FULLSCREEN);
+    SDL_SetWindowFullscreen(_window, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS);
 
     SDL_SetWindowPosition(_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 }

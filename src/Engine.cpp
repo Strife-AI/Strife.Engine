@@ -275,7 +275,7 @@ void Engine::Render(Scene* scene, float deltaTime, float renderDeltaTime)
 
     auto screenSize = _sdlManager->WindowSize().AsVectorOfType<float>();
     scene->GetCamera()->SetScreenSize(screenSize);
-    scene->GetCamera()->SetZoom(screenSize.y / (1080 / 2));
+    scene->GetCamera()->SetZoom(1);// screenSize.y / (1080 / 2));
 
     auto camera = scene->GetCamera();
     _renderer->BeginRender(camera, Vector2(0, 0), renderDeltaTime, scene->timeSinceStart);
