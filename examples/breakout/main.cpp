@@ -2,25 +2,11 @@
 
 
 #include "Engine.hpp"
+#include "InputService.hpp"
+#include "PlayerEntity.hpp"
 #include "Scene/IGame.hpp"
 #include "Scene/Scene.hpp"
 #include "Tools/Console.hpp"
-
-struct Service : ISceneService
-{
-    void ReceiveEvent(const IEntityEvent& ev) override
-    {
-        if(ev.Is<PreUpdateEvent>())
-        {
-            if(quit.IsPressed())
-            {
-                scene->GetEngine()->QuitGame();
-            }
-        }
-    }
-
-    InputButton quit = InputButton(SDL_SCANCODE_ESCAPE);
-};
 
 struct BreakoutGame : IGame
 {
@@ -37,8 +23,11 @@ struct BreakoutGame : IGame
 
     void BuildScene(Scene* scene) override
     {
-        scene->AddService<Service>();
-        scene->GetEngine()->GetConsole()->Execute("light 0");
+        if (scene->MapSegmentName() != "empty-map"_sid)
+        {
+            scene->AddService<InputService>();
+            scene->GetEngine()->GetConsole()->Execute("light 0");
+        }
     }
 };
 

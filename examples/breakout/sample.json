@@ -15,6 +15,11 @@
             "type": "tilemap",
             "name": "isengard",
             "path": "Tilemaps/Isengard.tmx"
+        },
+        {
+            "type": "sprite",
+            "name": "castle",
+            "path": "Sprites/castle.png"
         }
     ]
 }
