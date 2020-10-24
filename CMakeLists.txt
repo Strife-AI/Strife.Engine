@@ -11,8 +11,21 @@ set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -DNOGDI -DWIN32")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 
+set(USE_DEBUG_TORCH 1)
+
+if(USE_DEBUG_TORCH)
+	set(TORCH_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libtorch-debug")
+	message("Using debug Torch")
+else()
+	set(TORCH_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libtorch-release")
+	message("Using release Torch")
+endif()
+
+list(APPEND CMAKE_PREFIX_PATH "${TORCH_DIR}/share/cmake/Torch")
+
 add_subdirectory(src)
 add_subdirectory(examples)
 add_subdirectory(OALWrapper)
+add_subdirectory(Strife.ML)
 add_subdirectory(ContentPipeline)
 add_subdirectory(tmxlite/tmxlite)

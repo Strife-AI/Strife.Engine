@@ -1,7 +1,7 @@
 #include <string>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include <System/Logger.hpp>
+#include "System/Logger.hpp"
 
 
 #include "Math/Vector2.hpp"

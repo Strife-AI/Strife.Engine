@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+
 find_package(SDL2 REQUIRED)
 find_package(SDL2-image REQUIRED)
 find_package(unofficial-box2d CONFIG REQUIRED)
 
-add_library(Engine STATIC
+add_library(Strife.Engine STATIC
         Engine.cpp
         Math/Rectangle.cpp
         Math/Vector2.cpp
@@ -134,14 +136,15 @@ add_library(Engine STATIC
  		Components/RigidBodyComponent.hpp
  		Components/RigidBodyComponent.cpp
 
- "Memory/Util.hpp")
+        Memory/Util.hpp        
+)
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
 # Workaround because OALWrapper can't find SDL path
 find_path(SDL_INCLUDE_DIR SDL.h PATH_SUFFIXES SDL2)
 
-target_include_directories(Engine
+target_include_directories(Strife.Engine
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../OALWrapper/include>
@@ -151,19 +154,20 @@ target_include_directories(Engine
             ../imgui/examples
             Renderer)
 
-target_link_libraries(Engine PUBLIC
+target_link_libraries(Strife.Engine PUBLIC
     SDL2::SDL2
     SDL2::SDL2main
     SDL2::SDL2_image
     unofficial::box2d::box2d
-    OALWrapper)
+    OALWrapper
+    )
 
-target_compile_definitions(Engine PUBLIC IMGUI_IMPL_OPENGL_LOADER_GL3W)
+target_compile_definitions(Strife.Engine PUBLIC IMGUI_IMPL_OPENGL_LOADER_GL3W)
 
 find_package(Microsoft.GSL CONFIG REQUIRED)
-target_link_libraries(Engine PRIVATE Microsoft.GSL::GSL)
+target_link_libraries(Strife.Engine PRIVATE Microsoft.GSL::GSL)
 
 
-set_property(TARGET Engine PROPERTY CXX_STANDARD 17)
+set_property(TARGET Strife.Engine PROPERTY CXX_STANDARD 17)
 
 set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -DNOGDI -DWIN32")
