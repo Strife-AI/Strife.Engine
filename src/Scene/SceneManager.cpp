@@ -94,6 +94,7 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
     _newScene->GetCamera()->SetScreenSize(screenSize);
     _newScene->GetCamera()->SetZoom(screenSize.y / (1080.0f / 2));
 
+    _engine->Game()->BuildScene(_newScene);
     _newScene->LoadMapSegment(*mapSegment);
 
 
@@ -102,8 +103,6 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
     {
         _newScene->levelId = levelId;
     }
-
-    _engine->Game()->BuildScene(_newScene);
 }
 
 void SceneManager::DestroyScene()

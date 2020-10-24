@@ -24,6 +24,7 @@ DEFINE_COMPONENT(SpriteComponent)
     Resource<Sprite> sprite;
     Vector2 offsetFromCenter;
     float depth = 0;
+    Vector2 scale = Vector2::Unit();
     Flags<SpriteComponentFlags> flags;
     Color blendColor;
 };

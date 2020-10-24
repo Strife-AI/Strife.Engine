@@ -199,7 +199,12 @@ DEFINE_EVENT(SegmentLoadedEvent)
 DEFINE_EMPTY_EVENT(RenderImguiEvent)
 DEFINE_EMPTY_EVENT(PreUpdateEvent)
 DEFINE_EMPTY_EVENT(PreRenderEvent)
+
+/// <summary>
+/// Sent after the scene has been loaded (usually after the first segment is done loading)
+/// </summary>
 DEFINE_EMPTY_EVENT(SceneLoadedEvent)
+
 DEFINE_EMPTY_EVENT(SceneDestroyedEvent)
 DEFINE_EMPTY_EVENT(EntityMovedEvent)
 DEFINE_EMPTY_EVENT(EntityTeleportedEvent)

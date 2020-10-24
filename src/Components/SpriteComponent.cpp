@@ -16,9 +16,9 @@ void SpriteComponent::Render(Renderer* renderer)
 {
     renderer->RenderSprite(
         sprite.Value(),
-        owner->Center() + offsetFromCenter - sprite->Bounds().Size() / 2,
+        owner->Center() + offsetFromCenter - sprite->Bounds().Size() * scale / 2,
         depth,
-        Vector2(1),
+        scale,
         owner->Rotation(),
         flags.HasFlag(SpriteComponentFlags::FlipHorizontal),
         blendColor);

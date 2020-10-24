@@ -134,7 +134,7 @@ add_library(Engine STATIC
  		Components/RigidBodyComponent.hpp
  		Components/RigidBodyComponent.cpp
 
-)
+ "Memory/Util.hpp")
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
