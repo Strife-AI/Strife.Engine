@@ -37,6 +37,8 @@ extern ConsoleVar<bool> g_developerMode("developer-mode", true, true);
 ConsoleVar<bool> g_stressTest("stress-test", false, false);
 int stressCount = 0;
 
+ConsoleVar<bool> isServer("server", false);
+
 Engine* Engine::Initialize(const EngineConfig& config)
 {
     InitializeLogging("log.txt");
@@ -63,6 +65,8 @@ Engine* Engine::Initialize(const EngineConfig& config)
         engine->_console->LoadVariables(config.consoleVarsFile.value().c_str());
     }
 
+    engine->_console->Execute(config.initialConsoleCmd);
+
     Log("==============================================================\n");
     Log("Initializing engine\n");
 
@@ -85,6 +89,8 @@ Engine* Engine::Initialize(const EngineConfig& config)
     engine->_soundManager = new SoundManager;
 
     engine->_sceneManager = new SceneManager(engine);
+
+    engine->_networkManager = new NetworkManager(isServer.Value());
 
     UiCanvas::Initialize(engine->_soundManager);
 
@@ -110,6 +116,7 @@ Engine::~Engine()
             delete _plotManager;
             delete _sdlManager;
             delete _input;
+            delete _networkManager;
         }
         catch(const std::exception& e)
         {
