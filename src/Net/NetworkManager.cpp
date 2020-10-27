@@ -1,7 +1,10 @@
 #include "NetworkManager.hpp"
+
+#include "Engine.hpp"
 #include "slikenet/peerinterface.h"
 #include "slikenet/MessageIdentifiers.h"
 #include "System/Logger.hpp"
+#include "Tools/Console.hpp"
 
 enum GameMessages
 {
@@ -37,14 +40,6 @@ NetworkManager::NetworkManager(bool isServer)
 		{
 			FatalError("Failed to startup client");
 		}
-
-        Log("Connecting to server...\n");
-        auto connectResult = _peerInterface->Connect("127.0.0.1", Port, nullptr, 0);
-
-        if (connectResult != SLNet::CONNECTION_ATTEMPT_STARTED)
-        {
-            FatalError("Failed to initiate server connection");
-        }
     }
 }
 
@@ -59,18 +54,34 @@ namespace SLNet
 	const RakNetGUID UNASSIGNED_RAKNET_GUID((uint64_t)-1);
 }
 
+void ConnectCommand(ConsoleCommandBinder& binder)
+{
+	std::string address;
+
+	binder
+		.Bind(address, "serverAddress")
+		.Help("Connects to a server");
+
+	Engine::GetInstance()->GetNetworkManger()->ConnectToServer(address.c_str());
+}
+
+ConsoleCmd connectCmd("connect", ConnectCommand);
+
 void NetworkManager::Update()
 {
 	SLNet::Packet* packet;
-	if (IsClient())
+	if (!_isConnectedToServer && IsClient())
 	{
-		auto state = _peerInterface->GetConnectionState(SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.1", Port)));
-		printf("State: %d\n", (int)state);
+		auto state = _peerInterface->GetConnectionState(SLNet::AddressOrGUID(SLNet::SystemAddress(_serverAddress.c_str(), Port)));
+
+		if(state == SLNet::IS_CONNECTED)
+		{
+			_isConnectedToServer = true;;
+		}
 	}
 
 	for (packet = _peerInterface->Receive(); packet; _peerInterface->DeallocatePacket(packet), packet = _peerInterface->Receive())
 	{
-		printf("Received packet!\n");
 		switch (packet->data[0])
 		{
 		case ID_REMOTE_DISCONNECTION_NOTIFICATION:
@@ -139,6 +150,19 @@ void NetworkManager::Update()
 			printf("Message with identifier %i has arrived.\n", packet->data[0]);
 			break;
 		}
+	}
+}
+
+void NetworkManager::ConnectToServer(const char* serverAddress)
+{
+	_serverAddress = serverAddress;
+
+	Log("Connecting to server...\n");
+	auto connectResult = _peerInterface->Connect("127.0.0.1", Port, nullptr, 0);
+
+	if (connectResult != SLNet::CONNECTION_ATTEMPT_STARTED)
+	{
+		FatalError("Failed to initiate server connection");
 	}
 }
 
