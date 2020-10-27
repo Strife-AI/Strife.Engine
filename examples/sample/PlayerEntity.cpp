@@ -8,9 +8,6 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
     rigidBody = AddComponent<RigidBodyComponent>("rb", b2_dynamicBody);
     rigidBody->CreateBoxCollider(Dimensions());
 
-    scene->GetCameraFollower()->CenterOn(Center());
-    scene->GetCameraFollower()->FollowEntity(this);
-
     scene->SendEvent(PlayerAddedToGame(this));
 }
 
