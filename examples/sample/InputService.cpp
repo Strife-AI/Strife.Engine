@@ -38,6 +38,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 
         self->netId = joinedServerEvent->selfId;
         scene->GetCameraFollower()->FollowEntity(self);
+        scene->GetCameraFollower()->CenterOn(self->Center());
         activePlayer = self;
         players.push_back(self);
     }
