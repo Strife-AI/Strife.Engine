@@ -28,43 +28,74 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         Render(renderEvent->renderer);
     }
-    else if (auto playerAdded = ev.Is<PlayerAddedToGame>())
+    else if(auto joinedServerEvent = ev.Is<JoinedServerEvent>())
     {
-        if (players.size() == 1)
-        {
-            playerAdded->player->Destroy();
-            return;
-        }
+        auto self = static_cast<PlayerEntity*>(scene->CreateEntity({
+            EntityProperty::EntityType<PlayerEntity>(),
+            { "position", { 1819.0f, 2023.0f } },
+            { "dimensions", { 32, 32 } },
+        }));
 
-        players.push_back(playerAdded->player);
+        self->netId = joinedServerEvent->selfId;
+        scene->GetCameraFollower()->FollowEntity(self);
+        activePlayer = self;
+        players.push_back(self);
     }
-    else if (auto playerRemoved = ev.Is<PlayerRemovedFromGame>())
+    else if(auto connectedEvent = ev.Is<PlayerConnectedEvent>())
     {
-        RemoveFromVector(players, playerRemoved->player);
+        auto player = static_cast<PlayerEntity*>(scene->CreateEntity({
+            EntityProperty::EntityType<PlayerEntity>(),
+            { "position", { 1819.0f, 2023.0f } },
+            { "dimensions", { 32, 32 } },
+            }));
+
+        player->netId = connectedEvent->id;
+        players.push_back(player);
     }
-    else if(ev.Is<SceneLoadedEvent>())
+}
+
+PlayerEntity* InputService::GetPlayerByNetId(int netId)
+{
+    for(auto player : players)
     {
-        SwitchControlledPlayer(players[0]);
+        if(player->netId == netId)
+        {
+            return player;
+        }
     }
+
+    return nullptr;
 }
 
 void InputService::OnAdded()
 {
     auto net = scene->GetEngine()->GetNetworkManger();
-    net->onReceiveMessageFromClient = [=](SLNet::BitStream& message, SLNet::BitStream& response)
+    if(net->IsServer())
     {
-        response.Write((int)players[0]->Center().x);
-        response.Write((int)players[0]->Center().y);
-    };
+        scene->GetCameraFollower()->FollowMouse();
 
-    net->onReceiveServerResponse = [=](SLNet::BitStream& message)
+        net->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
+        {
+            Vector2 position;
+            message.Read(position.x);
+            message.Read(position.y);
+
+            auto player = GetPlayerByNetId(clientId);
+            if(player != nullptr)
+            {
+                player->SetCenter(position);
+            }
+
+            response.Write(PacketType::UpdateResponse);
+        };
+    }
+    else
     {
-        int x, y;
-        message.Read(x);
-        message.Read(y);
+        net->onUpdateResponse = [=](SLNet::BitStream& message)
+        {
 
-        players[0]->SetCenter(Vector2(x, y));
-    };
+        };
+    }
 }
 
 void InputService::HandleInput()
@@ -72,50 +103,30 @@ void InputService::HandleInput()
     auto net = scene->GetEngine()->GetNetworkManger();
     auto peer = net->GetPeerInterface();
 
-    if(net->IsClient())
-    {
-        net->SendPacketToServer([=](SLNet::BitStream& message)
-        {
-
-        });
-    }
-
     if (g_quit.IsPressed())
     {
         scene->GetEngine()->QuitGame();
     }
 
-    PlayerEntity* player;
-    if (activePlayer.TryGetValue(player))
+    if (net->IsClient())
     {
-        if (g_nextPlayer.IsPressed())
+        PlayerEntity* player;
+        if (activePlayer.TryGetValue(player))
         {
-            for (int i = 0; i < players.size(); ++i)
+            auto moveDirection = Vector2(
+                g_leftButton.IsDown() ? -1 : g_rightButton.IsDown() ? 1 : 0,
+                g_upButton.IsDown() ? -1 : g_downButton.IsDown() ? 1 : 0);
+
+            float moveSpeed = 300;
+
+            player->SetMoveDirection(moveDirection * moveSpeed);
+
+            net->SendPacketToServer([=](SLNet::BitStream& message)
             {
-                if (players[i] == player)
-                {
-                    SwitchControlledPlayer(players[(i + 1) % players.size()]);
-                }
-            }
-        }
-
-        auto moveDirection = Vector2(
-            g_leftButton.IsDown() ? -1 : g_rightButton.IsDown() ? 1 : 0,
-            g_upButton.IsDown() ? -1 : g_downButton.IsDown() ? 1 : 0);
-
-        float moveSpeed = 300;
-
-        player->SetMoveDirection(moveDirection * moveSpeed);
-    }
-    else
-    {
-        if (g_nextPlayer.IsPressed())
-        {
-            auto closestPlayer = FindClosestPlayerOrNull(scene->GetCamera()->Position());
-            if (closestPlayer != nullptr)
-            {
-                scene->GetCameraFollower()->FollowEntity(closestPlayer);
-            }
+                message.Write(PacketType::UpdateRequest);
+                message.Write(player->Center().x);
+                message.Write(player->Center().y);
+            });
         }
     }
 }
@@ -127,40 +138,4 @@ void InputService::Render(Renderer* renderer)
     {
         renderer->RenderRectangleOutline(currentPlayer->Bounds(), Color::White(), -1);
     }
-}
-
-void InputService::SwitchControlledPlayer(PlayerEntity* player)
-{
-    PlayerEntity* currentPlayer;
-    if(activePlayer.TryGetValue(currentPlayer))
-    {
-        currentPlayer->SetMoveDirection({ 0, 0 });
-    }
-
-    activePlayer = player;
-
-    if(player != nullptr)
-    {
-        scene->GetCameraFollower()->FollowEntity(player);
-    }
-}
-
-PlayerEntity* InputService::FindClosestPlayerOrNull(Vector2 point)
-{
-    if(players.size() == 0)
-    {
-        return nullptr;
-    }
-
-    PlayerEntity* closest = players[0];
-
-    for(int i = 1; i < players.size(); ++i)
-    {
-        if((players[i]->Center() - point).Length() < (closest->Center() - point).Length())
-        {
-            closest = players[i];
-        }
-    }
-
-    return closest;
 }

@@ -11,8 +11,8 @@ struct InputService : ISceneService
     void HandleInput();
     void Render(Renderer* renderer);
     void ReceiveEvent(const IEntityEvent& ev) override;
-    void SwitchControlledPlayer(PlayerEntity* player);
-    PlayerEntity* FindClosestPlayerOrNull(Vector2 point);
+
+    PlayerEntity* GetPlayerByNetId(int netId);
 
     EntityReference<PlayerEntity> activePlayer;
     std::vector<PlayerEntity*> players;

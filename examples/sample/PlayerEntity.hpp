@@ -36,4 +36,5 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
     void SetMoveDirection(Vector2 direction);
 
     RigidBodyComponent* rigidBody;
+    int netId;
 };
