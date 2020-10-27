@@ -1,16 +1,12 @@
 #include "NetworkManager.hpp"
 
 #include "Engine.hpp"
+#include "Scene/Scene.hpp"
+#include "Scene/SceneManager.hpp"
 #include "slikenet/peerinterface.h"
 #include "slikenet/MessageIdentifiers.h"
 #include "System/Logger.hpp"
 #include "Tools/Console.hpp"
-
-enum GameMessages
-{
-	ID_SERVER_PACKET = ID_USER_PACKET_ENUM + 1,
-	ID_CLIENT_PACKET
-};
 
 NetworkManager::NetworkManager(bool isServer)
     : _isServer(isServer)
@@ -76,79 +72,28 @@ void NetworkManager::Update()
 
 		if(state == SLNet::IS_CONNECTED)
 		{
-			_isConnectedToServer = true;;
+			_isConnectedToServer = true;
 		}
 	}
 
 	for (packet = _peerInterface->Receive(); packet; _peerInterface->DeallocatePacket(packet), packet = _peerInterface->Receive())
 	{
-		switch (packet->data[0])
-		{
-		case ID_REMOTE_DISCONNECTION_NOTIFICATION:
-			printf("Another client has disconnected.\n");
-			break;
-		case ID_REMOTE_CONNECTION_LOST:
-			printf("Another client has lost the connection.\n");
-			break;
-		case ID_REMOTE_NEW_INCOMING_CONNECTION:
-			printf("Another client has connected.\n");
-			break;
-		case ID_CONNECTION_REQUEST_ACCEPTED:
-			printf("Our connection request has been accepted.\n");
-			break;
-		case ID_NEW_INCOMING_CONNECTION:
-			printf("A connection is incoming.\n");
-			break;
-		case ID_NO_FREE_INCOMING_CONNECTIONS:
-			printf("The server is full.\n");
-			break;
-		case ID_DISCONNECTION_NOTIFICATION:
-			if (_isServer) {
-				printf("A client has disconnected.\n");
-			}
-			else {
-				printf("We have been disconnected.\n");
-			}
-			break;
-		case ID_CONNECTION_LOST:
-			if (_isServer) {
-				printf("A client lost the connection.\n");
-			}
-			else {
-				printf("Connection lost.\n");
-			}
-			break;
+		SLNet::BitStream message(packet->data, packet->length, false);
+		message.IgnoreBytes(sizeof(SLNet::MessageID));		// Skip message header
 
-		case ID_SERVER_PACKET:
+		PacketType type = (PacketType)packet->data[0];
+
+		if(_isServer)
 		{
-			if (onReceiveMessageFromClient)
+			SLNet::BitStream response;
+			if(ProcessServerPacket(message, type, packet, response))
 			{
-				SLNet::BitStream response;
-				response.Write((SLNet::MessageID)ID_CLIENT_PACKET);
-				SLNet::BitStream message(packet->data, packet->length, false);
-				message.IgnoreBytes(sizeof(SLNet::MessageID));		// Skip message header
-
-				onReceiveMessageFromClient(message, response);
-
 				_peerInterface->Send(&response, HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
-
 			}
-
-			break;
 		}
-
-		case ID_CLIENT_PACKET:
+		else
 		{
-			SLNet::BitStream message(packet->data, packet->length, false);
-			message.IgnoreBytes(sizeof(SLNet::MessageID));		// Skip message header
-			onReceiveServerResponse(message);
-
-			break;
-		}
-
-		default:
-			printf("Message with identifier %i has arrived.\n", packet->data[0]);
-			break;
+			ProcessClientPacket(message, type);
 		}
 	}
 }
@@ -169,7 +114,48 @@ void NetworkManager::ConnectToServer(const char* serverAddress)
 void NetworkManager::SendPacketToServer(const std::function<void(SLNet::BitStream&)>& writeFunc)
 {
 	SLNet::BitStream stream;
-	stream.Write((SLNet::MessageID)ID_SERVER_PACKET);
 	writeFunc(stream);
 	_peerInterface->Send(&stream, HIGH_PRIORITY, RELIABLE_ORDERED, 0, SLNet::AddressOrGUID(SLNet::SystemAddress(_serverAddress.c_str(), Port)), false);
+}
+
+bool NetworkManager::ProcessServerPacket(SLNet::BitStream& message, PacketType type, SLNet::Packet* packet, SLNet::BitStream& response)
+{
+	switch(type)
+	{
+	    case PacketType::NewConnection:
+		    ++_clientId;
+			_clientIdByGuid[SLNet::RakNetGUID::ToUint32(packet->guid)] = _clientId;
+
+		    response.Write(PacketType::NewConnectionResponse);
+		    response.Write(_clientId);
+			GetScene()->SendEvent(PlayerConnectedEvent(_clientId));
+		    return true;
+
+		case PacketType::UpdateRequest:
+			onUpdateRequest(message, response, _clientIdByGuid[SLNet::RakNetGUID::ToUint32(packet->guid)]);
+			return true;
+	}
+
+	return false;
+}
+
+void NetworkManager::ProcessClientPacket(SLNet::BitStream& message, PacketType type)
+{
+	switch(type)
+	{
+	    case PacketType::NewConnectionResponse:
+			message.Read(_clientId);
+			Log("Assigned client id %d\n", _clientId);
+			GetScene()->SendEvent(JoinedServerEvent(_clientId));
+			break;
+
+		case PacketType::UpdateResponse:
+			onUpdateResponse(message);
+			break;
+	}
+}
+
+Scene* NetworkManager::GetScene()
+{
+	return Engine::GetInstance()->GetSceneManager()->GetScene();
 }

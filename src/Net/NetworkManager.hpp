@@ -1,11 +1,47 @@
 #pragma once
 #include <functional>
 #include <slikenet/BitStream.h>
+#include <slikenet/MessageIdentifiers.h>
+
+
+#include "Scene/IEntityEvent.hpp"
 
 namespace SLNet
 {
     class RakPeerInterface;
 }
+
+DEFINE_EVENT(PlayerConnectedEvent)
+{
+    PlayerConnectedEvent(int id_)
+        : id(id_)
+    {
+        
+    }
+
+    int id;
+};
+
+DEFINE_EVENT(JoinedServerEvent)
+{
+    JoinedServerEvent(int selfId_)
+        : selfId(selfId_)
+    {
+        
+    }
+
+    int selfId;
+};
+
+enum class PacketType : unsigned char
+{
+    NewConnection = (unsigned char)ID_NEW_INCOMING_CONNECTION,
+
+    NewConnectionResponse = (unsigned char)ID_USER_PACKET_ENUM + 1,
+    UpdateRequest,
+    UpdateResponse
+};
+
 
 class NetworkManager
 {
@@ -29,13 +65,22 @@ public:
 
     void SendPacketToServer(const std::function<void(SLNet::BitStream&)>& writeFunc);
 
-    std::function<void(SLNet::BitStream& message, SLNet::BitStream& response)> onReceiveMessageFromClient;
-    std::function<void(SLNet::BitStream& message)> onReceiveServerResponse;
+    std::function<void(SLNet::BitStream& message, SLNet::BitStream& response, int clientId)> onUpdateRequest;
+    std::function<void(SLNet::BitStream& message)> onUpdateResponse;
 
 private:
+    bool ProcessServerPacket(SLNet::BitStream& message, PacketType type, SLNet::Packet* packet, SLNet::BitStream& response);
+    void ProcessClientPacket(SLNet::BitStream& message, PacketType type);
+
+    Scene* GetScene();
+
     bool _isServer = false;
     bool _isConnectedToServer = false;
     std::string _serverAddress;
+    int _clientId = -1;
+
+    int _nextClientId = 0;
 
     SLNet::RakPeerInterface* _peerInterface;
+    std::unordered_map<unsigned int, int> _clientIdByGuid;
 };
