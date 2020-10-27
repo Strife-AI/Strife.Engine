@@ -158,7 +158,7 @@ void NetworkManager::ConnectToServer(const char* serverAddress)
 	_serverAddress = serverAddress;
 
 	Log("Connecting to server...\n");
-	auto connectResult = _peerInterface->Connect("127.0.0.1", Port, nullptr, 0);
+	auto connectResult = _peerInterface->Connect(serverAddress, Port, nullptr, 0);
 
 	if (connectResult != SLNet::CONNECTION_ATTEMPT_STARTED)
 	{
@@ -171,5 +171,5 @@ void NetworkManager::SendPacketToServer(const std::function<void(SLNet::BitStrea
 	SLNet::BitStream stream;
 	stream.Write((SLNet::MessageID)ID_SERVER_PACKET);
 	writeFunc(stream);
-	_peerInterface->Send(&stream, HIGH_PRIORITY, RELIABLE_ORDERED, 0, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.1", Port)), false);
+	_peerInterface->Send(&stream, HIGH_PRIORITY, RELIABLE_ORDERED, 0, SLNet::AddressOrGUID(SLNet::SystemAddress(_serverAddress.c_str(), Port)), false);
 }
