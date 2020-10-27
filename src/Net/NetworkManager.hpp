@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <optional>
 #include <slikenet/BitStream.h>
 #include <slikenet/MessageIdentifiers.h>
 
@@ -13,13 +14,14 @@ namespace SLNet
 
 DEFINE_EVENT(PlayerConnectedEvent)
 {
-    PlayerConnectedEvent(int id_)
+    PlayerConnectedEvent(int id_, std::optional<Vector2> = std::nullopt)
         : id(id_)
     {
         
     }
 
     int id;
+    std::optional<Vector2> position;
 };
 
 DEFINE_EVENT(JoinedServerEvent)
@@ -41,7 +43,6 @@ enum class PacketType : unsigned char
     UpdateRequest,
     UpdateResponse
 };
-
 
 class NetworkManager
 {
