@@ -172,8 +172,8 @@ void Engine::RunFrame()
     }
 
     _input->Update();
-
     _sdlManager->Update();
+    _networkManager->Update();
 
     _sceneManager->DoSceneTransition();
 

@@ -38,6 +38,8 @@ struct ISceneService
         }
     }
 
+    virtual void OnAdded() { }
+
     virtual ~ISceneService() = default;
 
     int flags = 0;
@@ -129,8 +131,10 @@ public:
         auto servicePtr = service.get();
 
         service->scene = this;
+        service->OnAdded();
 
         _services.push_back(std::move(service));
+
         return servicePtr;
     }
 

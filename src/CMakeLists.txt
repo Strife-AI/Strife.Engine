@@ -138,7 +138,7 @@ add_library(Strife.Engine STATIC
  		Components/RigidBodyComponent.cpp
 
         Memory/Util.hpp        
- "Net/NetworkManager.hpp")
+ "Net/NetworkManager.hpp" "Net/NetworkManager.cpp")
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
