@@ -1,5 +1,12 @@
 #include "InputService.hpp"
 
+#include <slikenet/MessageIdentifiers.h>
+#include <slikenet/PacketPriority.h>
+#include <slikenet/socket2.h>
+#include <slikenet/BitStream.h>
+#include <slikenet/peerinterface.h>
+
+
 #include "Engine.hpp"
 #include "Memory/Util.hpp"
 #include "Renderer/Renderer.hpp"
@@ -23,6 +30,12 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if (auto playerAdded = ev.Is<PlayerAddedToGame>())
     {
+        if (players.size() == 1)
+        {
+            playerAdded->player->Destroy();
+            return;
+        }
+
         players.push_back(playerAdded->player);
     }
     else if (auto playerRemoved = ev.Is<PlayerRemovedFromGame>())
@@ -35,8 +48,38 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     }
 }
 
+void InputService::OnAdded()
+{
+    auto net = scene->GetEngine()->GetNetworkManger();
+    net->onReceiveMessageFromClient = [=](SLNet::BitStream& message, SLNet::BitStream& response)
+    {
+        response.Write((int)players[0]->Center().x);
+        response.Write((int)players[0]->Center().y);
+    };
+
+    net->onReceiveServerResponse = [=](SLNet::BitStream& message)
+    {
+        int x, y;
+        message.Read(x);
+        message.Read(y);
+
+        players[0]->SetCenter(Vector2(x, y));
+    };
+}
+
 void InputService::HandleInput()
 {
+    auto net = scene->GetEngine()->GetNetworkManger();
+    auto peer = net->GetPeerInterface();
+
+    if(net->IsClient())
+    {
+        net->SendPacketToServer([=](SLNet::BitStream& message)
+        {
+
+        });
+    }
+
     if (g_quit.IsPressed())
     {
         scene->GetEngine()->QuitGame();

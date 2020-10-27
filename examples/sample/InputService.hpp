@@ -6,6 +6,8 @@
 
 struct InputService : ISceneService
 {
+    void OnAdded() override;
+
     void HandleInput();
     void Render(Renderer* renderer);
     void ReceiveEvent(const IEntityEvent& ev) override;
