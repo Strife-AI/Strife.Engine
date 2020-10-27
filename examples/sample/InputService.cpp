@@ -45,7 +45,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         auto player = static_cast<PlayerEntity*>(scene->CreateEntity({
             EntityProperty::EntityType<PlayerEntity>(),
-            { "position", { 1819.0f, 2023.0f } },
+            { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : Vector2( 1819.0f, 2023.0f) },
             { "dimensions", { 32, 32 } },
             }));
 
@@ -87,13 +87,49 @@ void InputService::OnAdded()
             }
 
             response.Write(PacketType::UpdateResponse);
+            response.Write((int)players.size());
+
+            for(auto player : players)
+            {
+                response.Write(player->netId);
+                response.Write(player->Center().x);
+                response.Write(player->Center().y);
+            }
         };
     }
     else
     {
         net->onUpdateResponse = [=](SLNet::BitStream& message)
         {
+            int totalPlayerUpdates = 0;
+            message.Read(totalPlayerUpdates);
 
+            for(int i = 0; i < totalPlayerUpdates; ++i)
+            {
+                int id;
+                message.Read(id);
+
+                Vector2 position;
+                message.Read(position.x);
+                message.Read(position.y);
+
+                PlayerEntity* self;
+                if(activePlayer.TryGetValue(self))
+                {
+                    if (self->netId == id) continue;
+                }
+
+                auto player = GetPlayerByNetId(id);
+
+                if(player == nullptr)
+                {
+                    scene->SendEvent(PlayerConnectedEvent(id, position));
+                }
+                else
+                {
+                    player->SetCenter(position);
+                }
+            }
         };
     }
 }
