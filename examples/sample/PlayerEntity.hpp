@@ -37,4 +37,5 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
 
     RigidBodyComponent* rigidBody;
     int netId;
+    unsigned int keyBits = 0;
 };

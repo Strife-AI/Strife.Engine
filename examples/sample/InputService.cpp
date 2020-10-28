@@ -77,14 +77,13 @@ void InputService::OnAdded()
 
         net->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
         {
-            Vector2 position;
-            message.Read(position.x);
-            message.Read(position.y);
+            unsigned int keyBits;
+            message.Read(keyBits);
 
             auto player = GetPlayerByNetId(clientId);
             if(player != nullptr)
             {
-                player->SetCenter(position);
+                player->keyBits = keyBits;
             }
 
             response.Write(PacketType::UpdateResponse);
@@ -117,7 +116,7 @@ void InputService::OnAdded()
                 PlayerEntity* self;
                 if(activePlayer.TryGetValue(self))
                 {
-                    if (self->netId == id) continue;
+                    //if (self->netId == id) continue;
                 }
 
                 auto player = GetPlayerByNetId(id);
@@ -150,20 +149,30 @@ void InputService::HandleInput()
         PlayerEntity* player;
         if (activePlayer.TryGetValue(player))
         {
-            auto moveDirection = Vector2(
-                g_leftButton.IsDown() ? -1 : g_rightButton.IsDown() ? 1 : 0,
-                g_upButton.IsDown() ? -1 : g_downButton.IsDown() ? 1 : 0);
-
-            float moveSpeed = 300;
-
-            player->SetMoveDirection(moveDirection * moveSpeed);
+            unsigned int keyBits = (g_leftButton.IsDown() << 0)
+                | (g_rightButton.IsDown() << 1)
+                | (g_upButton.IsDown() << 2)
+                | (g_downButton.IsDown() << 3);
 
             net->SendPacketToServer([=](SLNet::BitStream& message)
             {
                 message.Write(PacketType::UpdateRequest);
-                message.Write(player->Center().x);
-                message.Write(player->Center().y);
+                message.Write(keyBits);
             });
+        }
+    }
+    else
+    {
+        for (auto player : players)
+        {
+            Vector2 moveDirection;
+
+            if (player->keyBits & 1) moveDirection.x -= 1;
+            if (player->keyBits & 2) moveDirection.x += 1;
+            if (player->keyBits & 4) moveDirection.y -= 1;
+            if (player->keyBits & 8) moveDirection.y += 1;
+
+            player->SetMoveDirection(moveDirection * 300);
         }
     }
 }
