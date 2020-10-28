@@ -92,6 +92,11 @@ Engine* Engine::Initialize(const EngineConfig& config)
 
     engine->_networkManager = new NetworkManager(isServer.Value());
 
+    if(isServer.Value())
+    {
+        engine->targetFps.SetValue(10);
+    }
+
     UiCanvas::Initialize(engine->_soundManager);
 
     WindowSizeChangedEvent(engine->_sdlManager->WindowSize().x, engine->_sdlManager->WindowSize().y).Send();

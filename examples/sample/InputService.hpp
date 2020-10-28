@@ -16,4 +16,5 @@ struct InputService : ISceneService
 
     EntityReference<PlayerEntity> activePlayer;
     std::vector<PlayerEntity*> players;
+    float sendUpdateTimer = 0;
 };
