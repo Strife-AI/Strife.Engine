@@ -649,6 +649,8 @@ void Scene::UpdateEntities(float deltaTime)
             fixedUpdatable->FixedUpdate(PhysicsDeltaTime);
         }
 
+        SendEvent(FixedUpdateEvent());
+
         _world->Step(PhysicsDeltaTime, 8, 3);
 
         _collisionManager.UpdateEntityPositions();

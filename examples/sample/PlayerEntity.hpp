@@ -1,5 +1,7 @@
 #pragma once
 
+#include <queue>
+
 #include "Scene/BaseEntity.hpp"
 
 struct PlayerEntity;
@@ -26,6 +28,13 @@ DEFINE_EVENT(PlayerRemovedFromGame)
     PlayerEntity* player;
 };
 
+struct PlayerCommand
+{
+    unsigned char timeMilliseconds;
+    unsigned char keys;
+    unsigned int id;
+};
+
 DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
 {
     void OnAdded(const EntityDictionary& properties) override;
@@ -38,4 +47,9 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
     RigidBodyComponent* rigidBody;
     int netId;
     unsigned int keyBits = 0;
+    Vector2 smoothVelocity;
+    unsigned int nextCommandSequenceNumber = 0;
+    unsigned int lastServerSequenceNumber = 0;
+
+    std::list<PlayerCommand> commands;
 };

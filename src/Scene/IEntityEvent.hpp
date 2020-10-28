@@ -199,6 +199,7 @@ DEFINE_EVENT(SegmentLoadedEvent)
 DEFINE_EMPTY_EVENT(RenderImguiEvent)
 DEFINE_EMPTY_EVENT(PreUpdateEvent)
 DEFINE_EMPTY_EVENT(PreRenderEvent)
+DEFINE_EMPTY_EVENT(FixedUpdateEvent)
 
 /// <summary>
 /// Sent after the scene has been loaded (usually after the first segment is done loading)
