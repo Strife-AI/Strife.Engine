@@ -94,7 +94,7 @@ Engine* Engine::Initialize(const EngineConfig& config)
 
     if(isServer.Value())
     {
-        engine->targetFps.SetValue(10);
+        engine->targetFps.SetValue(20);
     }
 
     UiCanvas::Initialize(engine->_soundManager);

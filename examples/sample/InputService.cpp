@@ -53,11 +53,6 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
                 if(player->commands.size() > 0)
                 {
                     auto& currentCommand = player->commands.front();
-                    printf("id: %d, QS: %d, K: %d, T: %d\n",
-                        (int)currentCommand.id,
-                        (int)player->commands.size(),
-                        (int)currentCommand.keys,
-                        (int)currentCommand.timeMilliseconds);
 
                     auto direction = GetDirectionFromKeyBits(currentCommand.keys) * 300;
                     player->SetMoveDirection(direction);
@@ -156,7 +151,16 @@ void InputService::OnAdded()
                 }
 
                 response.Write(PacketType::UpdateResponse);
+
+                response.Write(player->clientClock);
+
                 response.Write(player->lastServerSequenceNumber);
+
+                int lastExecuted = player->commands.size() == 0
+                    ? player->lastServerSequenceNumber
+                    : player->commands.front().id;
+
+                response.Write(lastExecuted);
                 response.Write((int)players.size());
 
                 for (auto player : players)
@@ -172,8 +176,14 @@ void InputService::OnAdded()
     {
         net->onUpdateResponse = [=](SLNet::BitStream& message)
         {
+            int clientClock;
+            message.Read(clientClock);
+
             int lastServerSequence;
             message.Read(lastServerSequence);
+
+            int lastExecuted;
+            message.Read(lastExecuted);
 
             int totalPlayerUpdates = 0;
             message.Read(totalPlayerUpdates);
@@ -182,6 +192,12 @@ void InputService::OnAdded()
             if (activePlayer.TryGetValue(self))
             {
                 self->lastServerSequenceNumber = lastServerSequence;
+
+                //while (self->commands.size() > 0 && self->commands.front().id <= lastExecuted)
+                //{
+                //    self->commands.pop_front();
+                //}
+
                 //if (self->netId == id) continue;
             }
 
@@ -200,9 +216,26 @@ void InputService::OnAdded()
                 {
                     scene->SendEvent(PlayerConnectedEvent(id, position));
                 }
-                else
+                else if(player != self)
                 {
                     player->SetCenter(position);
+                }
+                else
+                {
+                    // Reapply the moves we locally made on the client
+                    Vector2 offset;
+                    int clock = 0;
+                    bool firstIntersection = false;
+
+                    for(auto& command : self->commands)
+                    {
+                        if(id > lastExecuted)
+                        {
+                            offset += GetDirectionFromKeyBits(command.keys) * 300 * (command.timeMilliseconds / 1000.0);
+                        }
+                    }
+
+                    self->SetCenter(position + offset);
                 }
             }
         };
@@ -232,11 +265,14 @@ void InputService::HandleInput()
                 | (g_downButton.IsDown() << 3);
 
             auto direction = GetDirectionFromKeyBits(keyBits);
+            player->SetMoveDirection(direction * 300);
 
             PlayerCommand command;
             command.id = ++player->nextCommandSequenceNumber;
             command.keys = keyBits;
             command.timeMilliseconds = scene->deltaTime * 1000;
+            command.timeMilliseconds = ((command.timeMilliseconds + 4) / 5) * 5;
+
             player->commands.push_back(command);
 
             // Time to send new update to server with missing commands
@@ -244,11 +280,6 @@ void InputService::HandleInput()
             {
                 sendUpdateTimer = 1.0 / 30;
                 std::vector<PlayerCommand> missingCommands;
-
-                while(player->commands.size() > 0 && player->commands.front().id <= player->lastServerSequenceNumber)
-                {
-                    player->commands.pop_front();
-                }
 
                 for(auto& command : player->commands)
                 {
