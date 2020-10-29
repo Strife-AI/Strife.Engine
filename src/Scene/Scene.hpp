@@ -91,7 +91,7 @@ class Scene
 {
 public:
     static const int MaxEntities = 8192;
-    static constexpr float PhysicsDeltaTime = 1.0f / 240;
+    static constexpr float PhysicsDeltaTime = 1.0f / 200;
     static constexpr Vector2 PixelsToBox2DRatio = Vector2(1.0f / 16, 1.0f / 16);
     static constexpr Vector2 Box2DToPixelsRatio = Vector2(1.0, 1.0) / PixelsToBox2DRatio;
     static constexpr Vector2 Gravity = Vector2(0, 0) * Box2DToPixelsRatio;

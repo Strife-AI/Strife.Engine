@@ -33,6 +33,8 @@ struct PlayerCommand
     unsigned char timeMilliseconds;
     unsigned char keys;
     unsigned int id;
+    float sentTime = -1;
+    float receivedResponseTime = -1;
 };
 
 DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
@@ -50,6 +52,9 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
     Vector2 smoothVelocity;
     unsigned int nextCommandSequenceNumber = 0;
     unsigned int lastServerSequenceNumber = 0;
+    unsigned int lastServedExecuted = 0;
+
+    unsigned int clientClock = 0;
 
     std::list<PlayerCommand> commands;
 };
