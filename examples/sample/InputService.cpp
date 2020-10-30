@@ -10,6 +10,7 @@
 #include "Engine.hpp"
 #include "Memory/Util.hpp"
 #include "Renderer/Renderer.hpp"
+#include "Tools/Console.hpp"
 
 InputButton g_quit = InputButton(SDL_SCANCODE_ESCAPE);
 InputButton g_upButton(SDL_SCANCODE_W);
@@ -34,15 +35,29 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 {
     auto net = scene->GetEngine()->GetNetworkManger();
 
+    if(ev.Is<SceneLoadedEvent>())
+    {
+        if(net->IsClient())
+        {
+            Sleep(2000);
+            scene->GetEngine()->GetConsole()->Execute("connect 127.0.0.1");
+        }
+    }
     if (ev.Is<PreUpdateEvent>())
     {
         HandleInput();
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
+        if (net->IsServer())
+        {
+            status.VFormat("Total time: %d", totalTime);
+            totalTime = 0;
+        }
+
         Render(renderEvent->renderer);
     }
-    else if(auto fixedUpdateEvent = ev.Is<FixedUpdateEvent>())
+    else if (auto fixedUpdateEvent = ev.Is<FixedUpdateEvent>())
     {
         if (net->IsServer())
         {
@@ -50,23 +65,31 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             {
                 int physicsTime = Scene::PhysicsDeltaTime * 1000;
 
-                if(player->commands.size() > 0)
+                if (player->commands.size() > 0)
                 {
                     auto& currentCommand = player->commands.front();
 
                     auto direction = GetDirectionFromKeyBits(currentCommand.keys) * 300;
                     player->SetMoveDirection(direction);
 
-                    if((int)currentCommand.timeMilliseconds - physicsTime >= 0)
+                    if ((int)currentCommand.timeMilliseconds - 1 <= 0)
                     {
+                        player->lastServedExecuted = currentCommand.id;
                         player->commands.pop_front();
+                        player->positionAtStartOfCommand = player->Center();
                     }
                     else
                     {
-                        currentCommand.timeMilliseconds -= physicsTime;
+                        currentCommand.timeMilliseconds--;
                     }
+
+                    totalTime += physicsTime;
                 }
             }
+        }
+        else
+        {
+            ++fixedUpdateCount;
         }
     }
     else if(auto joinedServerEvent = ev.Is<JoinedServerEvent>())
@@ -93,6 +116,8 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 
         player->netId = connectedEvent->id;
         players.push_back(player);
+        scene->GetCameraFollower()->FollowEntity(player);
+        scene->GetCameraFollower()->CenterOn(player->Center());
     }
 }
 
@@ -156,18 +181,14 @@ void InputService::OnAdded()
 
                 response.Write(player->lastServerSequenceNumber);
 
-                int lastExecuted = player->commands.size() == 0
-                    ? player->lastServerSequenceNumber
-                    : player->commands.front().id;
-
-                response.Write(lastExecuted);
+                response.Write(player->lastServedExecuted);
                 response.Write((int)players.size());
 
                 for (auto player : players)
                 {
                     response.Write(player->netId);
-                    response.Write(player->Center().x);
-                    response.Write(player->Center().y);
+                    response.Write(player->positionAtStartOfCommand.x);
+                    response.Write(player->positionAtStartOfCommand.y);
                 }
             }
         };
@@ -192,6 +213,7 @@ void InputService::OnAdded()
             if (activePlayer.TryGetValue(self))
             {
                 self->lastServerSequenceNumber = lastServerSequence;
+                self->lastServedExecuted = lastExecuted;
 
                 //while (self->commands.size() > 0 && self->commands.front().id <= lastExecuted)
                 //{
@@ -226,16 +248,11 @@ void InputService::OnAdded()
                     Vector2 offset;
                     int clock = 0;
                     bool firstIntersection = false;
+                    int totalMs = 0;
 
-                    for(auto& command : self->commands)
-                    {
-                        if(id > lastExecuted)
-                        {
-                            offset += GetDirectionFromKeyBits(command.keys) * 300 * (command.timeMilliseconds / 1000.0);
-                        }
-                    }
+                    printf("============\n");
 
-                    self->SetCenter(position + offset);
+                    self->positionAtStartOfCommand = position;
                 }
             }
         };
@@ -265,15 +282,19 @@ void InputService::HandleInput()
                 | (g_downButton.IsDown() << 3);
 
             auto direction = GetDirectionFromKeyBits(keyBits);
-            player->SetMoveDirection(direction * 300);
 
-            PlayerCommand command;
-            command.id = ++player->nextCommandSequenceNumber;
-            command.keys = keyBits;
-            command.timeMilliseconds = scene->deltaTime * 1000;
-            command.timeMilliseconds = ((command.timeMilliseconds + 4) / 5) * 5;
+            if (fixedUpdateCount > 0)
+            {
+                PlayerCommand command;
+                command.id = ++player->nextCommandSequenceNumber;
+                command.keys = keyBits;
+                command.timeMilliseconds = fixedUpdateCount;
+                fixedUpdateCount = 0;
 
-            player->commands.push_back(command);
+                player->commands.push_back(command);
+
+                //player->SetMoveDirection(direction * 300);
+            }
 
             // Time to send new update to server with missing commands
             if (sendUpdateTimer <= 0)
@@ -311,6 +332,21 @@ void InputService::HandleInput()
                     }
                 });
             }
+
+            Vector2 offset;
+            // Update position based on prediction
+            for (auto& command : player->commands)
+            {
+                if ((int)command.id > (int)player->lastServedExecuted)
+                {
+                    //totalMs += command.timeMilliseconds * 5;
+                    offset += GetDirectionFromKeyBits(command.keys) * 300 * (command.timeMilliseconds * 5 / 1000.0);
+                }
+            }
+
+            //status.VFormat("Offset: %f %f, total time: %d", offset.x, offset.y, totalMs);
+
+            player->SetCenter(player->positionAtStartOfCommand + offset);
         }
     }
     else
@@ -326,4 +362,9 @@ void InputService::Render(Renderer* renderer)
     {
         renderer->RenderRectangleOutline(currentPlayer->Bounds(), Color::White(), -1);
     }
+
+    renderer->RenderString(FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid), 1),
+        status.c_str(),
+        Vector2(0, 200) + scene->GetCamera()->TopLeft(),
+        -1);
 }

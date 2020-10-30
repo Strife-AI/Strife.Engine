@@ -53,6 +53,7 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
     unsigned int nextCommandSequenceNumber = 0;
     unsigned int lastServerSequenceNumber = 0;
     unsigned int lastServedExecuted = 0;
+    Vector2 positionAtStartOfCommand;
 
     unsigned int clientClock = 0;
 
