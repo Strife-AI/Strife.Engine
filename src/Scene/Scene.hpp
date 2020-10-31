@@ -124,6 +124,8 @@ public:
     void RenderEntities(Renderer* renderer);
     void RenderHud(Renderer* renderer);
 
+    void ForceFixedUpdate();
+
     template <typename TService, typename ... Args>
     TService* AddService(Args&& ...args)
     {
