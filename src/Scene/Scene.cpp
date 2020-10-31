@@ -331,6 +331,12 @@ void Scene::RenderHud(Renderer* renderer)
     SendEvent(RenderHudEvent(renderer));
 }
 
+void Scene::ForceFixedUpdate()
+{
+    _world->Step(PhysicsDeltaTime, 8, 3);
+    _collisionManager.UpdateEntityPositions();
+}
+
 struct FindFixturesQueryCallback : b2QueryCallback
 {
     FindFixturesQueryCallback(gsl::span<ColliderHandle> foundFixtures_)
@@ -643,7 +649,6 @@ void Scene::UpdateEntities(float deltaTime)
     while (_physicsTimeLeft >= PhysicsDeltaTime)
     {
         _physicsTimeLeft -= PhysicsDeltaTime;
-
         for (auto fixedUpdatable : _fixedUpdatables)
         {
             fixedUpdatable->FixedUpdate(PhysicsDeltaTime);

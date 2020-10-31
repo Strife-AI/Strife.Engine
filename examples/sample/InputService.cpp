@@ -8,6 +8,7 @@
 #include <slikenet/peerinterface.h>
 
 #include "Engine.hpp"
+#include "Components/RigidBodyComponent.hpp"
 #include "Memory/Util.hpp"
 #include "Renderer/Renderer.hpp"
 #include "Tools/Console.hpp"
@@ -244,14 +245,6 @@ void InputService::OnAdded()
                 }
                 else
                 {
-                    // Reapply the moves we locally made on the client
-                    Vector2 offset;
-                    int clock = 0;
-                    bool firstIntersection = false;
-                    int totalMs = 0;
-
-                    printf("============\n");
-
                     self->positionAtStartOfCommand = position;
                 }
             }
@@ -281,7 +274,6 @@ void InputService::HandleInput()
                 | (g_upButton.IsDown() << 2)
                 | (g_downButton.IsDown() << 3);
 
-            auto direction = GetDirectionFromKeyBits(keyBits);
 
             if (fixedUpdateCount > 0)
             {
@@ -292,8 +284,6 @@ void InputService::HandleInput()
                 fixedUpdateCount = 0;
 
                 player->commands.push_back(command);
-
-                //player->SetMoveDirection(direction * 300);
             }
 
             // Time to send new update to server with missing commands
@@ -335,18 +325,23 @@ void InputService::HandleInput()
 
             Vector2 offset;
             // Update position based on prediction
+            player->SetCenter(player->positionAtStartOfCommand);
+            //player->rigidBody->body->SetTransform(Scene::PixelToBox2D(player->positionAtStartOfCommand), 0);
+
+
             for (auto& command : player->commands)
             {
                 if ((int)command.id > (int)player->lastServedExecuted)
                 {
-                    //totalMs += command.timeMilliseconds * 5;
-                    offset += GetDirectionFromKeyBits(command.keys) * 300 * (command.timeMilliseconds * 5 / 1000.0);
+                    for(int i = 0; i < (int)command.timeMilliseconds; ++i)
+                    {
+                        player->SetMoveDirection(GetDirectionFromKeyBits(command.keys) * 300);
+                        scene->ForceFixedUpdate();
+                    }
                 }
             }
 
             //status.VFormat("Offset: %f %f, total time: %d", offset.x, offset.y, totalMs);
-
-            player->SetCenter(player->positionAtStartOfCommand + offset);
         }
     }
     else
