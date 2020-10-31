@@ -32,13 +32,15 @@ Vector2 GetDirectionFromKeyBits(unsigned int keyBits)
     return moveDirection;
 }
 
+ConsoleVar<bool> autoConnect("auto-connect", false);
+
 void InputService::ReceiveEvent(const IEntityEvent& ev)
 {
     auto net = scene->GetEngine()->GetNetworkManger();
 
     if(ev.Is<SceneLoadedEvent>())
     {
-        if(net->IsClient())
+        if(net->IsClient() && autoConnect.Value())
         {
             Sleep(2000);
             scene->GetEngine()->GetConsole()->Execute("connect 127.0.0.1");
