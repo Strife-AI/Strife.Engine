@@ -43,10 +43,20 @@ struct PlayerCommand
     unsigned char keys;
     unsigned int id;
 
+    // Client only
+    float timeRecorded;
+
     // Server only
     Vector2 positionAtStartOfCommand;
     PlayerCommandStatus status = PlayerCommandStatus::NotStarted;
     int fixedUpdateStartId;
+};
+
+struct PlayerSnapshot
+{
+    Vector2 position;
+    float time;
+    int commandId;
 };
 
 DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
@@ -59,6 +69,10 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
     void SetMoveDirection(Vector2 direction);
 
     Vector2 PositionAtFixedUpdateId(int fixedUpdateId, int currentFixedUpdateId);
+    PlayerCommand* GetCommandById(int id);
+
+    Vector2 GetSnapshotPosition(float time);
+    void AddSnapshot(const PlayerSnapshot& snapshot);
 
     RigidBodyComponent* rigidBody;
     int netId;
@@ -71,5 +85,8 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
 
     unsigned int clientClock = 0;
 
-    CircularQueue<PlayerCommand, 16384> commands;
+    CircularQueue<PlayerCommand, 128> commands;
+
+    bool isClientPlayer = false;
+    std::vector<PlayerSnapshot> snapshots;
 };

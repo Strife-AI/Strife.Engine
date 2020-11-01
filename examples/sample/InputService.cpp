@@ -38,7 +38,7 @@ ConsoleVar<bool> autoConnect("auto-connect", false);
 
 [x] In every command, on the server, store where the player is at the end of that command
 [x] The server shouldn't delete a command when it's done. It should mark it as complete
-[ ] When returning the snapshot to a client, rewind all the other players to the time of the snapshot (the time when the
+[x] When returning the snapshot to a client, rewind all the other players to the time of the snapshot (the time when the
     current command started) by lerping between that position and the previous position
 
 [ ] Add a snapshot buffer to the players on the client that stores where they were given a command id
@@ -144,6 +144,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
         }));
 
         self->netId = joinedServerEvent->selfId;
+        self->isClientPlayer = true;
         scene->GetCameraFollower()->FollowEntity(self);
         scene->GetCameraFollower()->CenterOn(self->Center());
         activePlayer = self;
@@ -159,8 +160,12 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 
         player->netId = connectedEvent->id;
         players.push_back(player);
-        scene->GetCameraFollower()->FollowEntity(player);
-        scene->GetCameraFollower()->CenterOn(player->Center());
+
+        if (net->IsServer())
+        {
+            scene->GetCameraFollower()->FollowEntity(player);
+            scene->GetCameraFollower()->CenterOn(player->Center());
+        }
     }
 }
 
@@ -232,6 +237,11 @@ void InputService::OnAdded()
                 response.Write(player->lastServedExecuted);
                 response.Write((int)players.size());
 
+                PlayerCommand* lastCommand = player->GetCommandById(player->lastServedExecuted);
+                int clientCommandStartTime = lastCommand != nullptr
+                    ? lastCommand->fixedUpdateStartId
+                    : currentFixedUpdateId - 1;
+
                 for (auto p : players)
                 {
                     response.Write(p->netId);
@@ -244,7 +254,7 @@ void InputService::OnAdded()
                     }
                     else
                     {
-                        position = p->PositionAtFixedUpdateId(currentFixedUpdateId - 5000, currentFixedUpdateId);
+                        position = p->Center(); //p->PositionAtFixedUpdateId(clientCommandStartTime, currentFixedUpdateId);
                     }
 
                     response.Write(position.x);
@@ -294,13 +304,21 @@ void InputService::OnAdded()
 
                 auto player = GetPlayerByNetId(id);
 
+                auto lastCommandExecuted = self->GetCommandById(lastExecuted);
+
                 if(player == nullptr)
                 {
                     scene->SendEvent(PlayerConnectedEvent(id, position));
                 }
                 else if(player != self)
                 {
-                    player->SetCenter(position);
+                    //player->SetCenter(position);
+                    
+                    PlayerSnapshot snapshot;
+                    snapshot.commandId = lastExecuted;
+                    snapshot.position = position;
+                    snapshot.time = lastCommandExecuted->timeRecorded;
+                    player->AddSnapshot(snapshot);
                 }
                 else
                 {
@@ -340,6 +358,7 @@ void InputService::HandleInput()
                 command.id = ++self->nextCommandSequenceNumber;
                 command.keys = keyBits;
                 command.fixedUpdateCount = fixedUpdateCount;
+                command.timeRecorded = scene->timeSinceStart;
                 fixedUpdateCount = 0;
 
                 self->commands.Enqueue(command);
