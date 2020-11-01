@@ -244,7 +244,7 @@ void InputService::OnAdded()
                     }
                     else
                     {
-                        position = player->PositionAtFixedUpdateId(currentFixedUpdateId - 5000, currentFixedUpdateId);
+                        position = p->PositionAtFixedUpdateId(currentFixedUpdateId - 5000, currentFixedUpdateId);
                     }
 
                     response.Write(position.x);
