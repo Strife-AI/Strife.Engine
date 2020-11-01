@@ -18,7 +18,14 @@ void PlayerEntity::OnDestroyed()
 
 void PlayerEntity::Render(Renderer* renderer)
 {
-    renderer->RenderRectangle(Bounds(), Color::CornflowerBlue(), -0.99);
+    auto position = Center();
+
+    if (!isClientPlayer)
+    {
+        position = GetSnapshotPosition(scene->timeSinceStart - 0.3);
+    }
+
+    renderer->RenderRectangle(Rectangle(position - Dimensions() / 2, Dimensions()), Color::CornflowerBlue(), -0.99);
 }
 
 void PlayerEntity::SetMoveDirection(Vector2 direction)
@@ -62,4 +69,44 @@ Vector2 PlayerEntity::PositionAtFixedUpdateId(int fixedUpdateId, int currentFixe
     }
 
     return Center();
+}
+
+PlayerCommand* PlayerEntity::GetCommandById(int id)
+{
+    for (auto& command : commands)
+    {
+        if (command.id == id)
+        {
+            return &command;
+        }
+    }
+
+    return nullptr;
+}
+
+Vector2 PlayerEntity::GetSnapshotPosition(float time)
+{
+    for (int i = 0; i < (int)snapshots.size() - 1; ++i)
+    {
+        if (snapshots[i + 1].time > time)
+        {
+            return Lerp(
+                snapshots[i].position,
+                snapshots[i + 1].position,
+                (time - snapshots[i].time) / (snapshots[i + 1].time - snapshots[i].time));
+        }
+    }
+
+    return Center();
+}
+
+void PlayerEntity::AddSnapshot(const PlayerSnapshot& snapshot)
+{
+    if (snapshots.size() > 0 && snapshots[snapshots.size() - 1].commandId == snapshot.commandId)
+    {
+        // Duplicate snapshot
+        return;
+    }
+
+    snapshots.push_back(snapshot);
 }
