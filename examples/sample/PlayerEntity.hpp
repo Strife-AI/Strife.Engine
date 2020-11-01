@@ -2,6 +2,8 @@
 
 #include <queue>
 
+
+#include "Memory/CircularQueue.hpp"
 #include "Scene/BaseEntity.hpp"
 
 struct PlayerEntity;
@@ -28,13 +30,23 @@ DEFINE_EVENT(PlayerRemovedFromGame)
     PlayerEntity* player;
 };
 
+enum class PlayerCommandStatus
+{
+    NotStarted,
+    InProgress,
+    Complete
+};
+
 struct PlayerCommand
 {
-    unsigned char timeMilliseconds;
+    unsigned char fixedUpdateCount;
     unsigned char keys;
     unsigned int id;
-    float sentTime = -1;
-    float receivedResponseTime = -1;
+
+    // Server only
+    Vector2 positionAtStartOfCommand;
+    PlayerCommandStatus status = PlayerCommandStatus::NotStarted;
+    int fixedUpdateStartId;
 };
 
 DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
@@ -45,6 +57,8 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
     void Render(Renderer* renderer) override;
 
     void SetMoveDirection(Vector2 direction);
+
+    Vector2 PositionAtFixedUpdateId(int fixedUpdateId, int currentFixedUpdateId);
 
     RigidBodyComponent* rigidBody;
     int netId;
@@ -57,5 +71,5 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
 
     unsigned int clientClock = 0;
 
-    std::list<PlayerCommand> commands;
+    CircularQueue<PlayerCommand, 16384> commands;
 };

@@ -21,4 +21,6 @@ struct InputService : ISceneService
     FixedLengthString<1024> status;
     int totalTime = 0;
     int fixedUpdateCount = 0;
+
+    int currentFixedUpdateId = 0;
 };

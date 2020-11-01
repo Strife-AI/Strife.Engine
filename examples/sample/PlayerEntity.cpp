@@ -25,3 +25,41 @@ void PlayerEntity::SetMoveDirection(Vector2 direction)
 {
     rigidBody->SetVelocity(direction);
 }
+
+Vector2 PlayerEntity::PositionAtFixedUpdateId(int fixedUpdateId, int currentFixedUpdateId)
+{
+    for (auto it = commands.begin(); it != commands.end(); ++it)
+    {
+        auto& command = *it;
+
+        if (command.fixedUpdateStartId >= fixedUpdateId)
+        {
+            auto next = it;
+            ++next;
+
+            auto& nextCommand = *next;
+
+            Vector2 start = command.positionAtStartOfCommand;
+            Vector2 end;
+            float t;
+
+            if (next == commands.end() || nextCommand.status == PlayerCommandStatus::NotStarted)
+            {
+                // We don't have a next command to interpolate to, so use where we are now
+                end = Center();
+                float diff = currentFixedUpdateId - command.fixedUpdateStartId;
+                t = (fixedUpdateId - command.fixedUpdateStartId) / diff;
+            }
+            else
+            {
+                end = nextCommand.positionAtStartOfCommand;
+                float diff = nextCommand.fixedUpdateStartId - command.fixedUpdateStartId;
+                t = (fixedUpdateId - command.fixedUpdateStartId) / diff;
+            }
+
+            return Lerp(start, end, t);
+        }
+    }
+
+    return Center();
+}

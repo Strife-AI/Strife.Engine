@@ -34,6 +34,19 @@ Vector2 GetDirectionFromKeyBits(unsigned int keyBits)
 
 ConsoleVar<bool> autoConnect("auto-connect", false);
 
+/*
+
+[x] In every command, on the server, store where the player is at the end of that command
+[x] The server shouldn't delete a command when it's done. It should mark it as complete
+[ ] When returning the snapshot to a client, rewind all the other players to the time of the snapshot (the time when the
+    current command started) by lerping between that position and the previous position
+
+[ ] Add a snapshot buffer to the players on the client that stores where they were given a command id
+[ ] Each snapshot should have a game time of when that took snapshot happened
+[ ] When rendering, use the current game time and snapshot buffer to determine where to draw the player
+
+*/
+
 void InputService::ReceiveEvent(const IEntityEvent& ev)
 {
     auto net = scene->GetEngine()->GetNetworkManger();
@@ -64,26 +77,51 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if (net->IsServer())
         {
+            ++currentFixedUpdateId;
+
             for (auto player : players)
             {
                 int physicsTime = Scene::PhysicsDeltaTime * 1000;
 
-                if (player->commands.size() > 0)
+                PlayerCommand* commandToExecute = nullptr;
+
+
+                for (auto& currentCommand : player->commands)
                 {
-                    auto& currentCommand = player->commands.front();
-
-                    auto direction = GetDirectionFromKeyBits(currentCommand.keys) * 300;
-                    player->SetMoveDirection(direction);
-
-                    if ((int)currentCommand.timeMilliseconds - 1 <= 0)
+                    if (currentCommand.status == PlayerCommandStatus::Complete)
                     {
-                        player->lastServedExecuted = currentCommand.id;
-                        player->commands.pop_front();
-                        player->positionAtStartOfCommand = player->Center();
+                        continue;
                     }
                     else
                     {
-                        currentCommand.timeMilliseconds--;
+                        commandToExecute = &currentCommand;
+                        break;
+                    }
+                }
+
+                if (commandToExecute != nullptr)
+                {
+                    if (commandToExecute->status == PlayerCommandStatus::NotStarted)
+                    {
+                        commandToExecute->fixedUpdateStartId = currentFixedUpdateId;
+                        commandToExecute->status = PlayerCommandStatus::InProgress;
+                        commandToExecute->positionAtStartOfCommand = player->Center();
+                    }
+
+                    auto direction = GetDirectionFromKeyBits(commandToExecute->keys) * 300;
+                    player->SetMoveDirection(direction);
+
+                    if ((int)commandToExecute->fixedUpdateCount - 1 <= 0)
+                    {
+                        commandToExecute->status = PlayerCommandStatus::Complete;
+                        
+                        player->lastServedExecuted = commandToExecute->id;
+                        player->positionAtStartOfCommand = player->Center();
+
+                    }
+                    else
+                    {
+                        commandToExecute->fixedUpdateCount--;
                     }
 
                     totalTime += physicsTime;
@@ -94,6 +132,8 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
         {
             ++fixedUpdateCount;
         }
+
+        ++currentFixedUpdateId;
     }
     else if(auto joinedServerEvent = ev.Is<JoinedServerEvent>())
     {
@@ -167,10 +207,15 @@ void InputService::OnAdded()
                                 PlayerCommand newCommand;
                                 newCommand.id = currentId;
                                 message.Read(newCommand.keys);
-                                message.Read(newCommand.timeMilliseconds);
+                                message.Read(newCommand.fixedUpdateCount);
                                 player->lastServerSequenceNumber = currentId;
 
-                                player->commands.push_back(newCommand);
+                                if (player->commands.IsFull())
+                                {
+                                    player->commands.Dequeue();
+                                }
+
+                                player->commands.Enqueue(newCommand);
                             }
 
                             ++currentId;
@@ -187,11 +232,23 @@ void InputService::OnAdded()
                 response.Write(player->lastServedExecuted);
                 response.Write((int)players.size());
 
-                for (auto player : players)
+                for (auto p : players)
                 {
-                    response.Write(player->netId);
-                    response.Write(player->positionAtStartOfCommand.x);
-                    response.Write(player->positionAtStartOfCommand.y);
+                    response.Write(p->netId);
+
+                    Vector2 position;
+                    
+                    if(p == player)
+                    {
+                        position = p->positionAtStartOfCommand;
+                    }
+                    else
+                    {
+                        position = player->PositionAtFixedUpdateId(currentFixedUpdateId - 5000, currentFixedUpdateId);
+                    }
+
+                    response.Write(position.x);
+                    response.Write(position.y);
                 }
             }
         };
@@ -268,8 +325,8 @@ void InputService::HandleInput()
 
     if (net->IsClient())
     {
-        PlayerEntity* player;
-        if (activePlayer.TryGetValue(player))
+        PlayerEntity* self;
+        if (activePlayer.TryGetValue(self))
         {
             unsigned int keyBits = (g_leftButton.IsDown() << 0)
                 | (g_rightButton.IsDown() << 1)
@@ -280,12 +337,12 @@ void InputService::HandleInput()
             if (fixedUpdateCount > 0)
             {
                 PlayerCommand command;
-                command.id = ++player->nextCommandSequenceNumber;
+                command.id = ++self->nextCommandSequenceNumber;
                 command.keys = keyBits;
-                command.timeMilliseconds = fixedUpdateCount;
+                command.fixedUpdateCount = fixedUpdateCount;
                 fixedUpdateCount = 0;
 
-                player->commands.push_back(command);
+                self->commands.Enqueue(command);
             }
 
             // Time to send new update to server with missing commands
@@ -294,9 +351,14 @@ void InputService::HandleInput()
                 sendUpdateTimer = 1.0 / 30;
                 std::vector<PlayerCommand> missingCommands;
 
-                for(auto& command : player->commands)
+                while (!self->commands.IsEmpty() && self->commands.Peek().id < self->lastServedExecuted)
                 {
-                    if(command.id > player->lastServerSequenceNumber)
+                    self->commands.Dequeue();
+                }
+
+                for(auto& command : self->commands)
+                {
+                    if (command.id > self->lastServerSequenceNumber)
                     {
                         missingCommands.push_back(command);
                     }
@@ -319,7 +381,7 @@ void InputService::HandleInput()
                         for (int i = 0; i < missingCommands.size(); ++i)
                         {
                             message.Write(missingCommands[i].keys);
-                            message.Write(missingCommands[i].timeMilliseconds);
+                            message.Write(missingCommands[i].fixedUpdateCount);
                         }
                     }
                 });
@@ -327,28 +389,44 @@ void InputService::HandleInput()
 
             Vector2 offset;
             // Update position based on prediction
-            player->SetCenter(player->positionAtStartOfCommand);
+            self->SetCenter(self->positionAtStartOfCommand);
             //player->rigidBody->body->SetTransform(Scene::PixelToBox2D(player->positionAtStartOfCommand), 0);
 
-
-            for (auto& command : player->commands)
+            // Lock other players
+            for(auto player : players)
             {
-                if ((int)command.id > (int)player->lastServedExecuted)
+                if(player != self)
                 {
-                    for(int i = 0; i < (int)command.timeMilliseconds; ++i)
+                    player->rigidBody->body->SetType(b2_staticBody);
+                }
+            }
+
+            // Update client side prediction
+            for (auto& command : self->commands)
+            {
+                if ((int)command.id > (int)self->lastServedExecuted)
+                {
+                    for(int i = 0; i < (int)command.fixedUpdateCount; ++i)
                     {
-                        player->SetMoveDirection(GetDirectionFromKeyBits(command.keys) * 300);
+                        self->SetMoveDirection(GetDirectionFromKeyBits(command.keys) * 300);
                         scene->ForceFixedUpdate();
                     }
                 }
             }
 
-            //status.VFormat("Offset: %f %f, total time: %d", offset.x, offset.y, totalMs);
+            // Unlock other players
+            for (auto player : players)
+            {
+                if (player != self)
+                {
+                    player->rigidBody->body->SetType(b2_dynamicBody);
+                }
+            }
         }
     }
     else
     {
-
+        
     }
 }
 
