@@ -22,8 +22,10 @@ void PlayerEntity::Render(Renderer* renderer)
 
     if (!isClientPlayer)
     {
-        position = GetSnapshotPosition(scene->timeSinceStart - 0.3);
+        position = GetSnapshotPosition(scene->timeSinceStart - 0.1);
+        SetCenter(position);
     }
+
 
     renderer->RenderRectangle(Rectangle(position - Dimensions() / 2, Dimensions()), Color::CornflowerBlue(), -0.99);
 }
