@@ -416,7 +416,7 @@ void InputService::HandleInput()
             {
                 if(player != self)
                 {
-                    player->rigidBody->body->SetType(b2_staticBody);
+                    player->rigidBody->body->SetLinearVelocity(b2Vec2(0, 0));
                 }
             }
 
@@ -438,7 +438,7 @@ void InputService::HandleInput()
             {
                 if (player != self)
                 {
-                    player->rigidBody->body->SetType(b2_dynamicBody);
+                    //player->rigidBody->body->SetType(b2_dynamicBody);
                 }
             }
         }
