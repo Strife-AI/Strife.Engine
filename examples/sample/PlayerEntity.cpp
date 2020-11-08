@@ -7,6 +7,7 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
     rigidBody = AddComponent<RigidBodyComponent>("rb", b2_dynamicBody);
     rigidBody->CreateBoxCollider(Dimensions());
+    net = AddComponent<NetComponent>();
 
     scene->SendEvent(PlayerAddedToGame(this));
 }
@@ -20,9 +21,9 @@ void PlayerEntity::Render(Renderer* renderer)
 {
     auto position = Center();
 
-    if (!isClientPlayer)
+    if (!net->isClientPlayer)
     {
-        position = GetSnapshotPosition(scene->timeSinceStart - 0.1);
+        position = net->GetSnapshotPosition(scene->timeSinceStart - 0.1);
         SetCenter(position);
     }
 

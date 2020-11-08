@@ -9,5 +9,5 @@ void ReplicationManager::ComputeWorldDiff(WorldState& before, WorldState& after,
 
 WorldState ReplicationManager::GetWorldState(Scene* scene)
 {
-
+    return WorldState();
 }
