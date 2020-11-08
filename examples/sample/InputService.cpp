@@ -86,7 +86,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
                 PlayerCommand* commandToExecute = nullptr;
 
 
-                for (auto& currentCommand : player->commands)
+                for (auto& currentCommand : player->net->commands)
                 {
                     if (currentCommand.status == PlayerCommandStatus::Complete)
                     {
@@ -115,8 +115,8 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
                     {
                         commandToExecute->status = PlayerCommandStatus::Complete;
                         
-                        player->lastServedExecuted = commandToExecute->id;
-                        player->positionAtStartOfCommand = player->Center();
+                        player->net->lastServedExecuted = commandToExecute->id;
+                        player->net->positionAtStartOfCommand = player->Center();
 
                     }
                     else
@@ -143,8 +143,8 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             { "dimensions", { 32, 32 } },
         }));
 
-        self->netId = joinedServerEvent->selfId;
-        self->isClientPlayer = true;
+        self->net->netId = joinedServerEvent->selfId;
+        self->net->isClientPlayer = true;
         scene->GetCameraFollower()->FollowEntity(self);
         scene->GetCameraFollower()->CenterOn(self->Center());
         activePlayer = self;
@@ -158,7 +158,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             { "dimensions", { 32, 32 } },
             }));
 
-        player->netId = connectedEvent->id;
+        player->net->netId = connectedEvent->id;
         players.push_back(player);
 
         if (net->IsServer())
@@ -173,7 +173,7 @@ PlayerEntity* InputService::GetPlayerByNetId(int netId)
 {
     for(auto player : players)
     {
-        if(player->netId == netId)
+        if(player->net->netId == netId)
         {
             return player;
         }
@@ -202,25 +202,25 @@ void InputService::OnAdded()
                     unsigned int firstCommandId = 0;
                     message.Read(firstCommandId);
 
-                    if (player->lastServerSequenceNumber + 1 <= firstCommandId)
+                    if (player->net->lastServerSequenceNumber + 1 <= firstCommandId)
                     {
                         auto currentId = firstCommandId;
                         for (int i = 0; i < commandsInPacket; ++i)
                         {
-                            if (currentId > player->lastServerSequenceNumber)
+                            if (currentId > player->net->lastServerSequenceNumber)
                             {
                                 PlayerCommand newCommand;
                                 newCommand.id = currentId;
                                 message.Read(newCommand.keys);
                                 message.Read(newCommand.fixedUpdateCount);
-                                player->lastServerSequenceNumber = currentId;
+                                player->net->lastServerSequenceNumber = currentId;
 
-                                if (player->commands.IsFull())
+                                if (player->net->commands.IsFull())
                                 {
-                                    player->commands.Dequeue();
+                                    player->net->commands.Dequeue();
                                 }
 
-                                player->commands.Enqueue(newCommand);
+                                player->net->commands.Enqueue(newCommand);
                             }
 
                             ++currentId;
@@ -230,27 +230,27 @@ void InputService::OnAdded()
 
                 response.Write(PacketType::UpdateResponse);
 
-                response.Write(player->clientClock);
+                response.Write(player->net->clientClock);
 
-                response.Write(player->lastServerSequenceNumber);
+                response.Write(player->net->lastServerSequenceNumber);
 
-                response.Write(player->lastServedExecuted);
+                response.Write(player->net->lastServedExecuted);
                 response.Write((int)players.size());
 
-                PlayerCommand* lastCommand = player->GetCommandById(player->lastServedExecuted);
+                PlayerCommand* lastCommand = player->net->GetCommandById(player->net->lastServedExecuted);
                 int clientCommandStartTime = lastCommand != nullptr
                     ? lastCommand->fixedUpdateStartId
                     : currentFixedUpdateId - 1;
 
                 for (auto p : players)
                 {
-                    response.Write(p->netId);
+                    response.Write(p->net->netId);
 
                     Vector2 position;
                     
                     if(p == player)
                     {
-                        position = p->positionAtStartOfCommand;
+                        position = p->net->positionAtStartOfCommand;
                     }
                     else
                     {
@@ -282,8 +282,8 @@ void InputService::OnAdded()
             PlayerEntity* self;
             if (activePlayer.TryGetValue(self))
             {
-                self->lastServerSequenceNumber = lastServerSequence;
-                self->lastServedExecuted = lastExecuted;
+                self->net->lastServerSequenceNumber = lastServerSequence;
+                self->net->lastServedExecuted = lastExecuted;
 
                 //while (self->commands.size() > 0 && self->commands.front().id <= lastExecuted)
                 //{
@@ -304,7 +304,7 @@ void InputService::OnAdded()
 
                 auto player = GetPlayerByNetId(id);
 
-                auto lastCommandExecuted = self->GetCommandById(lastExecuted);
+                auto lastCommandExecuted = self->net->GetCommandById(lastExecuted);
 
                 if(player == nullptr)
                 {
@@ -318,11 +318,11 @@ void InputService::OnAdded()
                     snapshot.commandId = lastExecuted;
                     snapshot.position = position;
                     snapshot.time = lastCommandExecuted->timeRecorded;
-                    player->AddSnapshot(snapshot);
+                    player->net->AddSnapshot(snapshot);
                 }
                 else
                 {
-                    self->positionAtStartOfCommand = position;
+                    self->net->positionAtStartOfCommand = position;
                 }
             }
         };
@@ -355,13 +355,13 @@ void InputService::HandleInput()
             if (fixedUpdateCount > 0)
             {
                 PlayerCommand command;
-                command.id = ++self->nextCommandSequenceNumber;
+                command.id = ++self->net->nextCommandSequenceNumber;
                 command.keys = keyBits;
                 command.fixedUpdateCount = fixedUpdateCount;
                 command.timeRecorded = scene->timeSinceStart;
                 fixedUpdateCount = 0;
 
-                self->commands.Enqueue(command);
+                self->net->commands.Enqueue(command);
             }
 
             // Time to send new update to server with missing commands
@@ -370,14 +370,14 @@ void InputService::HandleInput()
                 sendUpdateTimer = 1.0 / 30;
                 std::vector<PlayerCommand> missingCommands;
 
-                while (!self->commands.IsEmpty() && self->commands.Peek().id < self->lastServedExecuted)
+                while (!self->net->commands.IsEmpty() && self->net->commands.Peek().id < self->net->lastServedExecuted)
                 {
-                    self->commands.Dequeue();
+                    self->net->commands.Dequeue();
                 }
 
-                for(auto& command : self->commands)
+                for(auto& command : self->net->commands)
                 {
-                    if (command.id > self->lastServerSequenceNumber)
+                    if (command.id > self->net->lastServerSequenceNumber)
                     {
                         missingCommands.push_back(command);
                     }
@@ -408,7 +408,7 @@ void InputService::HandleInput()
 
             Vector2 offset;
             // Update position based on prediction
-            self->SetCenter(self->positionAtStartOfCommand);
+            self->SetCenter(self->net->positionAtStartOfCommand);
             //player->rigidBody->body->SetTransform(Scene::PixelToBox2D(player->positionAtStartOfCommand), 0);
 
             // Lock other players
@@ -421,9 +421,9 @@ void InputService::HandleInput()
             }
 
             // Update client side prediction
-            for (auto& command : self->commands)
+            for (auto& command : self->net->commands)
             {
-                if ((int)command.id > (int)self->lastServedExecuted)
+                if ((int)command.id > (int)self->net->lastServedExecuted)
                 {
                     for(int i = 0; i < (int)command.fixedUpdateCount; ++i)
                     {

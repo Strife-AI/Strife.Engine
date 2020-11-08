@@ -3,6 +3,8 @@
 #include <queue>
 
 
+
+#include "Components/NetComponent.hpp"
 #include "Memory/CircularQueue.hpp"
 #include "Scene/BaseEntity.hpp"
 
@@ -40,4 +42,5 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
     void SetMoveDirection(Vector2 direction);
 
     RigidBodyComponent* rigidBody;
+    NetComponent* net;
 };
