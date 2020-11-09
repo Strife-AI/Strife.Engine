@@ -13,6 +13,8 @@ enum class PlayerCommandStatus
     Complete
 };
 
+Vector2 GetDirectionFromKeyBits(unsigned int keyBits);
+
 struct PlayerCommand
 {
     unsigned char fixedUpdateCount;
@@ -37,6 +39,9 @@ struct PlayerSnapshot
 
 DEFINE_COMPONENT(NetComponent)
 {
+    void OnAdded() override;
+    void OnRemoved() override;
+
     PlayerCommand* GetCommandById(int id);
     Vector2 PositionAtFixedUpdateId(int fixedUpdateId, int currentFixedUpdateId);
     Vector2 GetSnapshotPosition(float time);

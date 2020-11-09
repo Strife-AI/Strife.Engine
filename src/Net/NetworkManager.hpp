@@ -44,6 +44,13 @@ enum class PacketType : unsigned char
     UpdateResponse
 };
 
+struct Client
+{
+    SLNet::AddressOrGUID address;
+
+
+};
+
 class NetworkManager
 {
 public:
