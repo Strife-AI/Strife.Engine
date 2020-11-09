@@ -1,9 +1,6 @@
 
 #include "InputService.hpp"
 
-#include <slikenet/MessageIdentifiers.h>
-#include <slikenet/PacketPriority.h>
-#include <slikenet/socket2.h>
 #include <slikenet/BitStream.h>
 #include <slikenet/peerinterface.h>
 
@@ -19,18 +16,6 @@ InputButton g_downButton(SDL_SCANCODE_S);
 InputButton g_leftButton(SDL_SCANCODE_A);
 InputButton g_rightButton(SDL_SCANCODE_D);
 InputButton g_nextPlayer(SDL_SCANCODE_TAB);
-
-Vector2 GetDirectionFromKeyBits(unsigned int keyBits)
-{
-    Vector2 moveDirection;
-
-    if (keyBits & 1) moveDirection.x -= 1;
-    if (keyBits & 2) moveDirection.x += 1;
-    if (keyBits & 4) moveDirection.y -= 1;
-    if (keyBits & 8) moveDirection.y += 1;
-
-    return moveDirection;
-}
 
 ConsoleVar<bool> autoConnect("auto-connect", false);
 
@@ -77,56 +62,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if (net->IsServer())
         {
-            ++currentFixedUpdateId;
 
-            for (auto player : players)
-            {
-                int physicsTime = Scene::PhysicsDeltaTime * 1000;
-
-                PlayerCommand* commandToExecute = nullptr;
-
-
-                for (auto& currentCommand : player->net->commands)
-                {
-                    if (currentCommand.status == PlayerCommandStatus::Complete)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        commandToExecute = &currentCommand;
-                        break;
-                    }
-                }
-
-                if (commandToExecute != nullptr)
-                {
-                    if (commandToExecute->status == PlayerCommandStatus::NotStarted)
-                    {
-                        commandToExecute->fixedUpdateStartId = currentFixedUpdateId;
-                        commandToExecute->status = PlayerCommandStatus::InProgress;
-                        commandToExecute->positionAtStartOfCommand = player->Center();
-                    }
-
-                    auto direction = GetDirectionFromKeyBits(commandToExecute->keys) * 300;
-                    player->SetMoveDirection(direction);
-
-                    if ((int)commandToExecute->fixedUpdateCount - 1 <= 0)
-                    {
-                        commandToExecute->status = PlayerCommandStatus::Complete;
-                        
-                        player->net->lastServedExecuted = commandToExecute->id;
-                        player->net->positionAtStartOfCommand = player->Center();
-
-                    }
-                    else
-                    {
-                        commandToExecute->fixedUpdateCount--;
-                    }
-
-                    totalTime += physicsTime;
-                }
-            }
         }
         else
         {
@@ -230,17 +166,10 @@ void InputService::OnAdded()
 
                 response.Write(PacketType::UpdateResponse);
 
-                response.Write(player->net->clientClock);
-
                 response.Write(player->net->lastServerSequenceNumber);
 
                 response.Write(player->net->lastServedExecuted);
                 response.Write((int)players.size());
-
-                PlayerCommand* lastCommand = player->net->GetCommandById(player->net->lastServedExecuted);
-                int clientCommandStartTime = lastCommand != nullptr
-                    ? lastCommand->fixedUpdateStartId
-                    : currentFixedUpdateId - 1;
 
                 for (auto p : players)
                 {
@@ -267,9 +196,6 @@ void InputService::OnAdded()
     {
         net->onUpdateResponse = [=](SLNet::BitStream& message)
         {
-            int clientClock;
-            message.Read(clientClock);
-
             int lastServerSequence;
             message.Read(lastServerSequence);
 
@@ -406,41 +332,7 @@ void InputService::HandleInput()
                 });
             }
 
-            Vector2 offset;
-            // Update position based on prediction
-            self->SetCenter(self->net->positionAtStartOfCommand);
-            //player->rigidBody->body->SetTransform(Scene::PixelToBox2D(player->positionAtStartOfCommand), 0);
-
-            // Lock other players
-            for(auto player : players)
-            {
-                if(player != self)
-                {
-                    player->rigidBody->body->SetLinearVelocity(b2Vec2(0, 0));
-                }
-            }
-
-            // Update client side prediction
-            for (auto& command : self->net->commands)
-            {
-                if ((int)command.id > (int)self->net->lastServedExecuted)
-                {
-                    for(int i = 0; i < (int)command.fixedUpdateCount; ++i)
-                    {
-                        self->SetMoveDirection(GetDirectionFromKeyBits(command.keys) * 300);
-                        scene->ForceFixedUpdate();
-                    }
-                }
-            }
-
-            // Unlock other players
-            for (auto player : players)
-            {
-                if (player != self)
-                {
-                    //player->rigidBody->body->SetType(b2_dynamicBody);
-                }
-            }
+            // TODO update prediction
         }
     }
     else

@@ -15,6 +15,7 @@
 #include "Memory/FreeList.hpp"
 #include "MapSegment.hpp"
 #include "Timer.hpp"
+#include "Net/ReplicationManager.hpp"
 
 class StringId;
 class Renderer;
@@ -234,6 +235,7 @@ public:
 
     float currentAmbientBrightness = 0.85;
     int currentDifficulty = 1;
+    ReplicationManager replicationManager;
 
 protected:
     virtual void ReceiveEvent(const IEntityEvent& ev) { }

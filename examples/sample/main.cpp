@@ -3,6 +3,7 @@
 #include "Engine.hpp"
 #include "InputService.hpp"
 #include "PlayerEntity.hpp"
+#include "Net/NetworkPhysics.hpp"
 #include "Scene/IGame.hpp"
 #include "Scene/Scene.hpp"
 #include "Tools/Console.hpp"
@@ -30,6 +31,8 @@ struct BreakoutGame : IGame
         if (scene->MapSegmentName() != "empty-map"_sid)
         {
             scene->AddService<InputService>();
+            scene->AddService<NetworkPhysics>(GetEngine()->GetNetworkManger()->IsServer());
+
             scene->GetEngine()->GetConsole()->Execute("light 0");
         }
     }
