@@ -7,6 +7,7 @@
 #include "Engine.hpp"
 #include "Components/RigidBodyComponent.hpp"
 #include "Memory/Util.hpp"
+#include "Net/NetworkPhysics.hpp"
 #include "Renderer/Renderer.hpp"
 #include "Tools/Console.hpp"
 
@@ -332,7 +333,7 @@ void InputService::HandleInput()
                 });
             }
 
-            // TODO update prediction
+            scene->GetService<NetworkPhysics>()->UpdateClientPrediction(self->net);
         }
     }
     else

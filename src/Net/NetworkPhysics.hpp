@@ -10,6 +10,8 @@ public:
         
     }
 
+    void UpdateClientPrediction(NetComponent* self);
+
 private:
     void ReceiveEvent(const IEntityEvent& ev) override;
     void ServerFixedUpdate();

@@ -4,6 +4,7 @@
 #include "../../examples/sample/InputService.hpp"
 #include "Components/NetComponent.hpp"
 #include "Scene/Scene.hpp"
+#include "Components/RigidBodyComponent.hpp"
 
 void NetworkPhysics::ReceiveEvent(const IEntityEvent& ev)
 {
@@ -70,26 +71,30 @@ void NetworkPhysics::ClientFixedUpdate()
 
 void NetworkPhysics::UpdateClientPrediction(NetComponent* self)
 {
+    auto selfRb = self->owner->GetComponent<RigidBodyComponent>();
+
     // Update position based on prediction
     self->owner->SetCenter(self->positionAtStartOfCommand);
 
     // Lock other players
     for (auto player : scene->replicationManager.components)
     {
-        if (player != self)
+        auto rb = player->owner->GetComponent<RigidBodyComponent>();
+
+        if (player != self) 
         {
-            player->rigidBody->body->SetLinearVelocity(b2Vec2(0, 0));
+             rb->body->SetLinearVelocity(b2Vec2(0, 0));
         }
     }
 
     // Update client side prediction
-    for (auto& command : self->net->commands)
+    for (auto& command : self->commands)
     {
-        if ((int)command.id > (int)self->net->lastServedExecuted)
+        if ((int)command.id > (int)self->lastServedExecuted)
         {
             for (int i = 0; i < (int)command.fixedUpdateCount; ++i)
             {
-                self->SetMoveDirection(GetDirectionFromKeyBits(command.keys) * 300);
+                selfRb->SetVelocity(GetDirectionFromKeyBits(command.keys) * 300);
                 scene->ForceFixedUpdate();
             }
         }
