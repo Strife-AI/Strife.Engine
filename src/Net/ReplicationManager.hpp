@@ -8,6 +8,8 @@
 #include "Math/Vector2.hpp"
 #include "Scene/Entity.hpp"
 
+class NetworkManager;
+
 namespace SLNet {
     class BitStream;
 }
@@ -18,6 +20,13 @@ struct ReadWriteBitStream;
 class ReplicationManager
 {
 public:
+    ReplicationManager(Scene* scene, bool isServer)
+        : _isServer(isServer),
+        _scene(scene)
+    {
+        
+    }
+
     void AddNetComponent(NetComponent* component)
     {
         if (_isServer)
@@ -34,7 +43,10 @@ public:
 
     void UpdateClient(SLNet::BitStream& stream);
 
+    void DoClientUpdate(float deltaTime, NetworkManager* networkManager);
+
     std::unordered_set<NetComponent*> components;
+    EntityReference<Entity> localPlayer;
 
 private:
     void ProcessSpawnEntity(ReadWriteBitStream& stream);
@@ -45,4 +57,5 @@ private:
     int _nextNetId = 0;
     bool _isServer; // TODO
     Scene* _scene;  // TODO
+    float _sendUpdateTimer = 0;
 };

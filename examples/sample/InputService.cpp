@@ -82,6 +82,9 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 
         self->net->netId = joinedServerEvent->selfId;
         self->net->isClientPlayer = true;
+
+        scene->replicationManager.localPlayer = self;
+
         scene->GetCameraFollower()->FollowEntity(self);
         scene->GetCameraFollower()->CenterOn(self->Center());
         activePlayer = self;
@@ -211,13 +214,6 @@ void InputService::OnAdded()
             {
                 self->net->lastServerSequenceNumber = lastServerSequence;
                 self->net->lastServedExecuted = lastExecuted;
-
-                //while (self->commands.size() > 0 && self->commands.front().id <= lastExecuted)
-                //{
-                //    self->commands.pop_front();
-                //}
-
-                //if (self->netId == id) continue;
             }
 
             for(int i = 0; i < totalPlayerUpdates; ++i)
@@ -239,8 +235,6 @@ void InputService::OnAdded()
                 }
                 else if(player != self)
                 {
-                    //player->SetCenter(position);
-                    
                     PlayerSnapshot snapshot;
                     snapshot.commandId = lastExecuted;
                     snapshot.position = position;
@@ -258,8 +252,6 @@ void InputService::OnAdded()
 
 void InputService::HandleInput()
 {
-    sendUpdateTimer -= scene->deltaTime;
-    
     auto net = scene->GetEngine()->GetNetworkManger();
     auto peer = net->GetPeerInterface();
 
@@ -291,54 +283,9 @@ void InputService::HandleInput()
                 self->net->commands.Enqueue(command);
             }
 
-            // Time to send new update to server with missing commands
-            if (sendUpdateTimer <= 0)
-            {
-                sendUpdateTimer = 1.0 / 30;
-                std::vector<PlayerCommand> missingCommands;
-
-                while (!self->net->commands.IsEmpty() && self->net->commands.Peek().id < self->net->lastServedExecuted)
-                {
-                    self->net->commands.Dequeue();
-                }
-
-                for(auto& command : self->net->commands)
-                {
-                    if (command.id > self->net->lastServerSequenceNumber)
-                    {
-                        missingCommands.push_back(command);
-                    }
-                }
-
-                if(missingCommands.size() > 60)
-                {
-                    missingCommands.resize(60);
-                }
-
-                net->SendPacketToServer([=](SLNet::BitStream& message)
-                {
-                    message.Write(PacketType::UpdateRequest);
-                    message.Write((unsigned char)missingCommands.size());
-
-                    if (missingCommands.size() > 0)
-                    {
-                        message.Write((unsigned int)missingCommands[0].id);
-                        
-                        for (int i = 0; i < missingCommands.size(); ++i)
-                        {
-                            message.Write(missingCommands[i].keys);
-                            message.Write(missingCommands[i].fixedUpdateCount);
-                        }
-                    }
-                });
-            }
-
             scene->GetService<NetworkPhysics>()->UpdateClientPrediction(self->net);
+            scene->replicationManager.DoClientUpdate(scene->deltaTime, net);
         }
-    }
-    else
-    {
-        
     }
 }
 
