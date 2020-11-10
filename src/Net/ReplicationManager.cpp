@@ -100,6 +100,41 @@ struct EntitySnapshotMessage
     EntityUpdateMessage entities[50];
 };
 
+struct PlayerCommandMessage
+{
+    void ReadWrite(ReadWriteBitStream& stream)
+    {
+        stream.Add(keys).Add(fixedUpdateCount);
+    }
+
+    uint8 keys;
+    uint8 fixedUpdateCount;
+};
+
+struct ClientUpdateRequestMessage
+{
+    void ReadWrite(ReadWriteBitStream& stream)
+    {
+        stream.Add(commandCount);
+
+        if (commandCount > 0)
+        {
+            stream.Add(firstCommandId);
+
+            for (int i = 0; i < commandCount; ++i)
+            {
+                commands[i].ReadWrite(stream);
+            }
+        }
+    }
+
+    static constexpr int MaxCommands = 60;
+
+    uint8 commandCount;
+    uint32 firstCommandId;
+    PlayerCommandMessage commands[MaxCommands];
+};
+
 void ReplicationManager::UpdateClient(SLNet::BitStream& stream)
 {
     uint8 messageType;
@@ -155,18 +190,23 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
         networkManager->SendPacketToServer([=](SLNet::BitStream& message)
         {
             message.Write(PacketType::UpdateRequest);
-            message.Write((unsigned char)missingCommands.size());
 
-            if (missingCommands.size() > 0)
+            ClientUpdateRequestMessage request;
+            request.commandCount = missingCommands.size();
+
+            if (request.commandCount > 0)
             {
-                message.Write((unsigned int)missingCommands[0].id);
+                request.firstCommandId = missingCommands[0].id;
 
-                for (int i = 0; i < missingCommands.size(); ++i)
+                for(int i = 0; i < request.commandCount; ++i)
                 {
-                    message.Write(missingCommands[i].keys);
-                    message.Write(missingCommands[i].fixedUpdateCount);
+                    request.commands[i].keys = missingCommands[i].keys;
+                    request.commands[i].fixedUpdateCount = missingCommands[i].fixedUpdateCount;
                 }
             }
+
+            ReadWriteBitStream stream(message, false);
+            request.ReadWrite(stream);
         });
     }
 }
