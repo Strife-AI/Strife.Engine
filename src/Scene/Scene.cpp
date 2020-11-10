@@ -67,7 +67,8 @@ Scene::Scene(Engine* engine, StringId mapSegmentName)
     _freeEntityHeaders(_entityHeaders.begin(), MaxEntities),
     _world(std::make_unique<b2World>(b2Vec2(0, 0))),
     _collisionManager(_world.get()),
-    _freeSegments(_segmentPool, MaxLoadedSegments)
+    _freeSegments(_segmentPool, MaxLoadedSegments),
+    replicationManager(this, engine->GetNetworkManger() != nullptr ? engine->GetNetworkManger()->IsServer() : false)
 {
     for (int i = 0; i < MaxEntities; ++i)
     {

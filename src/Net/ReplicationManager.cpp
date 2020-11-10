@@ -2,6 +2,8 @@
 
 #include <slikenet/BitStream.h>
 
+
+#include "NetworkManager.hpp"
 #include "Scene/Scene.hpp"
 
 enum class MessageType : uint8
@@ -117,6 +119,55 @@ void ReplicationManager::UpdateClient(SLNet::BitStream& stream)
 
     default:
         break;
+    }
+}
+
+void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* networkManager)
+{
+    _sendUpdateTimer -= _scene->deltaTime;
+
+    // Time to send new update to server with missing commands
+    if (_sendUpdateTimer <= 0)
+    {
+        _sendUpdateTimer = 1.0 / 30;
+        std::vector<PlayerCommand> missingCommands;
+
+        auto self = localPlayer.GetValueOrNull()->GetComponent<NetComponent>();
+
+        while (!self->commands.IsEmpty() && self->commands.Peek().id < self->lastServedExecuted)
+        {
+            self->commands.Dequeue();
+        }
+
+        for (auto& command : self->commands)
+        {
+            if (command.id > self->lastServerSequenceNumber)
+            {
+                missingCommands.push_back(command);
+            }
+        }
+
+        if (missingCommands.size() > 60)
+        {
+            missingCommands.resize(60);
+        }
+
+        networkManager->SendPacketToServer([=](SLNet::BitStream& message)
+        {
+            message.Write(PacketType::UpdateRequest);
+            message.Write((unsigned char)missingCommands.size());
+
+            if (missingCommands.size() > 0)
+            {
+                message.Write((unsigned int)missingCommands[0].id);
+
+                for (int i = 0; i < missingCommands.size(); ++i)
+                {
+                    message.Write(missingCommands[i].keys);
+                    message.Write(missingCommands[i].fixedUpdateCount);
+                }
+            }
+        });
     }
 }
 
