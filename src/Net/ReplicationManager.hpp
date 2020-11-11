@@ -17,6 +17,23 @@ namespace SLNet {
 enum class MessageType : uint8;
 struct ReadWriteBitStream;
 
+struct WorldState
+{
+    std::unordered_set<int> entities;
+};
+
+struct WorldDiff
+{
+    WorldDiff(const WorldState& before, const WorldState& after);
+
+    std::vector<int> addedEntities;
+};
+
+struct ClientState
+{
+    WorldState currentState;
+};
+
 class ReplicationManager
 {
 public:
@@ -46,7 +63,9 @@ public:
 
     void DoClientUpdate(float deltaTime, NetworkManager* networkManager);
 
-    void ProcessMessageFromClient(SLNet::BitStream& message, SLNet::BitStream& response, NetComponent* client);
+    void ProcessMessageFromClient(SLNet::BitStream& message, SLNet::BitStream& response, NetComponent* client, int clientId);
+
+    WorldState GetCurrentWorldState();
 
     std::unordered_set<NetComponent*> components;
     EntityReference<Entity> localPlayer;
@@ -56,9 +75,10 @@ private:
     void ProcessEntitySnapshotMessage(ReadWriteBitStream& stream);
 
     std::unordered_map<int, NetComponent*> _componentsByNetId;
+    std::unordered_map<int, ClientState> _clientStateByClientId;
 
     int _nextNetId = 0;
-    bool _isServer; // TODO
-    Scene* _scene;  // TODO
+    bool _isServer;
+    Scene* _scene;
     float _sendUpdateTimer = 0;
 };
