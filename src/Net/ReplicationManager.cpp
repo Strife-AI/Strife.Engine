@@ -237,6 +237,33 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
             }
         }
     }
+
+    // Send the current state of the world
+    response.Write(PacketType::UpdateResponse);
+
+    response.Write(client->lastServerSequenceNumber);
+
+    response.Write(client->lastServedExecuted);
+    response.Write((int)components.size());
+
+    for (auto p : components)
+    {
+        response.Write(p->netId);
+
+        Vector2 position;
+
+        if (p == client)
+        {
+            position = client->positionAtStartOfCommand;
+        }
+        else
+        {
+            position = p->owner->Center(); //p->PositionAtFixedUpdateId(clientCommandStartTime, currentFixedUpdateId);
+        }
+
+        response.Write(position.x);
+        response.Write(position.y);
+    }
 }
 
 void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
