@@ -256,6 +256,8 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
 
     ReadWriteBitStream responseStream(response, false);
 
+    response.Write(PacketType::UpdateResponse);
+
     // Send new entities that don't exist on the client
     {
         auto currentState = GetCurrentWorldState();
@@ -264,9 +266,12 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
         WorldDiff diff(clientState.currentState, currentState);
 
         for(auto addedEntity : diff.addedEntities)
-        {
+        {   
             auto net = _componentsByNetId[addedEntity];
             auto entity = net->owner;
+
+            Log("Send entity id #%d (%s)\n", addedEntity, typeid(*entity).name());
+
             SpawnEntityMessage spawnMessage;
             spawnMessage.position = entity->Center();
             spawnMessage.netId = net->netId;
@@ -282,7 +287,6 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
 
     // Send the current state of the world
     {
-        response.Write(PacketType::UpdateResponse);
         response.Write(MessageType::EntitySnapshot);
 
         EntitySnapshotMessage responseMessage;
