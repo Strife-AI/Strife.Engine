@@ -44,6 +44,9 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
         {
             Sleep(2000);
             scene->GetEngine()->GetConsole()->Execute("connect 127.0.0.1");
+
+            //scene->GetCameraFollower()->FollowMouse();
+            //scene->GetCameraFollower()->CenterOn({ 800, 800});
         }
 
         if(net->IsServer())
@@ -84,35 +87,18 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto joinedServerEvent = ev.Is<JoinedServerEvent>())
     {
-        auto self = static_cast<PlayerEntity*>(scene->CreateEntity({
-            EntityProperty::EntityType<PlayerEntity>(),
-            { "position", { 1819.0f, 2023.0f } },
-            { "dimensions", { 32, 32 } },
-        }));
-
-        self->net->netId = joinedServerEvent->selfId;
-        self->net->isClientPlayer = true;
-
-        scene->replicationManager.localPlayer = self;
-
-        scene->GetCameraFollower()->FollowEntity(self);
-        scene->GetCameraFollower()->CenterOn(self->Center());
-        activePlayer = self;
-        players.push_back(self);
+        scene->replicationManager.localNetId = 1;// joinedServerEvent->selfId;
     }
     else if(auto connectedEvent = ev.Is<PlayerConnectedEvent>())
     {
-        auto player = static_cast<PlayerEntity*>(scene->CreateEntity({
-            EntityProperty::EntityType<PlayerEntity>(),
-            { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : Vector2( 1819.0f, 2023.0f) },
-            { "dimensions", { 32, 32 } },
-            }));
-
-        player->net->netId = connectedEvent->id;
-        players.push_back(player);
-
         if (net->IsServer())
         {
+            auto player = static_cast<PlayerEntity*>(scene->CreateEntity({
+              EntityProperty::EntityType<PlayerEntity>(),
+              { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : Vector2(1819.0f, 2023.0f) },
+              { "dimensions", { 32, 32 } },
+            }));
+
             scene->GetCameraFollower()->FollowEntity(player);
             scene->GetCameraFollower()->CenterOn(player->Center());
         }
@@ -141,11 +127,13 @@ void InputService::OnAdded()
 
         net->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
         {
-            auto player = GetPlayerByNetId(clientId);
-            if (player != nullptr)
-            {
-                scene->replicationManager.ProcessMessageFromClient(message, response, player->net, clientId);
-            }
+            auto player = GetPlayerByNetId(1);
+
+            auto netComponent = player != nullptr
+                ? player->net
+                : nullptr;
+
+            scene->replicationManager.ProcessMessageFromClient(message, response, netComponent, clientId);
         };
     }
     else
@@ -191,8 +179,9 @@ void InputService::HandleInput()
             }
 
             scene->GetService<NetworkPhysics>()->UpdateClientPrediction(self->net);
-            scene->replicationManager.DoClientUpdate(scene->deltaTime, net);
         }
+
+        scene->replicationManager.DoClientUpdate(scene->deltaTime, net);
     }
 }
 

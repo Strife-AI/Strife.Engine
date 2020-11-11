@@ -1,5 +1,7 @@
 #include "PlayerEntity.hpp"
 
+
+#include "InputService.hpp"
 #include "Components/RigidBodyComponent.hpp"
 #include "Renderer/Renderer.hpp"
 
@@ -10,6 +12,23 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
     net = AddComponent<NetComponent>();
 
     scene->SendEvent(PlayerAddedToGame(this));
+
+    scene->GetService<InputService>()->players.push_back(this);
+}
+
+void PlayerEntity::OnEvent(const IEntityEvent& ev)
+{
+    if(ev.Is<SpawnedOnClientEvent>())
+    {
+        //if (net->netId == scene->replicationManager.localNetId)
+        {
+            scene->GetCameraFollower()->FollowEntity(this);
+            scene->GetCameraFollower()->CenterOn(Center());
+            scene->GetService<InputService>()->activePlayer = this;
+            net->isClientPlayer = true;
+            scene->replicationManager.localPlayer = this;
+        }
+    }
 }
 
 void PlayerEntity::OnDestroyed()

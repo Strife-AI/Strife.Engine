@@ -46,7 +46,7 @@ public:
 
     void AddNetComponent(NetComponent* component)
     {
-        //if (_isServer)
+        if (_isServer)
         {
             component->netId = _nextNetId++;
             _componentsByNetId[component->netId] = component;
@@ -69,6 +69,7 @@ public:
 
     std::unordered_set<NetComponent*> components;
     EntityReference<Entity> localPlayer;
+    int localNetId = -1;
 
 private:
     void ProcessSpawnEntity(ReadWriteBitStream& stream);
