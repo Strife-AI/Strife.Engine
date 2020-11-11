@@ -135,32 +135,6 @@ void InputService::OnAdded()
             if (player != nullptr)
             {
                 scene->replicationManager.ProcessMessageFromClient(message, response, player->net);
-
-                response.Write(PacketType::UpdateResponse);
-
-                response.Write(player->net->lastServerSequenceNumber);
-
-                response.Write(player->net->lastServedExecuted);
-                response.Write((int)players.size());
-
-                for (auto p : players)
-                {
-                    response.Write(p->net->netId);
-
-                    Vector2 position;
-                    
-                    if(p == player)
-                    {
-                        position = p->net->positionAtStartOfCommand;
-                    }
-                    else
-                    {
-                        position = p->Center(); //p->PositionAtFixedUpdateId(clientCommandStartTime, currentFixedUpdateId);
-                    }
-
-                    response.Write(position.x);
-                    response.Write(position.y);
-                }
             }
         };
     }

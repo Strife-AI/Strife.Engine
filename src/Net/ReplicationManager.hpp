@@ -33,6 +33,7 @@ public:
         {
             component->netId = _nextNetId++;
             _componentsByNetId[component->netId] = component;
+            components.insert(component);
         }
     }
 
