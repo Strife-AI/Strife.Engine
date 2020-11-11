@@ -211,36 +211,29 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
 
 void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLNet::BitStream& response, NetComponent* client)
 {
-    unsigned char commandsInPacket = 0;
-    message.Read(commandsInPacket);
+    ClientUpdateRequestMessage request;
+    ReadWriteBitStream readMessage(message, true);
+    request.ReadWrite(readMessage);
 
-    if (commandsInPacket > 0)
+    if (client->lastServerSequenceNumber + 1 <= request.firstCommandId)
     {
-        unsigned int firstCommandId = 0;
-        message.Read(firstCommandId);
-
-        if (client->lastServerSequenceNumber + 1 <= firstCommandId)
+        for (int i = 0; i < request.commandCount; ++i)
         {
-            auto currentId = firstCommandId;
-            for (int i = 0; i < commandsInPacket; ++i)
+            unsigned int currentId = request.firstCommandId + i;
+            if (currentId > client->lastServerSequenceNumber)
             {
-                if (currentId > client->lastServerSequenceNumber)
+                PlayerCommand newCommand;
+                newCommand.id = currentId;
+                newCommand.keys = request.commands[i].keys;
+                newCommand.fixedUpdateCount = request.commands[i].fixedUpdateCount;
+                client->lastServerSequenceNumber = currentId;
+
+                if (client->commands.IsFull())
                 {
-                    PlayerCommand newCommand;
-                    newCommand.id = currentId;
-                    message.Read(newCommand.keys);
-                    message.Read(newCommand.fixedUpdateCount);
-                    client->lastServerSequenceNumber = currentId;
-
-                    if(client->commands.IsFull())
-                    {
-                        client->commands.Dequeue();
-                    }
-
-                    client->commands.Enqueue(newCommand);
+                    client->commands.Dequeue();
                 }
 
-                ++currentId;
+                client->commands.Enqueue(newCommand);
             }
         }
     }
