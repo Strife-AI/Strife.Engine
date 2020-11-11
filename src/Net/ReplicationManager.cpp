@@ -57,12 +57,14 @@ struct SpawnEntityMessage
         stream
             .Add(netId)
             .Add(type.key)
-            .Add(position);
+            .Add(position)
+            .Add(dimensions);
     }
 
     uint16 netId;
     StringId type;
     Vector2 position;
+    Vector2 dimensions;
 };
 
 struct EntityUpdateMessage
@@ -134,6 +136,17 @@ struct ClientUpdateRequestMessage
     uint32 firstCommandId;
     PlayerCommandMessage commands[MaxCommands];
 };
+
+WorldDiff::WorldDiff(const WorldState& before, const WorldState& after)
+{
+    for(auto& currentEntity : after.entities)
+    {
+        if(before.entities.count(currentEntity) == 0)
+        {
+            addedEntities.push_back(currentEntity);
+        }
+    }
+}
 
 void ReplicationManager::UpdateClient(SLNet::BitStream& stream)
 {
@@ -212,7 +225,7 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
     }
 }
 
-void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLNet::BitStream& response, NetComponent* client)
+void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLNet::BitStream& response, NetComponent* client, int clientId)
 {
     ClientUpdateRequestMessage request;
     ReadWriteBitStream readMessage(message, true);
@@ -241,34 +254,72 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
         }
     }
 
-    // Send the current state of the world
-    response.Write(PacketType::UpdateResponse);
-    response.Write(MessageType::EntitySnapshot);
+    ReadWriteBitStream responseStream(response, false);
 
-    EntitySnapshotMessage responseMessage;
-    responseMessage.lastServerSequence = client->lastServerSequenceNumber;
-    responseMessage.lastServerExecuted = client->lastServedExecuted;
-    responseMessage.totalEntities = components.size();
-
-    int i = 0;
-    for (auto p : components)
+    // Send new entities that don't exist on the client
     {
-        responseMessage.entities[i].netId = p->netId;
+        auto currentState = GetCurrentWorldState();
+        auto& clientState = _clientStateByClientId[clientId];
 
-        if (p == client)
+        WorldDiff diff(clientState.currentState, currentState);
+
+        for(auto addedEntity : diff.addedEntities)
         {
-            responseMessage.entities[i].position = client->positionAtStartOfCommand;
-        }
-        else
-        {
-            responseMessage.entities[i].position = p->owner->Center(); //p->PositionAtFixedUpdateId(clientCommandStartTime, currentFixedUpdateId);
+            auto net = _componentsByNetId[addedEntity];
+            auto entity = net->owner;
+            SpawnEntityMessage spawnMessage;
+            spawnMessage.position = entity->Center();
+            spawnMessage.netId = net->netId;
+            spawnMessage.type = entity->type;
+            spawnMessage.dimensions = entity->Dimensions();
+
+            response.Write(MessageType::SpawnEntity);
+            spawnMessage.ReadWrite(responseStream);
         }
 
-        ++i;
+        clientState.currentState = currentState;
     }
 
-    ReadWriteBitStream responseStream(response, false);
-    responseMessage.ReadWrite(responseStream);
+    // Send the current state of the world
+    {
+        response.Write(PacketType::UpdateResponse);
+        response.Write(MessageType::EntitySnapshot);
+
+        EntitySnapshotMessage responseMessage;
+        responseMessage.lastServerSequence = client->lastServerSequenceNumber;
+        responseMessage.lastServerExecuted = client->lastServedExecuted;
+        responseMessage.totalEntities = components.size();
+
+        int i = 0;
+        for (auto p : components)
+        {
+            responseMessage.entities[i].netId = p->netId;
+
+            if (p == client)
+            {
+                responseMessage.entities[i].position = client->positionAtStartOfCommand;
+            }
+            else
+            {
+                responseMessage.entities[i].position = p->owner->Center(); //p->PositionAtFixedUpdateId(clientCommandStartTime, currentFixedUpdateId);
+            }
+
+            ++i;
+        }
+
+        responseMessage.ReadWrite(responseStream);
+    }
+}
+
+WorldState ReplicationManager::GetCurrentWorldState()
+{
+    WorldState state;
+    for(auto component : components)
+    {
+        state.entities.insert(component->netId);
+    }
+
+    return state;
 }
 
 void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
@@ -280,6 +331,7 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
     {
         { "type", message.type },
         { "position", message.position },
+        { "dimensions", message.dimensions }
     };
 
     auto entity = _scene->CreateEntity(properties);

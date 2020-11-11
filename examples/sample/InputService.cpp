@@ -134,7 +134,7 @@ void InputService::OnAdded()
             auto player = GetPlayerByNetId(clientId);
             if (player != nullptr)
             {
-                scene->replicationManager.ProcessMessageFromClient(message, response, player->net);
+                scene->replicationManager.ProcessMessageFromClient(message, response, player->net, clientId);
             }
         };
     }
