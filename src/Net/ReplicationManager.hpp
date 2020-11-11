@@ -45,6 +45,8 @@ public:
 
     void DoClientUpdate(float deltaTime, NetworkManager* networkManager);
 
+    void ProcessMessageFromClient(SLNet::BitStream& message, SLNet::BitStream& response, NetComponent* client);
+
     std::unordered_set<NetComponent*> components;
     EntityReference<Entity> localPlayer;
 

@@ -134,39 +134,7 @@ void InputService::OnAdded()
             auto player = GetPlayerByNetId(clientId);
             if (player != nullptr)
             {
-                unsigned char commandsInPacket = 0;
-                message.Read(commandsInPacket);
-
-                if(commandsInPacket > 0)
-                {
-                    unsigned int firstCommandId = 0;
-                    message.Read(firstCommandId);
-
-                    if (player->net->lastServerSequenceNumber + 1 <= firstCommandId)
-                    {
-                        auto currentId = firstCommandId;
-                        for (int i = 0; i < commandsInPacket; ++i)
-                        {
-                            if (currentId > player->net->lastServerSequenceNumber)
-                            {
-                                PlayerCommand newCommand;
-                                newCommand.id = currentId;
-                                message.Read(newCommand.keys);
-                                message.Read(newCommand.fixedUpdateCount);
-                                player->net->lastServerSequenceNumber = currentId;
-
-                                if (player->net->commands.IsFull())
-                                {
-                                    player->net->commands.Dequeue();
-                                }
-
-                                player->net->commands.Enqueue(newCommand);
-                            }
-
-                            ++currentId;
-                        }
-                    }
-                }
+                scene->replicationManager.ProcessMessageFromClient(message, response, player->net);
 
                 response.Write(PacketType::UpdateResponse);
 
