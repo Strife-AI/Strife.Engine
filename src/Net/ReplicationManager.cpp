@@ -72,7 +72,7 @@ struct EntityUpdateMessage
         stream.Add(netId).Add(position);
     }
 
-    uint16 netId;
+    uint32 netId;   // TODO: make uint16
     Vector2 position;
 };
 
@@ -82,7 +82,7 @@ struct EntitySnapshotMessage
     {
         stream
             .Add(lastServerSequence)
-            .Add(lastExecuted)
+            .Add(lastServerExecuted)
             .Add(totalEntities);
 
         for(int i = 0; i < totalEntities; ++i)
@@ -94,9 +94,9 @@ struct EntitySnapshotMessage
     static constexpr int MaxEntities = 50;
 
     int lastServerSequence;
-    int lastExecuted;
+    int lastServerExecuted;
 
-    uint8 totalEntities;
+    uint32 totalEntities;   // TODO: make uint8
     EntityUpdateMessage entities[50];
 };
 
@@ -241,29 +241,30 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
     // Send the current state of the world
     response.Write(PacketType::UpdateResponse);
 
-    response.Write(client->lastServerSequenceNumber);
+    EntitySnapshotMessage responseMessage;
+    responseMessage.lastServerSequence = client->lastServerSequenceNumber;
+    responseMessage.lastServerExecuted = client->lastServedExecuted;
+    responseMessage.totalEntities = components.size();
 
-    response.Write(client->lastServedExecuted);
-    response.Write((int)components.size());
-
+    int i = 0;
     for (auto p : components)
     {
-        response.Write(p->netId);
-
-        Vector2 position;
+        responseMessage.entities[i].netId = p->netId;
 
         if (p == client)
         {
-            position = client->positionAtStartOfCommand;
+            responseMessage.entities[i].position = client->positionAtStartOfCommand;
         }
         else
         {
-            position = p->owner->Center(); //p->PositionAtFixedUpdateId(clientCommandStartTime, currentFixedUpdateId);
+            responseMessage.entities[i].position = p->owner->Center(); //p->PositionAtFixedUpdateId(clientCommandStartTime, currentFixedUpdateId);
         }
 
-        response.Write(position.x);
-        response.Write(position.y);
+        ++i;
     }
+
+    ReadWriteBitStream responseStream(response, false);
+    responseMessage.ReadWrite(responseStream);
 }
 
 void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
