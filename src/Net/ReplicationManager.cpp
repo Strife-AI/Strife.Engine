@@ -189,7 +189,7 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
                 }
 
                 request.commands[commandCount].keys = command.keys;
-                request.commands[commandCount].fixedUpdateCount = command.fixedUpdateCount;
+                request.commands[commandCount].fixedUpdateCount = command.fixedUpdateCount; // TODO: clamp
 
                 if(++commandCount == ClientUpdateRequestMessage::MaxCommands)
                 {
@@ -206,6 +206,43 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
             ReadWriteBitStream stream(message, false);
             request.ReadWrite(stream);
         });
+    }
+}
+
+void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLNet::BitStream& response, NetComponent* client)
+{
+    unsigned char commandsInPacket = 0;
+    message.Read(commandsInPacket);
+
+    if (commandsInPacket > 0)
+    {
+        unsigned int firstCommandId = 0;
+        message.Read(firstCommandId);
+
+        if (client->lastServerSequenceNumber + 1 <= firstCommandId)
+        {
+            auto currentId = firstCommandId;
+            for (int i = 0; i < commandsInPacket; ++i)
+            {
+                if (currentId > client->lastServerSequenceNumber)
+                {
+                    PlayerCommand newCommand;
+                    newCommand.id = currentId;
+                    message.Read(newCommand.keys);
+                    message.Read(newCommand.fixedUpdateCount);
+                    client->lastServerSequenceNumber = currentId;
+
+                    if(client->commands.IsFull())
+                    {
+                        client->commands.Dequeue();
+                    }
+
+                    client->commands.Enqueue(newCommand);
+                }
+
+                ++currentId;
+            }
+        }
     }
 }
 
