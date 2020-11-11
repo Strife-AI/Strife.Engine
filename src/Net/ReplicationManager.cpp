@@ -165,46 +165,44 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
     if (_sendUpdateTimer <= 0)
     {
         _sendUpdateTimer = 1.0 / 30;
-        std::vector<PlayerCommand> missingCommands;
 
         auto self = localPlayer.GetValueOrNull()->GetComponent<NetComponent>();
 
-        while (!self->commands.IsEmpty() && self->commands.Peek().id < self->lastServedExecuted)
+        // Garbage collect old commands that the server already has
         {
-            self->commands.Dequeue();
+            while (!self->commands.IsEmpty() && self->commands.Peek().id < self->lastServedExecuted)
+            {
+                self->commands.Dequeue();
+            }
         }
+
+        ClientUpdateRequestMessage request;
+        int commandCount = 0;
 
         for (auto& command : self->commands)
         {
             if (command.id > self->lastServerSequenceNumber)
             {
-                missingCommands.push_back(command);
-            }
-        }
-
-        if (missingCommands.size() > 60)
-        {
-            missingCommands.resize(60);
-        }
-
-        networkManager->SendPacketToServer([=](SLNet::BitStream& message)
-        {
-            message.Write(PacketType::UpdateRequest);
-
-            ClientUpdateRequestMessage request;
-            request.commandCount = missingCommands.size();
-
-            if (request.commandCount > 0)
-            {
-                request.firstCommandId = missingCommands[0].id;
-
-                for(int i = 0; i < request.commandCount; ++i)
+                if(commandCount == 0)
                 {
-                    request.commands[i].keys = missingCommands[i].keys;
-                    request.commands[i].fixedUpdateCount = missingCommands[i].fixedUpdateCount;
+                    request.firstCommandId = command.id;
+                }
+
+                request.commands[commandCount].keys = command.keys;
+                request.commands[commandCount].fixedUpdateCount = command.fixedUpdateCount;
+
+                if(++commandCount == ClientUpdateRequestMessage::MaxCommands)
+                {
+                    break;
                 }
             }
+        }
 
+        request.commandCount = commandCount;
+
+        networkManager->SendPacketToServer([&](SLNet::BitStream& message)
+        {
+            message.Write(PacketType::UpdateRequest);
             ReadWriteBitStream stream(message, false);
             request.ReadWrite(stream);
         });
