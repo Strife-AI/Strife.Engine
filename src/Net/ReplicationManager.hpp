@@ -29,7 +29,7 @@ public:
 
     void AddNetComponent(NetComponent* component)
     {
-        if (_isServer)
+        //if (_isServer)
         {
             component->netId = _nextNetId++;
             _componentsByNetId[component->netId] = component;

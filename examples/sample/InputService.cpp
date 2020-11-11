@@ -142,52 +142,7 @@ void InputService::OnAdded()
     {
         net->onUpdateResponse = [=](SLNet::BitStream& message)
         {
-            int lastServerSequence;
-            message.Read(lastServerSequence);
-
-            int lastExecuted;
-            message.Read(lastExecuted);
-
-            int totalPlayerUpdates = 0;
-            message.Read(totalPlayerUpdates);
-
-            PlayerEntity* self;
-            if (activePlayer.TryGetValue(self))
-            {
-                self->net->lastServerSequenceNumber = lastServerSequence;
-                self->net->lastServedExecuted = lastExecuted;
-            }
-
-            for(int i = 0; i < totalPlayerUpdates; ++i)
-            {
-                int id;
-                message.Read(id);
-
-                Vector2 position;
-                message.Read(position.x);
-                message.Read(position.y);
-
-                auto player = GetPlayerByNetId(id);
-
-                auto lastCommandExecuted = self->net->GetCommandById(lastExecuted);
-
-                if(player == nullptr)
-                {
-                    scene->SendEvent(PlayerConnectedEvent(id, position));
-                }
-                else if(player != self)
-                {
-                    PlayerSnapshot snapshot;
-                    snapshot.commandId = lastExecuted;
-                    snapshot.position = position;
-                    snapshot.time = lastCommandExecuted->timeRecorded;
-                    player->net->AddSnapshot(snapshot);
-                }
-                else
-                {
-                    self->net->positionAtStartOfCommand = position;
-                }
-            }
+            scene->replicationManager.UpdateClient(message);
         };
     }
 }

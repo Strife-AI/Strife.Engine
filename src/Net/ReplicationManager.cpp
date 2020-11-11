@@ -137,23 +137,26 @@ struct ClientUpdateRequestMessage
 
 void ReplicationManager::UpdateClient(SLNet::BitStream& stream)
 {
-    uint8 messageType;
-    stream.Read(messageType);
-
     ReadWriteBitStream rw(stream, true);
 
-    switch((MessageType)messageType)
+    while (stream.GetNumberOfUnreadBits() >= 8)
     {
-    case MessageType::SpawnEntity:
-        ProcessSpawnEntity(rw);
-        break;
+        uint8 messageType;
+        stream.Read(messageType);
 
-    case MessageType::EntitySnapshot:
-        ProcessEntitySnapshotMessage(rw);
-        break;
+        switch ((MessageType)messageType)
+        {
+        case MessageType::SpawnEntity:
+            ProcessSpawnEntity(rw);
+            break;
 
-    default:
-        break;
+        case MessageType::EntitySnapshot:
+            ProcessEntitySnapshotMessage(rw);
+            break;
+
+        default:
+            break;
+        }
     }
 }
 
@@ -240,6 +243,7 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
 
     // Send the current state of the world
     response.Write(PacketType::UpdateResponse);
+    response.Write(MessageType::EntitySnapshot);
 
     EntitySnapshotMessage responseMessage;
     responseMessage.lastServerSequence = client->lastServerSequenceNumber;
@@ -287,4 +291,35 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
 {
     EntitySnapshotMessage message;
     message.ReadWrite(stream);
+
+    auto self = localPlayer.GetValueOrNull()->GetComponent<NetComponent>();
+
+    self->lastServerSequenceNumber = message.lastServerSequence;
+    self->lastServedExecuted = message.lastServerExecuted;
+
+    for (int i = 0; i < message.totalEntities; ++i)
+    {
+        auto player = _componentsByNetId.count(message.entities[i].netId) != 0
+            ? _componentsByNetId[message.entities[i].netId]
+            : nullptr;
+
+        auto lastCommandExecuted = self->GetCommandById(self->lastServedExecuted);
+
+        if (player == nullptr)
+        {
+            _scene->SendEvent(PlayerConnectedEvent(message.entities[i].netId, message.entities[i].position));
+        }
+        else if (player != self)
+        {
+            PlayerSnapshot snapshot;
+            snapshot.commandId = self->lastServedExecuted;
+            snapshot.position = message.entities[i].position;
+            snapshot.time = lastCommandExecuted->timeRecorded;
+            player->AddSnapshot(snapshot);
+        }
+        else
+        {
+            self->positionAtStartOfCommand = message.entities[i].position;
+        }
+    }
 }
