@@ -35,6 +35,7 @@ DEFINE_EVENT(PlayerRemovedFromGame)
 DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
 {
     void OnAdded(const EntityDictionary& properties) override;
+    void OnEvent(const IEntityEvent& ev) override;
     void OnDestroyed() override;
 
     void Render(Renderer* renderer) override;

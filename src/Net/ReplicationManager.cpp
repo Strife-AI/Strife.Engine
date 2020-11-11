@@ -182,46 +182,63 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
     {
         _sendUpdateTimer = 1.0 / 30;
 
-        auto self = localPlayer.GetValueOrNull()->GetComponent<NetComponent>();
-
-        // Garbage collect old commands that the server already has
+        Entity* playerEntity;
+        if (localPlayer.TryGetValue(playerEntity))
         {
-            while (!self->commands.IsEmpty() && self->commands.Peek().id < self->lastServedExecuted)
+            auto self = localPlayer.GetValueOrNull()->GetComponent<NetComponent>();
+
+            // Garbage collect old commands that the server already has
             {
-                self->commands.Dequeue();
-            }
-        }
-
-        ClientUpdateRequestMessage request;
-        int commandCount = 0;
-
-        for (auto& command : self->commands)
-        {
-            if (command.id > self->lastServerSequenceNumber)
-            {
-                if(commandCount == 0)
+                while (!self->commands.IsEmpty() && self->commands.Peek().id < self->lastServedExecuted)
                 {
-                    request.firstCommandId = command.id;
-                }
-
-                request.commands[commandCount].keys = command.keys;
-                request.commands[commandCount].fixedUpdateCount = command.fixedUpdateCount; // TODO: clamp
-
-                if(++commandCount == ClientUpdateRequestMessage::MaxCommands)
-                {
-                    break;
+                    self->commands.Dequeue();
                 }
             }
+
+            ClientUpdateRequestMessage request;
+            int commandCount = 0;
+
+            for (auto& command : self->commands)
+            {
+                if (command.id > self->lastServerSequenceNumber)
+                {
+                    if (commandCount == 0)
+                    {
+                        request.firstCommandId = command.id;
+                    }
+
+                    request.commands[commandCount].keys = command.keys;
+                    request.commands[commandCount].fixedUpdateCount = command.fixedUpdateCount; // TODO: clamp
+
+                    if (++commandCount == ClientUpdateRequestMessage::MaxCommands)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            request.commandCount = commandCount;
+
+            networkManager->SendPacketToServer([&](SLNet::BitStream& message)
+            {
+                message.Write(PacketType::UpdateRequest);
+                ReadWriteBitStream stream(message, false);
+                request.ReadWrite(stream);
+            });
         }
-
-        request.commandCount = commandCount;
-
-        networkManager->SendPacketToServer([&](SLNet::BitStream& message)
+        else
         {
-            message.Write(PacketType::UpdateRequest);
-            ReadWriteBitStream stream(message, false);
-            request.ReadWrite(stream);
-        });
+            networkManager->SendPacketToServer([&](SLNet::BitStream& message)
+            {
+                message.Write(PacketType::UpdateRequest);
+                ReadWriteBitStream stream(message, false);
+
+                ClientUpdateRequestMessage request;
+                request.commandCount = 0;
+                request.firstCommandId = 0;
+                request.ReadWrite(stream);
+            });
+        }
     }
 }
 
@@ -231,25 +248,28 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
     ReadWriteBitStream readMessage(message, true);
     request.ReadWrite(readMessage);
 
-    if (client->lastServerSequenceNumber + 1 <= request.firstCommandId)
+    if (client != nullptr)
     {
-        for (int i = 0; i < request.commandCount; ++i)
+        if (client->lastServerSequenceNumber + 1 <= request.firstCommandId)
         {
-            unsigned int currentId = request.firstCommandId + i;
-            if (currentId > client->lastServerSequenceNumber)
+            for (int i = 0; i < request.commandCount; ++i)
             {
-                PlayerCommand newCommand;
-                newCommand.id = currentId;
-                newCommand.keys = request.commands[i].keys;
-                newCommand.fixedUpdateCount = request.commands[i].fixedUpdateCount;
-                client->lastServerSequenceNumber = currentId;
-
-                if (client->commands.IsFull())
+                unsigned int currentId = request.firstCommandId + i;
+                if (currentId > client->lastServerSequenceNumber)
                 {
-                    client->commands.Dequeue();
-                }
+                    PlayerCommand newCommand;
+                    newCommand.id = currentId;
+                    newCommand.keys = request.commands[i].keys;
+                    newCommand.fixedUpdateCount = request.commands[i].fixedUpdateCount;
+                    client->lastServerSequenceNumber = currentId;
 
-                client->commands.Enqueue(newCommand);
+                    if (client->commands.IsFull())
+                    {
+                        client->commands.Dequeue();
+                    }
+
+                    client->commands.Enqueue(newCommand);
+                }
             }
         }
     }
@@ -290,8 +310,8 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
         response.Write(MessageType::EntitySnapshot);
 
         EntitySnapshotMessage responseMessage;
-        responseMessage.lastServerSequence = client->lastServerSequenceNumber;
-        responseMessage.lastServerExecuted = client->lastServedExecuted;
+        responseMessage.lastServerSequence = client != nullptr ? client->lastServerSequenceNumber : 0;
+        responseMessage.lastServerExecuted = client != nullptr ? client->lastServedExecuted : 0;
         responseMessage.totalEntities = components.size();
 
         int i = 0;
@@ -340,13 +360,27 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
 
     auto entity = _scene->CreateEntity(properties);
     auto netComponent = entity->GetComponent<NetComponent>();
-    netComponent->netId = message.netId;
+
+    if (netComponent != nullptr)
+    {
+        netComponent->netId = message.netId;
+
+        _componentsByNetId[netComponent->netId] = netComponent;
+        components.insert(netComponent);
+
+        entity->SendEvent(SpawnedOnClientEvent());
+    }
 }
 
 void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream)
 {
     EntitySnapshotMessage message;
     message.ReadWrite(stream);
+
+    if(localPlayer.GetValueOrNull() == nullptr)
+    {
+        return;
+    }
 
     auto self = localPlayer.GetValueOrNull()->GetComponent<NetComponent>();
 
@@ -367,11 +401,14 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
         }
         else if (player != self)
         {
-            PlayerSnapshot snapshot;
-            snapshot.commandId = self->lastServedExecuted;
-            snapshot.position = message.entities[i].position;
-            snapshot.time = lastCommandExecuted->timeRecorded;
-            player->AddSnapshot(snapshot);
+            if (lastCommandExecuted != nullptr)
+            {
+                PlayerSnapshot snapshot;
+                snapshot.commandId = self->lastServedExecuted;
+                snapshot.position = message.entities[i].position;
+                snapshot.time = lastCommandExecuted->timeRecorded;
+                player->AddSnapshot(snapshot);
+            }
         }
         else
         {

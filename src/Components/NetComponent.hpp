@@ -5,6 +5,7 @@
 #include "Math/Vector2.hpp"
 #include "Memory/CircularQueue.hpp"
 #include "Scene/EntityComponent.hpp"
+#include "Scene/IEntityEvent.hpp"
 
 enum class PlayerCommandStatus
 {
@@ -35,6 +36,11 @@ struct PlayerSnapshot
     Vector2 position;
     float time;
     int commandId;
+};
+
+DEFINE_EVENT(SpawnedOnClientEvent)
+{
+
 };
 
 DEFINE_COMPONENT(NetComponent)
