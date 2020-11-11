@@ -5,6 +5,7 @@
 #include <slikenet/peerinterface.h>
 
 #include "Engine.hpp"
+#include "PuckEntity.hpp"
 #include "Components/RigidBodyComponent.hpp"
 #include "Memory/Util.hpp"
 #include "Net/NetworkPhysics.hpp"
@@ -43,6 +44,15 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
         {
             Sleep(2000);
             scene->GetEngine()->GetConsole()->Execute("connect 127.0.0.1");
+        }
+
+        if(net->IsServer())
+        {
+            scene->CreateEntity({
+                EntityProperty::EntityType<PuckEntity>(),
+                { "position", { 1800, 1800} },
+                { "dimensions", { 15, 15} },
+            });
         }
     }
     if (ev.Is<PreUpdateEvent>())
