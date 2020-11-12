@@ -94,7 +94,7 @@ Vector2 NetComponent::GetSnapshotPosition(float time)
 
 void NetComponent::AddSnapshot(const PlayerSnapshot& snapshot)
 {
-    if (snapshots.size() > 0 && snapshots[snapshots.size() - 1].commandId == snapshot.commandId)
+    if (snapshots.size() > 0 && snapshots[snapshots.size() - 1].commandId >= snapshot.commandId)
     {
         // Duplicate snapshot
         return;

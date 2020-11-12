@@ -88,7 +88,7 @@ void NetworkManager::Update()
 			SLNet::BitStream response;
 			if(ProcessServerPacket(message, type, packet, response))
 			{
-				_peerInterface->Send(&response, HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
+				_peerInterface->Send(&response, HIGH_PRIORITY, UNRELIABLE, 0, packet->systemAddress, false);
 			}
 		}
 		else
@@ -115,7 +115,7 @@ void NetworkManager::SendPacketToServer(const std::function<void(SLNet::BitStrea
 {
 	SLNet::BitStream stream;
 	writeFunc(stream);
-	_peerInterface->Send(&stream, HIGH_PRIORITY, RELIABLE_ORDERED, 0, SLNet::AddressOrGUID(SLNet::SystemAddress(_serverAddress.c_str(), Port)), false);
+	_peerInterface->Send(&stream, HIGH_PRIORITY, UNRELIABLE, 0, SLNet::AddressOrGUID(SLNet::SystemAddress(_serverAddress.c_str(), Port)), false);
 }
 
 bool NetworkManager::ProcessServerPacket(SLNet::BitStream& message, PacketType type, SLNet::Packet* packet, SLNet::BitStream& response)
