@@ -168,7 +168,7 @@ void ThrottleFrameRate()
     lastFrameStart = high_resolution_clock::now();
 }
 
-ConsoleVar<float> g_timeScale("time-scale", 1.125f);
+ConsoleVar<float> g_timeScale("time-scale", 1);
 
 void Engine::RunFrame()
 {
@@ -182,8 +182,6 @@ void Engine::RunFrame()
 
     _input->Update();
     _sdlManager->Update();
-    _networkManager->Update();
-
     _sceneManager->DoSceneTransition();
 
     Scene* scene = _sceneManager->GetScene();
@@ -230,6 +228,7 @@ void Engine::RunFrame()
     }
 
     scene->UpdateEntities(renderDeltaTime);
+    _networkManager->Update();
 
     if (g_developerMode.Value())
     {

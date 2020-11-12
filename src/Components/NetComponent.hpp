@@ -67,4 +67,6 @@ DEFINE_COMPONENT(NetComponent)
 
     bool isClientPlayer = false;
     std::vector<PlayerSnapshot> snapshots;
+
+    int wasted = 0;
 };

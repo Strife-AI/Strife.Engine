@@ -20,47 +20,60 @@ void NetworkPhysics::ServerFixedUpdate()
     {
         PlayerCommand* commandToExecute = nullptr;
 
-        for (auto& currentCommand : player->commands)
+        while (true)
         {
-            if (currentCommand.status == PlayerCommandStatus::Complete)
+            for (auto& currentCommand : player->commands)
             {
-                continue;
+                if (currentCommand.status == PlayerCommandStatus::Complete)
+                {
+                    continue;
+                }
+                else
+                {
+                    commandToExecute = &currentCommand;
+                    break;
+                }
             }
-            else
+
+            if (commandToExecute != nullptr)
             {
-                commandToExecute = &currentCommand;
+                if (commandToExecute->status == PlayerCommandStatus::NotStarted)
+                {
+                    commandToExecute->fixedUpdateStartId = currentFixedUpdateId;
+                    commandToExecute->status = PlayerCommandStatus::InProgress;
+                    commandToExecute->positionAtStartOfCommand = player->owner->Center();
+                }
+
+                auto direction = GetDirectionFromKeyBits(commandToExecute->keys) * 300;
+                player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(direction);
+
+                if ((int)commandToExecute->fixedUpdateCount - 1 <= 0)
+                {
+                    commandToExecute->status = PlayerCommandStatus::Complete;
+
+                    player->lastServedExecuted = commandToExecute->id;
+                    player->positionAtStartOfCommand = player->owner->Center();
+
+                }
+                else
+                {
+                    commandToExecute->fixedUpdateCount--;
+                }
+
+                if(player->wasted != 0)
+                {
+                    --player->wasted;
+                    continue;
+                }
+
                 break;
             }
-        }
-
-        if (commandToExecute != nullptr)
-        {
-            if (commandToExecute->status == PlayerCommandStatus::NotStarted)
-            {
-                commandToExecute->fixedUpdateStartId = currentFixedUpdateId;
-                commandToExecute->status = PlayerCommandStatus::InProgress;
-                commandToExecute->positionAtStartOfCommand = player->owner->Center();
-            }
-
-            auto direction = GetDirectionFromKeyBits(commandToExecute->keys) * 300;
-            player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(direction);
-
-            if ((int)commandToExecute->fixedUpdateCount - 1 <= 0)
-            {
-                commandToExecute->status = PlayerCommandStatus::Complete;
-
-                player->lastServedExecuted = commandToExecute->id;
-                player->positionAtStartOfCommand = player->owner->Center();
-
-            }
             else
             {
-                commandToExecute->fixedUpdateCount--;
+                //player->owner->GetComponent<RigidBodyComponent>()->SetVelocity({ 0, 0 });
+                ++player->wasted;
+                break;
             }
-        }
-        else
-        {
-            player->owner->GetComponent<RigidBodyComponent>()->SetVelocity({ 0, 0 });
         }
     }
 }
@@ -79,6 +92,8 @@ void NetworkPhysics::ClientFixedUpdate()
 void NetworkPhysics::UpdateClientPrediction(NetComponent* self)
 {
     auto selfRb = self->owner->GetComponent<RigidBodyComponent>();
+
+    Vector2 oldPosition = selfRb->owner->Center();
 
     // Update position based on prediction
     self->owner->SetCenter(self->positionAtStartOfCommand);
@@ -106,4 +121,7 @@ void NetworkPhysics::UpdateClientPrediction(NetComponent* self)
             }
         }
     }
+
+    auto correctPosition = selfRb->owner->Center();
+    selfRb->owner->SetCenter(Lerp(oldPosition, correctPosition, 0.1));
 }
