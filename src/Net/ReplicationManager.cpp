@@ -180,7 +180,7 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
     // Time to send new update to server with missing commands
     if (_sendUpdateTimer <= 0 || true)
     {
-        //_sendUpdateTimer += 1.0 / 60;
+        _sendUpdateTimer += 1.0 / 10;
 
         Entity* playerEntity;
         if (localPlayer.TryGetValue(playerEntity))
