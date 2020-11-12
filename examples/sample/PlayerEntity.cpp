@@ -8,7 +8,10 @@
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
     rigidBody = AddComponent<RigidBodyComponent>("rb", b2_dynamicBody);
-    rigidBody->CreateBoxCollider(Dimensions());
+    rigidBody->CreateBoxCollider(Dimensions())->SetDensity(1);
+
+
+
     net = AddComponent<NetComponent>();
 
     scene->SendEvent(PlayerAddedToGame(this));
@@ -39,13 +42,6 @@ void PlayerEntity::OnDestroyed()
 void PlayerEntity::Render(Renderer* renderer)
 {
     auto position = Center();
-
-    if (!net->isClientPlayer)
-    {
-        position = net->GetSnapshotPosition(scene->timeSinceStart - 0.1);
-        SetCenter(position);
-    }
-
 
     renderer->RenderRectangle(Rectangle(position - Dimensions() / 2, Dimensions()), Color::CornflowerBlue(), -0.99);
 }

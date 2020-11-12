@@ -1,7 +1,4 @@
 #include "NetworkPhysics.hpp"
-
-
-#include "../../examples/sample/InputService.hpp"
 #include "Components/NetComponent.hpp"
 #include "Scene/Scene.hpp"
 #include "Components/RigidBodyComponent.hpp"
@@ -19,11 +16,11 @@ void NetworkPhysics::ServerFixedUpdate()
 {
     ++currentFixedUpdateId;
 
-    for (auto player : scene->GetService<InputService>()->players)
+    for (auto player : scene->replicationManager.components)
     {
         PlayerCommand* commandToExecute = nullptr;
 
-        for (auto& currentCommand : player->net->commands)
+        for (auto& currentCommand : player->commands)
         {
             if (currentCommand.status == PlayerCommandStatus::Complete)
             {
@@ -42,18 +39,18 @@ void NetworkPhysics::ServerFixedUpdate()
             {
                 commandToExecute->fixedUpdateStartId = currentFixedUpdateId;
                 commandToExecute->status = PlayerCommandStatus::InProgress;
-                commandToExecute->positionAtStartOfCommand = player->Center();
+                commandToExecute->positionAtStartOfCommand = player->owner->Center();
             }
 
             auto direction = GetDirectionFromKeyBits(commandToExecute->keys) * 300;
-            player->SetMoveDirection(direction);
+            player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(direction);
 
             if ((int)commandToExecute->fixedUpdateCount - 1 <= 0)
             {
                 commandToExecute->status = PlayerCommandStatus::Complete;
 
-                player->net->lastServedExecuted = commandToExecute->id;
-                player->net->positionAtStartOfCommand = player->Center();
+                player->lastServedExecuted = commandToExecute->id;
+                player->positionAtStartOfCommand = player->owner->Center();
 
             }
             else
@@ -61,12 +58,22 @@ void NetworkPhysics::ServerFixedUpdate()
                 commandToExecute->fixedUpdateCount--;
             }
         }
+        else
+        {
+            player->owner->GetComponent<RigidBodyComponent>()->SetVelocity({ 0, 0 });
+        }
     }
 }
 
 void NetworkPhysics::ClientFixedUpdate()
 {
-
+    for(auto net : scene->replicationManager.components)
+    {
+        if (!net->isClientPlayer)
+        {
+            net->owner->SetCenter(net->GetSnapshotPosition(scene->timeSinceStart - 0.1));
+        }
+    }
 }
 
 void NetworkPhysics::UpdateClientPrediction(NetComponent* self)

@@ -94,7 +94,7 @@ Engine* Engine::Initialize(const EngineConfig& config)
 
     if(isServer.Value())
     {
-        engine->targetFps.SetValue(30);
+        engine->targetFps.SetValue(60);
     }
     else
     {

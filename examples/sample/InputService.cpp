@@ -179,7 +179,34 @@ void InputService::HandleInput()
             }
 
             scene->GetService<NetworkPhysics>()->UpdateClientPrediction(self->net);
+
+            NetComponent* cc = nullptr;
+
+            for(auto c : scene->replicationManager.components)
+            {
+                if(c->netId == 0)
+                {
+                    cc = c;
+                }
+            }
+
+            float last = cc->snapshots.size() > 0
+                ? cc->snapshots[cc->snapshots.size() - 1].time
+                : 0;
+
+            static int count = 0;
+
+            static int lastCount = 0;
+
+            count = (count + 1) % 60;
+            if (count == 0)
+            {
+                status.VFormat("%f ms (%d added)", (scene->timeSinceStart - last) * 1000, (int)cc->snapshots.size() - lastCount);
+                lastCount = cc->snapshots.size();
+            }
         }
+
+
 
         scene->replicationManager.DoClientUpdate(scene->deltaTime, net);
     }
