@@ -60,6 +60,7 @@ DEFINE_COMPONENT(NetComponent)
     unsigned int lastServerSequenceNumber = 0;
     unsigned int lastServedExecuted = 0;
     Vector2 positionAtStartOfCommand;
+    Vector2 lastDirection;
 
     unsigned int clientClock = 0;
 

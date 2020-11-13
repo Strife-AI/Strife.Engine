@@ -44,8 +44,9 @@ void NetworkPhysics::ServerFixedUpdate()
                     commandToExecute->positionAtStartOfCommand = player->owner->Center();
                 }
 
-                auto direction = GetDirectionFromKeyBits(commandToExecute->keys) * 300;
+                auto direction = GetDirectionFromKeyBits(commandToExecute->keys) * 200;
                 player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(direction);
+                player->lastDirection = direction;
 
                 if ((int)commandToExecute->fixedUpdateCount - 1 <= 0)
                 {
@@ -72,6 +73,9 @@ void NetworkPhysics::ServerFixedUpdate()
             {
                 //player->owner->GetComponent<RigidBodyComponent>()->SetVelocity({ 0, 0 });
                 ++player->wasted;
+
+                if(player->owner->type == "player"_sid)
+                player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(player->lastDirection);
                 break;
             }
         }
@@ -84,7 +88,8 @@ void NetworkPhysics::ClientFixedUpdate()
     {
         if (!net->isClientPlayer)
         {
-            net->owner->SetCenter(net->GetSnapshotPosition(scene->timeSinceStart - 0.1));
+            if (!net->snapshots.empty())
+                net->owner->SetCenter(net->GetSnapshotPosition(scene->timeSinceStart - 0.1));
         }
     }
 }
@@ -98,6 +103,8 @@ void NetworkPhysics::UpdateClientPrediction(NetComponent* self)
     // Update position based on prediction
     self->owner->SetCenter(self->positionAtStartOfCommand);
 
+    Vector2 oldVelocity;
+
     // Lock other players
     for (auto player : scene->replicationManager.components)
     {
@@ -105,6 +112,7 @@ void NetworkPhysics::UpdateClientPrediction(NetComponent* self)
 
         if (player != self) 
         {
+            oldVelocity = rb->GetVelocity();
              rb->body->SetLinearVelocity(b2Vec2(0, 0));
         }
     }
@@ -116,9 +124,19 @@ void NetworkPhysics::UpdateClientPrediction(NetComponent* self)
         {
             for (int i = 0; i < (int)command.fixedUpdateCount; ++i)
             {
-                selfRb->SetVelocity(GetDirectionFromKeyBits(command.keys) * 300);
+                selfRb->SetVelocity(GetDirectionFromKeyBits(command.keys) * 200);
                 scene->ForceFixedUpdate();
             }
+        }
+    }
+
+    for (auto player : scene->replicationManager.components)
+    {
+        auto rb = player->owner->GetComponent<RigidBodyComponent>();
+
+        if (player != self)
+        {
+            rb->SetVelocity(oldVelocity);
         }
     }
 
