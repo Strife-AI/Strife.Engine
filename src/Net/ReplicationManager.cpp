@@ -106,11 +106,13 @@ struct PlayerCommandMessage
 {
     void ReadWrite(ReadWriteBitStream& stream)
     {
-        stream.Add(keys).Add(fixedUpdateCount);
+        stream.Add(keys).Add(fixedUpdateCount).Add(moveToTarget).Add(target);
     }
 
     uint8 keys;
     uint8 fixedUpdateCount;
+    bool moveToTarget;
+    Vector2 target;
 };
 
 struct ClientUpdateRequestMessage
@@ -209,6 +211,8 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
 
                     request.commands[commandCount].keys = command.keys;
                     request.commands[commandCount].fixedUpdateCount = command.fixedUpdateCount; // TODO: clamp
+                    request.commands[commandCount].target = command.target;
+                    request.commands[commandCount].moveToTarget = command.moveToTarget;
 
                     if (++commandCount == ClientUpdateRequestMessage::MaxCommands)
                     {
@@ -261,6 +265,8 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
                     newCommand.id = currentId;
                     newCommand.keys = request.commands[i].keys;
                     newCommand.fixedUpdateCount = request.commands[i].fixedUpdateCount;
+                    newCommand.moveToTarget = request.commands[i].moveToTarget;
+                    newCommand.target = request.commands[i].target;
                     client->lastServerSequenceNumber = currentId;
 
                     if (client->commands.IsFull())
@@ -399,7 +405,7 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
         {
             _scene->SendEvent(PlayerConnectedEvent(message.entities[i].netId, message.entities[i].position));
         }
-        else if (player != self)
+        else if (player != self || true)
         {
             if (lastCommandExecuted != nullptr)
             {

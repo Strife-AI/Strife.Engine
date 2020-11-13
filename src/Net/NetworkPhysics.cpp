@@ -42,10 +42,15 @@ void NetworkPhysics::ServerFixedUpdate()
                     commandToExecute->fixedUpdateStartId = currentFixedUpdateId;
                     commandToExecute->status = PlayerCommandStatus::InProgress;
                     commandToExecute->positionAtStartOfCommand = player->owner->Center();
+
+                    if(commandToExecute->moveToTarget)
+                    {
+                        player->target = commandToExecute->target;
+                    }
                 }
 
                 auto direction = GetDirectionFromKeyBits(commandToExecute->keys) * 200;
-                player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(direction);
+                //player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(direction);
                 player->lastDirection = direction;
 
                 if ((int)commandToExecute->fixedUpdateCount - 1 <= 0)
@@ -75,10 +80,18 @@ void NetworkPhysics::ServerFixedUpdate()
                 ++player->wasted;
 
                 if(player->owner->type == "player"_sid)
-                player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(player->lastDirection);
+                    player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(player->lastDirection);
                 break;
             }
         }
+
+        auto position = player->owner->Center();
+        auto rb = player->owner->GetComponent<RigidBodyComponent>();
+
+        //auto velocity = rb->GetVelocity();
+        auto velocity = (player->target - position).Normalize() * 200; //position.SmoothDamp(player->target, velocity, 0.1f, Scene::PhysicsDeltaTime);
+
+        rb->SetVelocity(velocity);
     }
 }
 
@@ -86,16 +99,13 @@ void NetworkPhysics::ClientFixedUpdate()
 {
     for(auto net : scene->replicationManager.components)
     {
-        if (!net->isClientPlayer)
-        {
-            if (!net->snapshots.empty())
-                net->owner->SetCenter(net->GetSnapshotPosition(scene->timeSinceStart - 0.1));
-        }
+        net->owner->SetCenter(net->GetSnapshotPosition(scene->timeSinceStart - 0.1));
     }
 }
 
 void NetworkPhysics::UpdateClientPrediction(NetComponent* self)
 {
+#if false
     auto selfRb = self->owner->GetComponent<RigidBodyComponent>();
 
     Vector2 oldPosition = selfRb->owner->Center();
@@ -142,4 +152,5 @@ void NetworkPhysics::UpdateClientPrediction(NetComponent* self)
 
     auto correctPosition = selfRb->owner->Center();
     selfRb->owner->SetCenter(Lerp(oldPosition, correctPosition, 0.1));
+#endif
 }

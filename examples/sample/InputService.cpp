@@ -175,6 +175,13 @@ void InputService::HandleInput()
                 command.timeRecorded = scene->timeSinceStart;
                 fixedUpdateCount = 0;
 
+                auto mouse = scene->GetEngine()->GetInput()->GetMouse();
+                if(mouse->RightPressed())
+                {
+                    command.moveToTarget = true;
+                    command.target = scene->GetCamera()->ScreenToWorld(mouse->MousePosition());
+                }
+
                 self->net->commands.Enqueue(command);
             }
 

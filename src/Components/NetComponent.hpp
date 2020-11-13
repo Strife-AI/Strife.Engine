@@ -22,6 +22,9 @@ struct PlayerCommand
     unsigned char keys;
     unsigned int id;
 
+    bool moveToTarget = false;
+    Vector2 target;
+
     // Client only
     float timeRecorded;
 
@@ -70,4 +73,6 @@ DEFINE_COMPONENT(NetComponent)
     std::vector<PlayerSnapshot> snapshots;
 
     int wasted = 0;
+
+    Vector2 target;
 };
