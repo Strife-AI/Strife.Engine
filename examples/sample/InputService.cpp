@@ -54,7 +54,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             scene->CreateEntity({
                 EntityProperty::EntityType<PuckEntity>(),
                 { "position", { 1800, 1800} },
-                { "dimensions", { 15, 15} },
+                { "dimensions", { 32, 32} },
             });
         }
     }
