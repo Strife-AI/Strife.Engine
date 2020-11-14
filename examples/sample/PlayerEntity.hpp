@@ -32,13 +32,14 @@ DEFINE_EVENT(PlayerRemovedFromGame)
     PlayerEntity* player;
 };
 
-DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
+DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IFixedUpdatable
 {
     void OnAdded(const EntityDictionary& properties) override;
     void OnEvent(const IEntityEvent& ev) override;
     void OnDestroyed() override;
 
     void Render(Renderer* renderer) override;
+    void FixedUpdate(float deltaTime) override;
 
     void SetMoveDirection(Vector2 direction);
 

@@ -19,13 +19,13 @@ void NetworkPhysics::ServerFixedUpdate()
 {
     ++currentFixedUpdateId;
 
-    for (auto player : scene->replicationManager.components)
+    for (auto& client : scene->replicationManager.GetClients())
     {
         PlayerCommand* commandToExecute = nullptr;
 
         while (true)
         {
-            for (auto& currentCommand : player->commands)
+            for (auto& currentCommand : client.second.commands)
             {
                 if (currentCommand.status == PlayerCommandStatus::Complete)
                 {
@@ -44,12 +44,16 @@ void NetworkPhysics::ServerFixedUpdate()
                 {
                     commandToExecute->fixedUpdateStartId = currentFixedUpdateId;
                     commandToExecute->status = PlayerCommandStatus::InProgress;
-                    commandToExecute->positionAtStartOfCommand = player->owner->Center();
 
                     if(commandToExecute->moveToTarget)
                     {
-                        auto pathFinder = scene->GetService<PathFinderService>();
-                        pathFinder->RequestFlowField(player->owner->Center(), commandToExecute->target, player->owner);
+                        NetComponent* player = scene->replicationManager.GetNetComponentById(commandToExecute->netId);
+
+                        if (player != nullptr)
+                        {
+                            auto pathFinder = scene->GetService<PathFinderService>();
+                            pathFinder->RequestFlowField(player->owner->Center(), commandToExecute->target, player->owner);
+                        }
                     }
                 }
 
@@ -57,32 +61,16 @@ void NetworkPhysics::ServerFixedUpdate()
                 {
                     commandToExecute->status = PlayerCommandStatus::Complete;
 
-                    player->lastServedExecuted = commandToExecute->id;
-                    player->positionAtStartOfCommand = player->owner->Center();
-
+                    client.second.lastServedExecuted = commandToExecute->id;
                 }
                 else
                 {
                     commandToExecute->fixedUpdateCount--;
                 }
 
-                if (player->flowField != nullptr)
+                if(client.second.wasted > 0)
                 {
-                    auto velocity = player->flowField->GetFilteredFlowDirection(player->owner->Center() - Vector2(16, 16)) * 200;
-
-                    velocity = player->owner->GetComponent<RigidBodyComponent>()->GetVelocity().SmoothDamp(
-                        velocity,
-                        player->acceleration,
-                        0.05,
-                        Scene::PhysicsDeltaTime);
-
-                    player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(velocity);
-                    Renderer::DrawDebugLine({ player->owner->Center(), player->owner->Center() + velocity, Color::Red() });
-                }
-
-                if(player->wasted != 0)
-                {
-                    --player->wasted;
+                    --client.second.wasted;
                     continue;
                 }
 
@@ -90,8 +78,7 @@ void NetworkPhysics::ServerFixedUpdate()
             }
             else
             {
-                //player->owner->GetComponent<RigidBodyComponent>()->SetVelocity({ 0, 0 });
-                ++player->wasted;
+                ++client.second.wasted;
 
                 break;
             }
@@ -105,6 +92,6 @@ void NetworkPhysics::ClientFixedUpdate()
 {
     for(auto net : scene->replicationManager.components)
     {
-        net->owner->SetCenter(net->GetSnapshotPosition(scene->timeSinceStart - 0.1));
+        net->owner->SetCenter(net->GetSnapshotPosition(scene->timeSinceStart - 0.2));
     }
 }

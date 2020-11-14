@@ -22,6 +22,7 @@ struct PlayerCommand
     unsigned char keys;
     unsigned int id;
 
+    uint32 netId;
     bool moveToTarget = false;
     Vector2 target;
 
@@ -29,7 +30,6 @@ struct PlayerCommand
     float timeRecorded;
 
     // Server only
-    Vector2 positionAtStartOfCommand;
     PlayerCommandStatus status = PlayerCommandStatus::NotStarted;
     int fixedUpdateStartId;
 };
@@ -53,27 +53,13 @@ DEFINE_COMPONENT(NetComponent)
     void OnAdded() override;
     void OnRemoved() override;
 
-    PlayerCommand* GetCommandById(int id);
-    Vector2 PositionAtFixedUpdateId(int fixedUpdateId, int currentFixedUpdateId);
     Vector2 GetSnapshotPosition(float time);
     void AddSnapshot(const PlayerSnapshot& snapshot);
 
     int netId;
-    unsigned int keyBits = 0;
-    Vector2 smoothVelocity;
-    unsigned int nextCommandSequenceNumber = 0;
-    unsigned int lastServerSequenceNumber = 0;
-    unsigned int lastServedExecuted = 0;
-    Vector2 positionAtStartOfCommand;
+    int ownerClientId;
 
-    unsigned int clientClock = 0;
-
-    CircularQueue<PlayerCommand, 128> commands;
-
-    bool isClientPlayer = false;
     std::vector<PlayerSnapshot> snapshots;
-
-    int wasted = 0;
 
     std::shared_ptr<FlowField> flowField;
     Vector2 acceleration;

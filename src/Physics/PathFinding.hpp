@@ -86,7 +86,7 @@ public:
     void RequestFlowField(Vector2 start, Vector2 end, Entity* owner);
 
 private:
-    static constexpr int MaxGridCalculationsPerTick = 8192;
+    static constexpr int MaxGridCalculationsPerTick = 32768;
 
     void ReceiveEvent(const IEntityEvent& ev) override;
     void CalculatePaths();

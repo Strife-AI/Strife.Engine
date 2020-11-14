@@ -9,6 +9,7 @@
 #include "Components/RigidBodyComponent.hpp"
 #include "Memory/Util.hpp"
 #include "Net/NetworkPhysics.hpp"
+#include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
 #include "Tools/Console.hpp"
 
@@ -87,7 +88,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto joinedServerEvent = ev.Is<JoinedServerEvent>())
     {
-        scene->replicationManager.localNetId = 1;// joinedServerEvent->selfId;
+        scene->replicationManager.localClientId = joinedServerEvent->selfId;
     }
     else if(auto connectedEvent = ev.Is<PlayerConnectedEvent>())
     {
@@ -98,6 +99,8 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
               { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : Vector2(1819.0f, 2023.0f) },
               { "dimensions", { 30, 30 } },
             }));
+
+            player->GetComponent<NetComponent>()->ownerClientId = connectedEvent->id;
 
             scene->GetCameraFollower()->FollowEntity(player);
             scene->GetCameraFollower()->CenterOn(player->Center());
@@ -127,13 +130,7 @@ void InputService::OnAdded()
 
         net->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
         {
-            auto player = GetPlayerByNetId(1);
-
-            auto netComponent = player != nullptr
-                ? player->net
-                : nullptr;
-
-            scene->replicationManager.ProcessMessageFromClient(message, response, netComponent, clientId);
+            scene->replicationManager.ProcessMessageFromClient(message, response, clientId);
         };
     }
     else
@@ -169,10 +166,11 @@ void InputService::HandleInput()
             if (fixedUpdateCount > 0)
             {
                 PlayerCommand command;
-                command.id = ++self->net->nextCommandSequenceNumber;
+
                 command.keys = keyBits;
                 command.fixedUpdateCount = fixedUpdateCount;
                 command.timeRecorded = scene->timeSinceStart;
+                command.netId = self->net->netId;
                 fixedUpdateCount = 0;
 
                 auto mouse = scene->GetEngine()->GetInput()->GetMouse();
@@ -182,7 +180,7 @@ void InputService::HandleInput()
                     command.target = scene->GetCamera()->ScreenToWorld(mouse->MousePosition());
                 }
 
-                self->net->commands.Enqueue(command);
+                scene->replicationManager.AddPlayerCommand(command);
             }
 
             NetComponent* cc = nullptr;
