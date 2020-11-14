@@ -5,7 +5,6 @@
 
 
 #include "Components/NetComponent.hpp"
-#include "Math/Vector2.hpp"
 #include "Scene/Entity.hpp"
 
 class NetworkManager;

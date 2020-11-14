@@ -27,6 +27,37 @@ FlowDirection OppositeFlowDirection(FlowDirection direction)
     }
 }
 
+Vector2 FlowField::GetFlowDirectionAtCell(Vector2 position)
+{
+    auto cell = (position / tileSize)
+        .Floor()
+        .AsVectorOfType<float>()
+        .Clamp({ 0.0f, 0.0f }, grid.Dimensions() - Vector2(1));
+
+    return FlowDirectionToVector2(grid[cell].direction);
+}
+
+Vector2 FlowField::GetFilteredFlowDirection(Vector2 position)
+{
+    Rectangle bounds(position, tileSize);
+
+    auto topLeft = GetFlowDirectionAtCell(bounds.TopLeft());
+    auto topRight = GetFlowDirectionAtCell(bounds.TopRight());
+    auto bottomLeft = GetFlowDirectionAtCell(bounds.BottomLeft());
+    auto bottomRight = GetFlowDirectionAtCell(bounds.BottomRight());
+
+    auto tileTopLeft = (position / tileSize).Floor().AsVectorOfType<float>() * tileSize;
+
+    auto t = (position - tileTopLeft) / tileSize;
+
+
+
+    return Lerp(
+        Lerp(topLeft, topRight, t.x).Normalize(),
+        Lerp(bottomLeft, bottomRight, t.x).Normalize(),
+        t.y).Normalize();
+}
+
 PathFinderService::PathFinderService(int rows, int cols, Vector2 tileSize)
     : _obstacleGrid(rows, cols),
     _tileSize(tileSize)
@@ -37,8 +68,19 @@ PathFinderService::PathFinderService(int rows, int cols, Vector2 tileSize)
 void PathFinderService::AddObstacle(const Rectangle& bounds)
 {
     auto topLeft = PixelToCellCoordinate(bounds.TopLeft()).Max({ 0, 0 });
-    auto bottomRight = PixelToCellCoordinate(bounds.BottomRight()).Min(
-        Vector2(_obstacleGrid.Cols(), _obstacleGrid.Rows()));
+    auto bottomRight = PixelToCellCoordinate(bounds.BottomRight());
+
+    if((int)bounds.BottomRight().x % (int)_tileSize.x != 0)
+    {
+        ++bottomRight.x;
+    }
+
+    if ((int)bounds.BottomRight().y % (int)_tileSize.y != 0)
+    {
+        ++bottomRight.y;
+    }
+
+    bottomRight = bottomRight.Min(Vector2(_obstacleGrid.Cols(), _obstacleGrid.Rows()));
 
     for(int i = topLeft.y; i < bottomRight.y; ++i)
     {
@@ -98,10 +140,12 @@ void PathFinderService::CalculatePaths()
             WorkQueue emptyQueue;
             std::swap(emptyQueue, _workQueue);
 
-            _fieldInProgress = std::make_shared<FlowField>(_obstacleGrid.Rows(), _obstacleGrid.Cols());
+            _fieldInProgress = std::make_shared<FlowField>(_obstacleGrid.Rows(), _obstacleGrid.Cols(), request.end, _tileSize);
 
             _workQueue.push(request.endCell);
             _fieldInProgress->grid[request.endCell].direction = FlowDirection::Zero;
+
+            request.status = PathRequestStatus::InProgress;
         }
 
         while(calculationCount < MaxGridCalculationsPerTick && !_workQueue.empty())

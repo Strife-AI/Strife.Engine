@@ -29,13 +29,20 @@ FlowDirection OppositeFlowDirection(FlowDirection direction);
 
 struct FlowField
 {
-    FlowField(int rows, int cols)
-        : grid(rows, cols)
+    FlowField(int rows, int cols, Vector2 target_, Vector2 tileSize_)
+        : grid(rows, cols),
+        target(target_),
+        tileSize(tileSize_)
     {
         
     }
 
+    Vector2 GetFlowDirectionAtCell(Vector2 position);
+    Vector2 GetFilteredFlowDirection(Vector2 position);
+
     VariableSizedGrid<FlowCell> grid;
+    Vector2 target;
+    Vector2 tileSize;
 };
 
 /// <summary>
