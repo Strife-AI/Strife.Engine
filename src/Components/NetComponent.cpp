@@ -25,57 +25,6 @@ void NetComponent::OnRemoved()
     GetScene()->replicationManager.RemoveNetComponent(this);
 }
 
-PlayerCommand* NetComponent::GetCommandById(int id)
-{
-    for (auto& command : commands)
-    {
-        if (command.id == id)
-        {
-            return &command;
-        }
-    }
-
-    return nullptr;
-}
-
-Vector2 NetComponent::PositionAtFixedUpdateId(int fixedUpdateId, int currentFixedUpdateId)
-{
-    for (auto it = commands.begin(); it != commands.end(); ++it)
-    {
-        auto& command = *it;
-
-        if (command.fixedUpdateStartId >= fixedUpdateId)
-        {
-            auto next = it;
-            ++next;
-
-            auto& nextCommand = *next;
-
-            Vector2 start = command.positionAtStartOfCommand;
-            Vector2 end;
-            float t;
-
-            if (next == commands.end() || nextCommand.status == PlayerCommandStatus::NotStarted)
-            {
-                // We don't have a next command to interpolate to, so use where we are now
-                end = owner->Center();
-                float diff = currentFixedUpdateId - command.fixedUpdateStartId;
-                t = (fixedUpdateId - command.fixedUpdateStartId) / diff;
-            }
-            else
-            {
-                end = nextCommand.positionAtStartOfCommand;
-                float diff = nextCommand.fixedUpdateStartId - command.fixedUpdateStartId;
-                t = (fixedUpdateId - command.fixedUpdateStartId) / diff;
-            }
-
-            return Lerp(start, end, t);
-        }
-    }
-
-    return owner->Center();
-}
-
 Vector2 NetComponent::GetSnapshotPosition(float time)
 {
     for (int i = 0; i < (int)snapshots.size() - 1; ++i)
@@ -89,7 +38,9 @@ Vector2 NetComponent::GetSnapshotPosition(float time)
         }
     }
 
-    return owner->Center();
+    return snapshots.size() > 0
+        ? snapshots[snapshots.size() - 1].position
+        : owner->Center();
 }
 
 void NetComponent::AddSnapshot(const PlayerSnapshot& snapshot)

@@ -30,7 +30,17 @@ struct WorldDiff
 
 struct ClientState
 {
+    PlayerCommand* GetCommandById(int id);
+
     WorldState currentState;
+    unsigned int lastServerSequenceNumber = 0;
+    unsigned int nextCommandSequenceNumber = 0;
+    unsigned int lastServedExecuted = 0;
+    int wasted = 0;
+
+    unsigned int clientClock = 0;
+
+    CircularQueue<PlayerCommand, 128> commands;
 };
 
 class ReplicationManager
@@ -58,17 +68,28 @@ public:
         _componentsByNetId.erase(component->netId);
     }
 
+    NetComponent* GetNetComponentById(int id) const
+    {
+        auto it = _componentsByNetId.find(id);
+        return it != _componentsByNetId.end()
+            ? it->second
+            : nullptr;
+    }
+
+    auto& GetClients() { return _clientStateByClientId; }
+
     void UpdateClient(SLNet::BitStream& stream);
 
     void DoClientUpdate(float deltaTime, NetworkManager* networkManager);
 
-    void ProcessMessageFromClient(SLNet::BitStream& message, SLNet::BitStream& response, NetComponent* client, int clientId);
+    void ProcessMessageFromClient(SLNet::BitStream& message, SLNet::BitStream& response, int clientId);
+
+    void AddPlayerCommand(const PlayerCommand& command);
 
     WorldState GetCurrentWorldState();
 
     std::unordered_set<NetComponent*> components;
-    EntityReference<Entity> localPlayer;
-    int localNetId = -1;
+    int localClientId = -1;
 
 private:
     void ProcessSpawnEntity(ReadWriteBitStream& stream);
