@@ -46,6 +46,8 @@ DEFINE_EVENT(SpawnedOnClientEvent)
 
 };
 
+struct FlowField;
+
 DEFINE_COMPONENT(NetComponent)
 {
     void OnAdded() override;
@@ -54,7 +56,7 @@ DEFINE_COMPONENT(NetComponent)
     PlayerCommand* GetCommandById(int id);
     Vector2 PositionAtFixedUpdateId(int fixedUpdateId, int currentFixedUpdateId);
     Vector2 GetSnapshotPosition(float time);
-    void AddSnapshot(const PlayerSnapshot & snapshot);
+    void AddSnapshot(const PlayerSnapshot& snapshot);
 
     int netId;
     unsigned int keyBits = 0;
@@ -63,7 +65,6 @@ DEFINE_COMPONENT(NetComponent)
     unsigned int lastServerSequenceNumber = 0;
     unsigned int lastServedExecuted = 0;
     Vector2 positionAtStartOfCommand;
-    Vector2 lastDirection;
 
     unsigned int clientClock = 0;
 
@@ -74,5 +75,6 @@ DEFINE_COMPONENT(NetComponent)
 
     int wasted = 0;
 
-    Vector2 target;
+    std::shared_ptr<FlowField> flowField;
+    Vector2 acceleration;
 };

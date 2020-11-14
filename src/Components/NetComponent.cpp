@@ -18,7 +18,6 @@ Vector2 GetDirectionFromKeyBits(unsigned keyBits)
 void NetComponent::OnAdded()
 {
     GetScene()->replicationManager.AddNetComponent(this);
-    target = owner->Center();
 }
 
 void NetComponent::OnRemoved()

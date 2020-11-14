@@ -1,7 +1,10 @@
 #include "NetworkPhysics.hpp"
+
+#include "Renderer.hpp"
 #include "Components/NetComponent.hpp"
 #include "Scene/Scene.hpp"
 #include "Components/RigidBodyComponent.hpp"
+#include "Physics/PathFinding.hpp"
 
 void NetworkPhysics::ReceiveEvent(const IEntityEvent& ev)
 {
@@ -45,13 +48,10 @@ void NetworkPhysics::ServerFixedUpdate()
 
                     if(commandToExecute->moveToTarget)
                     {
-                        player->target = commandToExecute->target;
+                        auto pathFinder = scene->GetService<PathFinderService>();
+                        pathFinder->RequestFlowField(player->owner->Center(), commandToExecute->target, player->owner);
                     }
                 }
-
-                auto direction = GetDirectionFromKeyBits(commandToExecute->keys) * 200;
-                //player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(direction);
-                player->lastDirection = direction;
 
                 if ((int)commandToExecute->fixedUpdateCount - 1 <= 0)
                 {
@@ -64,6 +64,20 @@ void NetworkPhysics::ServerFixedUpdate()
                 else
                 {
                     commandToExecute->fixedUpdateCount--;
+                }
+
+                if (player->flowField != nullptr)
+                {
+                    auto velocity = player->flowField->GetFilteredFlowDirection(player->owner->Center() - Vector2(16, 16)) * 200;
+
+                    velocity = player->owner->GetComponent<RigidBodyComponent>()->GetVelocity().SmoothDamp(
+                        velocity,
+                        player->acceleration,
+                        0.05,
+                        Scene::PhysicsDeltaTime);
+
+                    player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(velocity);
+                    Renderer::DrawDebugLine({ player->owner->Center(), player->owner->Center() + velocity, Color::Red() });
                 }
 
                 if(player->wasted != 0)
@@ -79,19 +93,11 @@ void NetworkPhysics::ServerFixedUpdate()
                 //player->owner->GetComponent<RigidBodyComponent>()->SetVelocity({ 0, 0 });
                 ++player->wasted;
 
-                if(player->owner->type == "player"_sid)
-                    player->owner->GetComponent<RigidBodyComponent>()->SetVelocity(player->lastDirection);
                 break;
             }
         }
 
-        auto position = player->owner->Center();
-        auto rb = player->owner->GetComponent<RigidBodyComponent>();
-
-        //auto velocity = rb->GetVelocity();
-        auto velocity = (player->target - position).Normalize() * 200; //position.SmoothDamp(player->target, velocity, 0.1f, Scene::PhysicsDeltaTime);
-
-        rb->SetVelocity(velocity);
+        // TODO: use flow grid
     }
 }
 
@@ -101,56 +107,4 @@ void NetworkPhysics::ClientFixedUpdate()
     {
         net->owner->SetCenter(net->GetSnapshotPosition(scene->timeSinceStart - 0.1));
     }
-}
-
-void NetworkPhysics::UpdateClientPrediction(NetComponent* self)
-{
-#if false
-    auto selfRb = self->owner->GetComponent<RigidBodyComponent>();
-
-    Vector2 oldPosition = selfRb->owner->Center();
-
-    // Update position based on prediction
-    self->owner->SetCenter(self->positionAtStartOfCommand);
-
-    Vector2 oldVelocity;
-
-    // Lock other players
-    for (auto player : scene->replicationManager.components)
-    {
-        auto rb = player->owner->GetComponent<RigidBodyComponent>();
-
-        if (player != self) 
-        {
-            oldVelocity = rb->GetVelocity();
-             rb->body->SetLinearVelocity(b2Vec2(0, 0));
-        }
-    }
-
-    // Update client side prediction
-    for (auto& command : self->commands)
-    {
-        if ((int)command.id > (int)self->lastServedExecuted)
-        {
-            for (int i = 0; i < (int)command.fixedUpdateCount; ++i)
-            {
-                selfRb->SetVelocity(GetDirectionFromKeyBits(command.keys) * 200);
-                scene->ForceFixedUpdate();
-            }
-        }
-    }
-
-    for (auto player : scene->replicationManager.components)
-    {
-        auto rb = player->owner->GetComponent<RigidBodyComponent>();
-
-        if (player != self)
-        {
-            rb->SetVelocity(oldVelocity);
-        }
-    }
-
-    auto correctPosition = selfRb->owner->Center();
-    selfRb->owner->SetCenter(Lerp(oldPosition, correctPosition, 0.1));
-#endif
 }

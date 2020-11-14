@@ -1,6 +1,7 @@
 #include "CastleEntity.hpp"
 #include "Components/RigidBodyComponent.hpp"
 #include "Components/SpriteComponent.hpp"
+#include "Physics/PathFinding.hpp"
 
 void CastleEntity::OnAdded(const EntityDictionary& properties)
 {
@@ -10,7 +11,10 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
     spriteComponent->scale = Vector2(5.0f);
 
     auto rigidBody = AddComponent<RigidBodyComponent>("rb", b2_staticBody);
-    rigidBody->CreateBoxCollider({ 67 * 5, 55 * 5});
+    Vector2 size{ 67 * 5, 55 * 5 };
+    rigidBody->CreateBoxCollider(size);
+
+    scene->GetService<PathFinderService>()->AddObstacle(Rectangle(Center() - size / 2, size));
 }
 
 void CastleEntity::OnEvent(const IEntityEvent& ev)

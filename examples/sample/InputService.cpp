@@ -96,7 +96,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             auto player = static_cast<PlayerEntity*>(scene->CreateEntity({
               EntityProperty::EntityType<PlayerEntity>(),
               { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : Vector2(1819.0f, 2023.0f) },
-              { "dimensions", { 32, 32 } },
+              { "dimensions", { 30, 30 } },
             }));
 
             scene->GetCameraFollower()->FollowEntity(player);
@@ -184,8 +184,6 @@ void InputService::HandleInput()
 
                 self->net->commands.Enqueue(command);
             }
-
-            scene->GetService<NetworkPhysics>()->UpdateClientPrediction(self->net);
 
             NetComponent* cc = nullptr;
 

@@ -3,14 +3,16 @@
 
 #include "InputService.hpp"
 #include "Components/RigidBodyComponent.hpp"
+#include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
 
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
     rigidBody = AddComponent<RigidBodyComponent>("rb", b2_dynamicBody);
-    rigidBody->CreateBoxCollider(Dimensions())->SetDensity(1);
+    auto box = rigidBody->CreateBoxCollider(Dimensions());
 
-
+    box->SetDensity(1);
+    box->SetFriction(0);
 
     net = AddComponent<NetComponent>();
 
@@ -31,6 +33,10 @@ void PlayerEntity::OnEvent(const IEntityEvent& ev)
             net->isClientPlayer = true;
             scene->replicationManager.localPlayer = this;
         }
+    }
+    else if(auto flowFieldReady = ev.Is<FlowFieldReadyEvent>())
+    {
+        net->flowField = flowFieldReady->result;
     }
 }
 

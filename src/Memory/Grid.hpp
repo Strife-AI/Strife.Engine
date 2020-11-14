@@ -63,6 +63,11 @@ public:
     int Rows() const { return _rows; }
     int Cols() const { return _cols; }
 
+    Vector2 Dimensions() const
+    {
+        return Vector2(Cols(), Rows());
+    }
+
     T* Data() { return _data; }
 
 protected:

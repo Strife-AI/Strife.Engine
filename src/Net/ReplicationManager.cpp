@@ -106,7 +106,11 @@ struct PlayerCommandMessage
 {
     void ReadWrite(ReadWriteBitStream& stream)
     {
-        stream.Add(keys).Add(fixedUpdateCount).Add(moveToTarget).Add(target);
+        stream
+            .Add(keys)
+            .Add(fixedUpdateCount)
+            .Add(moveToTarget)
+            .Add(target);
     }
 
     uint8 keys;
