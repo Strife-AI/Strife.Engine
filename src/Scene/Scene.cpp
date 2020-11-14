@@ -13,6 +13,7 @@
 #include "Renderer.hpp"
 #include "SceneManager.hpp"
 #include "SdlManager.hpp"
+#include "Physics/PathFinding.hpp"
 #include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
 
@@ -61,14 +62,14 @@ void LoadedSegment::BroadcastEvent(const IEntityEvent& ev)
 }
 
 Scene::Scene(Engine* engine, StringId mapSegmentName)
-    : _mapSegmentName(mapSegmentName),
+    : replicationManager(this, engine->GetNetworkManger() != nullptr ? engine->GetNetworkManger()->IsServer() : false),
+    _mapSegmentName(mapSegmentName),
     _cameraFollower(&_camera, engine->GetInput()),
     _engine(engine),
     _freeEntityHeaders(_entityHeaders.begin(), MaxEntities),
     _world(std::make_unique<b2World>(b2Vec2(0, 0))),
     _collisionManager(_world.get()),
-    _freeSegments(_segmentPool, MaxLoadedSegments),
-    replicationManager(this, engine->GetNetworkManger() != nullptr ? engine->GetNetworkManger()->IsServer() : false)
+    _freeSegments(_segmentPool, MaxLoadedSegments)
 {
     for (int i = 0; i < MaxEntities; ++i)
     {
