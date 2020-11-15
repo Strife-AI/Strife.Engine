@@ -94,16 +94,24 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if (net->IsServer())
         {
-            auto player = static_cast<PlayerEntity*>(scene->CreateEntity({
-              EntityProperty::EntityType<PlayerEntity>(),
-              { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : Vector2(1819.0f, 2023.0f) },
-              { "dimensions", { 30, 30 } },
-            }));
+            Vector2 positions[2] = {
+                Vector2(1819.0f, 2023.0f),
+                Vector2(1819.0f + 64, 2023.0f),
+            };
 
-            player->GetComponent<NetComponent>()->ownerClientId = connectedEvent->id;
+            for (auto position : positions)
+            {
+                auto player = static_cast<PlayerEntity*>(scene->CreateEntity({
+                  EntityProperty::EntityType<PlayerEntity>(),
+                  { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : position },
+                  { "dimensions", { 30, 30 } },
+                    }));
 
-            scene->GetCameraFollower()->FollowEntity(player);
-            scene->GetCameraFollower()->CenterOn(player->Center());
+                player->GetComponent<NetComponent>()->ownerClientId = connectedEvent->id;
+
+                scene->GetCameraFollower()->FollowEntity(player);
+                scene->GetCameraFollower()->CenterOn(player->Center());
+            }
         }
     }
 }
@@ -154,6 +162,21 @@ void InputService::HandleInput()
 
     if (net->IsClient())
     {
+        auto mouse = scene->GetEngine()->GetInput()->GetMouse();
+
+        if(mouse->LeftPressed())
+        {
+            for(auto player : players)
+            {
+                if(player->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition()))
+                    && player->net->ownerClientId == scene->replicationManager.localClientId)
+                {
+                    activePlayer = player;
+                    break;
+                }
+            }
+        }
+
         PlayerEntity* self;
         if (activePlayer.TryGetValue(self))
         {
@@ -173,7 +196,6 @@ void InputService::HandleInput()
                 command.netId = self->net->netId;
                 fixedUpdateCount = 0;
 
-                auto mouse = scene->GetEngine()->GetInput()->GetMouse();
                 if(mouse->RightPressed())
                 {
                     command.moveToTarget = true;
