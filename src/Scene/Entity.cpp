@@ -243,6 +243,12 @@ void Entity::RemoveComponent(IEntityComponent* component)
     }
 }
 
+void Entity::NetSerialize(NetSerializer& serializer)
+{
+    serializer.Add(_position);
+    DoNetSerialize(serializer);
+}
+
 void Entity::NotifyMovement()
 {
     SendEvent(EntityMovedEvent());

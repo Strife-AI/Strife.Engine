@@ -88,11 +88,6 @@ struct EntitySnapshotMessage
             .Add(lastServerSequence)
             .Add(lastServerExecuted)
             .Add(totalEntities);
-
-        for(int i = 0; i < totalEntities; ++i)
-        {
-            entities[i].ReadWrite(stream);
-        }
     }
 
     static constexpr int MaxEntities = 50;
@@ -344,16 +339,26 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
         responseMessage.lastServerExecuted = client.lastServedExecuted;
         responseMessage.totalEntities = components.size();
 
-        int i = 0;
-        for (auto p : components)
-        {
-            responseMessage.entities[i].netId = p->netId;
-            responseMessage.entities[i].position = p->owner->Center();
-
-            ++i;
-        }
-
         responseMessage.ReadWrite(responseStream);
+
+        int i = 0;
+        for (auto c : components)
+        {
+            uint8 netId = c->netId;
+            response.WriteBits(&netId, 8);
+
+            NetSerializer serializer;
+            NetSerializationState state;
+            serializer.isReading = false;
+            serializer.state = &state;
+            c->owner->NetSerialize(serializer);
+
+            for(auto& var : serializer.state->vars)
+            {
+                if(var.sizeBits != 1) response.Write1();
+                response.WriteBits(var.data, var.sizeBits);
+            }
+        }
     }
 }
 
@@ -391,7 +396,8 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
     {
         { "type", message.type },
         { "position", message.position },
-        { "dimensions", message.dimensions }
+        { "dimensions", message.dimensions },
+        { "net", true }
     };
 
     auto entity = _scene->CreateEntity(properties);
@@ -414,7 +420,6 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
     EntitySnapshotMessage message;
     message.ReadWrite(stream);
 
-
     if(localClientId == -1)
     {
         return;
@@ -427,24 +432,42 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
 
     for (int i = 0; i < message.totalEntities; ++i)
     {
-        auto player = _componentsByNetId.count(message.entities[i].netId) != 0
-            ? _componentsByNetId[message.entities[i].netId]
+        uint8 netId;
+        stream.stream.ReadBits(&netId, 8);
+
+        NetSerializer serializer;
+        serializer.isReading = true;
+        serializer.stream = &stream.stream;
+
+        auto player = _componentsByNetId.count(netId) != 0
+            ? _componentsByNetId[netId]
             : nullptr;
+
+        if(!player)
+        {
+            FatalError("Missing entity %d\n", (int)netId);
+        }
+
+        Vector2 oldPosition = player->owner->Center();
+
+        player->owner->NetSerialize(serializer);
 
         auto lastCommandExecuted = client.GetCommandById(client.lastServedExecuted);
 
         if (player == nullptr)
         {
-            _scene->SendEvent(PlayerConnectedEvent(message.entities[i].netId, message.entities[i].position));
+            //_scene->SendEvent(PlayerConnectedEvent(message.entities[i].netId, message.entities[i].position));
         }
         else if (lastCommandExecuted != nullptr)
         {
             PlayerSnapshot snapshot;
             snapshot.commandId = client.lastServedExecuted;
-            snapshot.position = message.entities[i].position;
             snapshot.time = lastCommandExecuted->timeRecorded;
+            snapshot.position = player->owner->Center();
 
             player->AddSnapshot(snapshot);
         }
+
+        player->owner->SetCenter(oldPosition);
     }
 }

@@ -42,10 +42,10 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IFixedUpdatable
     void FixedUpdate(float deltaTime) override;
 
     void SetMoveDirection(Vector2 direction);
+    void DoNetSerialize(NetSerializer& serializer) override;
 
     RigidBodyComponent* rigidBody;
     NetComponent* net;
 
-    float health;
-    float ammo;
+    float health = 100;
 };
