@@ -50,6 +50,12 @@ DEFINE_EVENT(SpawnedOnClientEvent)
 
 struct FlowField;
 
+enum class NetVarType
+{
+    Bytes,
+    Vector2
+};
+
 struct NetVar
 {
     bool operator==(const NetVar& rhs) const

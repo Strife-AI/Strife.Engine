@@ -35,15 +35,13 @@ DEFINE_EVENT(PlayerRemovedFromGame)
 DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IFixedUpdatable
 {
     void OnAdded(const EntityDictionary& properties) override;
-    void OnEvent(const IEntityEvent& ev) override;
+    void ReceiveEvent(const IEntityEvent& ev) override;
     void OnDestroyed() override;
 
     void Render(Renderer* renderer) override;
     void FixedUpdate(float deltaTime) override;
 
     void SetMoveDirection(Vector2 direction);
-
-    void DoNetSerialize(NetSerializer& serializer);
 
     RigidBodyComponent* rigidBody;
     NetComponent* net;
