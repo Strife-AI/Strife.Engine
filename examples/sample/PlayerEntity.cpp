@@ -103,3 +103,13 @@ void PlayerEntity::Render(Renderer* renderer)
 {
     rigidBody->SetVelocity(direction);
 }
+
+ void PlayerEntity::DoNetSerialize(NetSerializer& serializer)
+ {
+    if(serializer.Add(health))
+    {
+        
+    }
+
+    serializer.Add(ammo);
+ }

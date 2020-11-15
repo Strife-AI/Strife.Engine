@@ -1,5 +1,8 @@
 #include "NetComponent.hpp"
 
+#include <slikenet/BitStream.h>
+
+
 #include "Scene/Entity.hpp"
 #include "Scene/Scene.hpp"
 
