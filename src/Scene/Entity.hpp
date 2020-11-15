@@ -276,7 +276,7 @@ struct Entity : SegmentLink
     template<typename TComponent> TComponent* GetComponent();
     void RemoveComponent(IEntityComponent* component);
 
-    virtual void DoNetSerialize(NetSerializer& serializer) { }
+    void NetSerialize(NetSerializer& serializer);
 
     int id;
     StringId name;
@@ -303,6 +303,8 @@ private:
     virtual void ReceiveServerEvent(const IEntityEvent& ev) { }
 
     virtual void DoSerialize(EntityDictionaryBuilder& writer) { }
+    virtual void DoNetSerialize(NetSerializer& serializer) { }
+
     virtual std::pair<int, void*> GetMemoryBlock() = 0;
 
     Vector2 _position;

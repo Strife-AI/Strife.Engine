@@ -48,6 +48,13 @@ void PlayerEntity::Render(Renderer* renderer)
     auto position = Center();
 
     renderer->RenderRectangle(Rectangle(position - Dimensions() / 2, Dimensions()), Color::CornflowerBlue(), -0.99);
+
+    Vector2 healthBarSize(32, 4);
+    renderer->RenderRectangle(Rectangle(
+        Center() - Vector2(0, 20) - healthBarSize / 2,
+        Vector2(healthBarSize.x * health / 100, healthBarSize.y)),
+        Color::White(),
+        -1);
 }
 
  void PlayerEntity::FixedUpdate(float deltaTime)
@@ -103,3 +110,8 @@ void PlayerEntity::Render(Renderer* renderer)
 {
     rigidBody->SetVelocity(direction);
 }
+
+ void PlayerEntity::DoNetSerialize(NetSerializer& serializer)
+ {
+     serializer.Add(health);
+ }

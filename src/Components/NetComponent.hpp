@@ -86,7 +86,7 @@ struct NetSerializer
         if (isReading)
         {
             auto old = b;
-            stream->Read(b);
+            b = stream->ReadBit();
             return b != old;
         }
         else
@@ -107,7 +107,7 @@ struct NetSerializer
                 return false;
 
             T old = val;
-            stream->ReadBits(&val, sizeof(val) * 8);
+            stream->ReadBits((unsigned char*)&val, sizeof(val) * 8);
 
             return val != old;
         }
@@ -121,8 +121,9 @@ struct NetSerializer
     void AddVar(void* data, int sizeBits)
     {
         NetVar v;
-        v.sizeBytes = NearestPowerOf2(sizeBits, 8);
+        v.sizeBytes = NearestPowerOf2(sizeBits, 8) / 8;
         v.sizeBits = sizeBits;
+        if (v.sizeBytes == 0) FatalError("Data takes 0 size");
         v.data = Alloc(v.sizeBytes);
         memcpy(v.data, data, v.sizeBytes);
         state->vars.PushBack(v);
