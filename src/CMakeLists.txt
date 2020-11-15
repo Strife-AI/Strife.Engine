@@ -25,7 +25,7 @@ add_library(Strife.Engine STATIC
         Scene/Scene.cpp
         Scene/SceneManager.cpp
         Scene/IGame.cpp
-        scene/TilemapEntity.cpp
+        Scene/TilemapEntity.cpp
         System/BinaryStreamReader.cpp
         System/BinaryStreamWriter.cpp
         System/FileSystem.cpp
