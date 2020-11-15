@@ -1,5 +1,6 @@
 #include "Entity.hpp"
 #include "BaseEntity.hpp"
+#include "Engine.hpp"
 #include "Scene.hpp"
 
 const EntityHeader InvalidEntityHeader::InvalidHeader;
@@ -176,6 +177,16 @@ void Entity::SetRotation(float angle)
 Engine* Entity::GetEngine() const
 {
     return scene->GetEngine();
+}
+
+void Entity::SendEvent(const IEntityEvent& ev)
+{
+    ReceiveEvent(ev);
+
+    if(GetEngine()->GetNetworkManger()->IsServer())
+    {
+        ReceiveServerEvent(ev);
+    }
 }
 
 void Entity::Serialize(EntityDictionaryBuilder& builder)

@@ -21,7 +21,7 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
     scene->GetService<InputService>()->players.push_back(this);
 }
 
-void PlayerEntity::OnEvent(const IEntityEvent& ev)
+void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)
 {
     if(ev.Is<SpawnedOnClientEvent>())
     {
@@ -103,13 +103,3 @@ void PlayerEntity::Render(Renderer* renderer)
 {
     rigidBody->SetVelocity(direction);
 }
-
- void PlayerEntity::DoNetSerialize(NetSerializer& serializer)
- {
-    if(serializer.Add(health))
-    {
-        
-    }
-
-    serializer.Add(ammo);
- }

@@ -14,24 +14,36 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
     Vector2 size{ 67 * 5, 55 * 5 };
     rigidBody->CreateBoxCollider(size);
 
+    rigidBody->CreateBoxCollider({ 600, 600 }, true);
+
     scene->GetService<PathFinderService>()->AddObstacle(Rectangle(Center() - size / 2, size));
 }
 
-void CastleEntity::OnEvent(const IEntityEvent& ev)
+void CastleEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
-    if(ev.Is<ContactBeginEvent>())
+    if (ev.Is<ContactBeginEvent>())
     {
+        ++_playerCount;
         _colorChangeTime = 1;
+        _drawRed = true;
         spriteComponent->blendColor = Color(255, 0, 0, 128);
+    }
+    else if(ev.Is<ContactEndEvent>())
+    {
+        if(--_playerCount == 0)
+        {
+            _drawRed = false;
+            spriteComponent->blendColor = Color(0, 0, 0, 0);
+        }
     }
 }
 
-void CastleEntity::Update(float deltaTime)
+void CastleEntity::DoNetSerialize(NetSerializer& serializer)
 {
-    _colorChangeTime -= deltaTime;
-
-    if(_colorChangeTime < 0)
+    if(serializer.Add(_drawRed))
     {
-        spriteComponent->blendColor = Color(0, 0, 0, 0);
+        spriteComponent->blendColor = _drawRed
+            ? Color(255, 0, 0, 128)
+            : Color(0, 0, 0, 0);
     }
 }

@@ -20,6 +20,7 @@
 #include "Renderer/Color.hpp"
 #include "Sound/SoundManager.hpp"
 
+struct NetSerializer;
 class b2Body;
 struct IEntityEvent;
 struct MoveResult;
@@ -241,7 +242,7 @@ struct Entity : SegmentLink
     /// Sends an event directly to an entity.
     /// </summary>
     /// <param name="ev"></param>
-    void SendEvent(const IEntityEvent& ev) { OnEvent(ev); }
+    void SendEvent(const IEntityEvent& ev);
 
     void Serialize(EntityDictionaryBuilder& builder);
 
@@ -275,6 +276,8 @@ struct Entity : SegmentLink
     template<typename TComponent> TComponent* GetComponent();
     void RemoveComponent(IEntityComponent* component);
 
+    virtual void DoNetSerialize(NetSerializer& serializer) { }
+
     int id;
     StringId name;
     StringId type;
@@ -296,7 +299,9 @@ private:
     friend class Scene;
     friend void MoveEntityRecursive(RigidBodyComponent* rigidBody, Vector2 offset);
 
-    virtual void OnEvent(const IEntityEvent& ev) { }
+    virtual void ReceiveEvent(const IEntityEvent& ev) { }
+    virtual void ReceiveServerEvent(const IEntityEvent& ev) { }
+
     virtual void DoSerialize(EntityDictionaryBuilder& writer) { }
     virtual std::pair<int, void*> GetMemoryBlock() = 0;
 
