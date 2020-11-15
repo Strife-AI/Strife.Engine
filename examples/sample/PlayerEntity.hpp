@@ -43,6 +43,11 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IFixedUpdatable
 
     void SetMoveDirection(Vector2 direction);
 
+    void DoNetSerialize(NetSerializer& serializer);
+
     RigidBodyComponent* rigidBody;
     NetComponent* net;
+
+    float health;
+    float ammo;
 };
