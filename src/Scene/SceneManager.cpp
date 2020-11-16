@@ -7,6 +7,7 @@
 #include "IGame.hpp"
 #include "Scene.hpp"
 #include "SdlManager.hpp"
+#include "IEntityEvent.hpp"
 
 void MapCmd(ConsoleCommandBinder& binder)
 {

@@ -3,6 +3,10 @@
 
 #include "Memory/Flags.hpp"
 
+#ifdef __linux__
+#include <typeinfo>
+#endif
+
 enum class EntityComponentFlags
 {
     ReceivesRenderEvents = 1,

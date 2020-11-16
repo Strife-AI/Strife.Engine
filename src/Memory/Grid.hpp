@@ -1,6 +1,8 @@
 #pragma once
 #include <cstring>
 
+#include <System/Logger.hpp>
+
 template <typename T>
 class Grid
 {

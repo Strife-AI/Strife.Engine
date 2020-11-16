@@ -7,7 +7,7 @@
 #include <Renderer/RenderVertex.hpp>
 #include <Renderer/Color.hpp>
 
-#include "Lighting.hpp"
+#include "Renderer/Lighting.hpp"
 #include "Shader.hpp"
 #include "gsl/span"
 #include "Memory/FixedSizeVector.hpp"

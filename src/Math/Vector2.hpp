@@ -153,9 +153,9 @@ template <typename T>
 Vector2Template<T> Vector2Template<T>::SmoothDamp(Vector2Template target, Vector2Template& velocity, float smoothSpeed, float deltaTime,
                                                   float maxSpeed)
 {
-    return Vector2(
-        ::SmoothDamp(x, target.x, velocity.x, smoothSpeed, deltaTime, maxSpeed),
-        ::SmoothDamp(y, target.y, velocity.y, smoothSpeed, deltaTime, maxSpeed));
+    return Vector2Template(
+            ::SmoothDamp(x, target.x, velocity.x, smoothSpeed, deltaTime, maxSpeed),
+            ::SmoothDamp(y, target.y, velocity.y, smoothSpeed, deltaTime, maxSpeed));
 }
 
 template <typename T>

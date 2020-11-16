@@ -40,9 +40,11 @@ void ResolutionCommand(ConsoleCommandBinder& binder)
 }
 ConsoleCmd g_resolutionCmd("resolution", ResolutionCommand);
 
+#ifdef _WIN32
 #include <Windows.h>
 #include <ShellScalingAPI.h>
 #include <comdef.h>
+#endif
 
 #pragma comment(lib, "Shcore.lib")
 

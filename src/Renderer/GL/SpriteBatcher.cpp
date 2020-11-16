@@ -311,7 +311,7 @@ void SpriteBatcher::RenderPolygon(Polygon& polygon, Texture* texture)
 int SpriteBatcher::UnformArrayLocation(const char* arrayName, const char* property, int index) const
 {
     char name[1024];
-    sprintf_s(name, "%s[%d].%s", arrayName, index, property);
+    sprintf(name, "%s[%d].%s", arrayName, index, property);
 
     return glGetUniformLocation(_shader->ProgramId(), name);
 }

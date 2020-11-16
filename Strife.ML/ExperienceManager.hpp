@@ -22,16 +22,16 @@ struct DecompressedExperience;
 struct ExperienceRequest;
 class Renderer;
 
-const float PerceptionGridCellSize = 8;
+constexpr float PerceptionGridCellSize = 8;
 
 constexpr int TotalColumnWidth()
 {
-	return PerceptionGridCellSize * PerceptionGridCols;
+	return (PerceptionGridCellSize * PerceptionGridCols);
 }
 
 constexpr int TotalColumnHeight()
 {
-	return PerceptionGridCellSize * PerceptionGridRows;
+	return (PerceptionGridCellSize * PerceptionGridRows);
 }
 
 struct CompressedExperience

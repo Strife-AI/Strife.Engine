@@ -1,6 +1,7 @@
 #include "BlockAllocator.hpp"
 
 #include <set>
+#include <cstring>
 
 static int totalLargeRequested = 0;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sstream>
+#include <memory>
 #include <cassert>
 
 #include "Memory/Grid.hpp"

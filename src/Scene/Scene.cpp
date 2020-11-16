@@ -15,6 +15,7 @@
 #include "SdlManager.hpp"
 #include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
+#include "IEntityEvent.hpp"
 
 template <typename TContainer, typename TItem, int MaxSize>
 void AddIfImplementsInterface(FixedSizeVector<TContainer, MaxSize>& container, const TItem& item)

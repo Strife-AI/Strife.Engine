@@ -4,13 +4,16 @@
 #include <box2d/b2_body.h>
 #include <map>
 #include <string>
+
+#ifdef _WIN32
 #include <vcruntime_typeinfo.h>
+#endif
+
 #include <charconv>
 
 
 #include "EntityComponent.hpp"
 #include "Math/Vector2.hpp"
-#include "IEntityEvent.hpp"
 #include "Memory/Dictionary.hpp"
 #include "Memory/DLinkNode.hpp"
 #include "Memory/FixedLengthString.hpp"

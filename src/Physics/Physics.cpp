@@ -1,6 +1,7 @@
 #include "Physics.hpp"
 
 #include <box2d/b2_contact.h>
+#include <Scene/IEntityEvent.hpp>
 
 
 #include "Components/RigidBodyComponent.hpp"

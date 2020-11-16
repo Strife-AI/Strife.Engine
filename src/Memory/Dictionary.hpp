@@ -81,17 +81,10 @@ public:
     }
 };
 
-template <typename T>
-inline bool TryParseDictionaryScalarValue(std::string_view& value, T& outValue)
-{
-    auto error = std::from_chars(value.data(), value.data() + value.size(), outValue);
-    return error.ec == std::errc();
-}
-
 template<>
 inline bool TryParseDictionaryValue(std::string_view& value, float& outResult)
 {
-    return TryParseDictionaryScalarValue<float>(value, outResult);
+    return sscanf(value.data(), "%f", &outResult) == 1;
 }
 
 template<>
@@ -104,19 +97,19 @@ inline bool TryParseDictionaryValue(std::string_view& value, std::string& outRes
 template<>
 inline bool TryParseDictionaryValue(std::string_view& value, double& outResult)
 {
-    return TryParseDictionaryScalarValue<double>(value, outResult);
+    return sscanf(value.data(), "%lf", &outResult) == 1;
 }
 
 template<>
 inline bool TryParseDictionaryValue(std::string_view& value, int& outResult)
 {
-    return TryParseDictionaryScalarValue<int>(value, outResult);
+    return sscanf(value.data(), "%d", &outResult) == 1;
 }
 
 template<>
 inline bool TryParseDictionaryValue(std::string_view& value, unsigned int& outResult)
 {
-    return TryParseDictionaryScalarValue<unsigned int>(value, outResult);
+    return sscanf(value.data(), "%u", &outResult) == 1;
 }
 
 template<>
@@ -145,22 +138,22 @@ inline bool TryParseDictionaryValue(std::string_view& value, StringId& outResult
         return false;
     }
 
-    auto error = std::from_chars(value.data() + 1, value.data() + value.size(), outResult.key);
-    return error.ec == std::errc();
+    return sscanf(value.data() + 1, "%u", &outResult.key) == 1;
 }
 
 template<>
 inline bool TryParseDictionaryValue(std::string_view& value, Vector2& outResult)
 {
-    int fieldsCaptured = sscanf_s(value.data(), "%f %f", &outResult.x, &outResult.y);
+    int fieldsCaptured = sscanf(value.data(), "%f %f", &outResult.x, &outResult.y);
     return fieldsCaptured == 2;
 }
 
 template<>
 inline bool TryParseDictionaryValue(std::string_view& value, Color& outResult)
 {
-    float r, g, b, a;
-    int fieldsCaptured = sscanf_s(value.data(), "%f %f %f %f", &r, &g, &b, &a);
+    float r, g, b, a;;
+
+    int fieldsCaptured = sscanf(value.data(), "%f %f %f %f", &r, &g, &b, &a);
 
     outResult = Color(r, g, b, a);
 
