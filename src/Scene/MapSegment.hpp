@@ -63,6 +63,7 @@ struct MapSegment
 
     EntityDictionary properties;
 
+    // TODO: deprecate
     Vector2 startMarker;
     Vector2 endMarker;
 

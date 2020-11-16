@@ -290,7 +290,6 @@ struct Entity : SegmentLink
     int observedObjectType = 0;
 
     unsigned int flags = 0;
-    int segmentId;
     Entity* parent = nullptr;
     Entity* nextSibling = nullptr;
     Entity* children = nullptr;

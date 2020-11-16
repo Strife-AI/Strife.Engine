@@ -17,38 +17,13 @@
 #include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
 
-void LoadedSegment::Reset(int segmentId_)
-{
-    segmentId = segmentId_;
-
-    firstLink.next = &lastLink;
-    firstLink.prev = nullptr;
-
-    lastLink.next = nullptr;
-    lastLink.prev = &firstLink;
-}
-
-void LoadedSegment::AddEntity(Entity* entity)
-{
-    firstLink.InsertAfterThis(entity);
-}
-
-void LoadedSegment::BroadcastEvent(const IEntityEvent& ev)
-{
-    for (auto node = firstLink.next; node != &lastLink; node = node->next)
-    {
-        node->GetEntity()->SendEvent(ev);
-    }
-}
-
 Scene::Scene(Engine* engine, StringId mapSegmentName)
     : replicationManager(this, engine->GetNetworkManger() != nullptr ? engine->GetNetworkManger()->IsServer() : false),
     _mapSegmentName(mapSegmentName),
     _cameraFollower(&_camera, engine->GetInput()),
     _engine(engine),
     _world(std::make_unique<b2World>(b2Vec2(0, 0))),
-    _collisionManager(_world.get()),
-    _freeSegments(_segmentPool, MaxLoadedSegments)
+    _collisionManager(_world.get())
 {
     
 
@@ -82,12 +57,7 @@ void Scene::RegisterEntity(Entity* entity, const EntityDictionary& properties)
     entity->scene = this;
     _engine->GetSoundManager()->AddSoundEmitter(&entity->_soundEmitter, entity);
 
-    // Make sure entities created in OnAdded() don't get offset by the segment offset
-    auto oldEntityOffset = _entityOffset;
-    _entityOffset = Vector2::Zero();
     entity->OnAdded(properties);
-
-    _entityOffset = oldEntityOffset;
 }
 
 void Scene::RemoveEntity(Entity* entity)
@@ -148,35 +118,6 @@ void Scene::DestroyScheduledEntities()
         toBeDestroyed.pop_back();
         RemoveEntity(entityToDestroy);
     }
-}
-
-LoadedSegment* Scene::RegisterSegment(int segmentId)
-{
-    if (_loadedSegments.Size() == _loadedSegments.Capacity())
-    {
-        FatalError("Too many segments loaded");
-    }
-
-    LoadedSegment* segment = _freeSegments.Borrow();
-    _loadedSegments.PushBack(segment);
-
-    segment->Reset(segmentId);
-
-    return segment;
-}
-
-
-LoadedSegment* Scene::GetLoadedSegment(int segmentId)
-{
-    for (auto segment : _loadedSegments)
-    {
-        if (segment->segmentId == segmentId)
-        {
-            return segment;
-        }
-    }
-
-    return nullptr;
 }
 
 void* Scene::AllocateMemory(int size) const
@@ -345,13 +286,10 @@ SoundManager* Scene::GetSoundManager() const
     return _engine->GetSoundManager();
 }
 
-int Scene::LoadMapSegment(StringId id)
+void Scene::LoadMapSegment(StringId id)
 {
     auto mapSegment = ResourceManager::GetResource<MapSegment>(id);
-
-    segmentsAdded.push_back(id);
-
-    return LoadMapSegment(*mapSegment.Value());
+    LoadMapSegment(*mapSegment.Value());
 }
 
 void CameraCommand(ConsoleCommandBinder& binder)
@@ -369,22 +307,8 @@ void CameraCommand(ConsoleCommandBinder& binder)
 
 ConsoleCmd cameraCmd("camera", CameraCommand);
 
-int Scene::LoadMapSegment(const MapSegment& segment)
+void Scene::LoadMapSegment(const MapSegment& segment)
 {
-    auto loadedSegment = RegisterSegment(_currentSegmentId);
-
-    auto oldEntityOffset = _entityOffset;
-
-    if (_segmentOffset == Vector2(0, 0))
-    {
-        // Make the coordinates for the editor light up if the first segment so we don't have to worry
-        // about segment offsets for the lights
-        _segmentOffset = segment.startMarker;
-    }
-
-    auto offset = _segmentOffset - segment.startMarker;
-    _entityOffset = offset;
-
     EntityDictionary tilemapProperties
     {
         { "type", "tilemap"_sid }
@@ -392,95 +316,17 @@ int Scene::LoadMapSegment(const MapSegment& segment)
 
     auto tileMap = CreateEntityInternal<TilemapEntity>(tilemapProperties);
     tileMap->SetMapSegment(segment);
-    tileMap->segmentId = _currentSegmentId;
-    tileMap->segmentStart = offset;
-    loadedSegment->AddEntity(tileMap);
-
-    loadedSegment->properties = segment.properties;
-
-    EntityDictionary ambientLightProperties
-    {
-        { "type", "ambient-light"_sid }
-    };
-
-    AmbientLightEntity* ambientLight = nullptr;
 
     for (auto& instance : segment.entities)
     {
         EntityDictionary properties(instance.properties.get(), instance.totalProperties);
         auto entity = CreateEntity(properties);
-        entity->segmentId = _currentSegmentId;
-        loadedSegment->AddEntity(entity);
-
-        if (entity->Is<AmbientLightEntity>())
-        {
-            ambientLight = static_cast<AmbientLightEntity*>(entity);
-        }
 
         if (entity->flags & PreventUnloading)
         {
             entity->Unlink();
         }
     }
-
-    if (ambientLight == nullptr)
-    {
-        ambientLight = CreateEntityInternal<AmbientLightEntity>(ambientLightProperties);
-        loadedSegment->AddEntity(ambientLight);
-
-        ambientLight->ambientLight.intensity = 1;
-        ambientLight->ambientLight.color = Color(255, 255, 255);
-        ambientLight->segmentId = _currentSegmentId;
-    }
-
-    Rectangle segmentBounds(Vector2(_segmentOffset.x, _segmentOffset.y - 1e5),
-        Vector2((segment.endMarker - segment.startMarker).x, 2 * 1e5));
-
-    ambientLight->ambientLight.bounds = segmentBounds;
-
-    auto useLocalAmbientLight = segment.properties.GetValueOrDefault("useLocalAmbientLight", false);
-    if (!useLocalAmbientLight)
-    {
-        ambientLight->ambientLight.intensity = currentAmbientBrightness;
-    }
-
-    _segmentOffset += segment.endMarker - segment.startMarker;
-
-    _entityOffset = oldEntityOffset;
-
-    auto segmentLoadedEvent = SegmentLoadedEvent(_currentSegmentId, segmentBounds, currentDifficulty);
-
-    loadedSegment->BroadcastEvent(segmentLoadedEvent);
-    SendEvent(segmentLoadedEvent);
-
-    return _currentSegmentId++;
-}
-
-void Scene::UnloadSegmentsBefore(int segmentId)
-{
-    int lastAliveIndex = 0;
-
-    for (int i = 0; i < _loadedSegments.Size(); ++i)
-    {
-        auto segment = _loadedSegments[i];
-
-        if (segment->segmentId < segmentId && segment->segmentId >= 0)
-        {
-            for (auto node = segment->firstLink.next; node != &segment->lastLink; node = node->next)
-            {
-                node->GetEntity()->Destroy();
-            }
-
-            segment->Reset(-2);
-            _freeSegments.Return(segment);
-        }
-        else
-        {
-            _loadedSegments[lastAliveIndex++] = segment;
-        }
-    }
-
-    _loadedSegments.Resize(lastAliveIndex);
 }
 
 void Scene::StartTimer(float timeSeconds, const std::function<void()>& callback)
@@ -553,52 +399,6 @@ bool Scene::Raycast(Vector2 start, Vector2 end, RaycastResult& outResult, bool a
     }
 }
 
-std::vector<Entity*> Scene::GetEntitiesByNameInSegment(StringId name, int segmentId)
-{
-    std::vector<Entity*> foundEntities;
-
-    auto segment = GetLoadedSegment(segmentId);
-
-    if (segment == nullptr)
-    {
-        return { };
-    }
-
-    for (auto node = segment->firstLink.next; node != &segment->lastLink; node = node->next)
-    {
-        auto entity = node->GetEntity();
-
-        if (entity->name == name)
-        {
-            foundEntities.push_back(entity);
-        }
-    }
-
-    return foundEntities;
-}
-
-Entity* Scene::GetFirstEntityByNameInSegment(StringId name, int segmentId)
-{
-    auto segment = GetLoadedSegment(segmentId);
-
-    if (segment == nullptr)
-    {
-        return { };
-    }
-
-    for (auto node = segment->firstLink.next; node != &segment->lastLink; node = node->next)
-    {
-        auto entity = node->GetEntity();
-
-        if (entity->name == name)
-        {
-            return entity;
-        }
-    }
-
-    return nullptr;
-}
-
 extern ConsoleVar<bool> g_stressTest;
 
 void Scene::UpdateEntities(float deltaTime)
@@ -660,18 +460,4 @@ void Scene::UpdateEntities(float deltaTime)
     DestroyScheduledEntities();
 
     _cameraFollower.Update(deltaTime);
-}
-
-bool Scene::TryGetLoadedSegmentById(const int segmentId, LoadedSegment*& segment)
-{
-    for (int i = 0; i < _loadedSegments.Size(); ++i)
-    {
-        if (_loadedSegments[i]->segmentId == segmentId)
-        {
-            segment = _loadedSegments[i];
-            return true;
-        }
-    }
-
-    return false;
 }

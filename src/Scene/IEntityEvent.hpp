@@ -181,21 +181,6 @@ DEFINE_EVENT(RenderEvent)
     Renderer* renderer;
 };
 
-DEFINE_EVENT(SegmentLoadedEvent)
-{
-    SegmentLoadedEvent(int segmentId_, const Rectangle& bounds_, int difficulty_)
-        : segmentId(segmentId_),
-        bounds(bounds_),
-        difficulty(difficulty_)
-    {
-        
-    }
-
-    int segmentId;
-    int difficulty;
-    Rectangle bounds;
-};
-
 DEFINE_EMPTY_EVENT(RenderImguiEvent)
 DEFINE_EMPTY_EVENT(PreUpdateEvent)
 DEFINE_EMPTY_EVENT(PreRenderEvent)

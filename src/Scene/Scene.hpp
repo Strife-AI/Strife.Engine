@@ -58,36 +58,6 @@ struct RaycastResult
     Vector2 normal;
 };
 
-struct LoadedSegment
-{
-    LoadedSegment()
-        : segmentId(-1)
-    {
-        
-    }
-
-    LoadedSegment(int segmentId_)
-        : segmentId(segmentId_)
-    {
-        
-    }
-
-    void Reset(int segmentId_);
-    void AddEntity(Entity* entity);
-    void BroadcastEvent(const IEntityEvent& ev);
-
-    bool operator==(const LoadedSegment& rhs) const
-    {
-        return segmentId == rhs.segmentId;
-    }
-
-    int segmentId;
-    SegmentLink firstLink;
-    SegmentLink lastLink;
-
-    EntityDictionary properties;
-};
-
 constexpr int MaxEntities = 8192;
 
 template<typename TInterface>
@@ -209,8 +179,6 @@ public:
     Camera* GetCamera() { return &_camera; }
     CameraFollower* GetCameraFollower() { return &_cameraFollower; }
     b2World* GetWorld() const { return _world.get(); }
-    Vector2 SegmentOffset() const { return _segmentOffset; }
-    int CurrentSegmentId() const { return _currentSegmentId; }
 
     Entity* CreateEntity(const EntityDictionary& properties);
 
@@ -273,10 +241,8 @@ public:
 
     SoundManager* GetSoundManager() const;
 
-    int LoadMapSegment(StringId id);
-    int LoadMapSegment(const MapSegment& segment);
-    bool TryGetLoadedSegmentById(const int segmentId, LoadedSegment*& segment);
-    void UnloadSegmentsBefore(int segmentId);
+    void LoadMapSegment(StringId id);
+    void LoadMapSegment(const MapSegment& segment);
 
     void StartTimer(float timeSeconds, const std::function<void()>& callback);
     void StartEntityTimer(float timeSeconds, const std::function<void()>& callback, Entity* entity);
@@ -298,11 +264,8 @@ public:
     template<typename TEntity>
     TEntity* GetFirstNamedEntityOfType(StringId name);
 
-    std::vector<Entity*> GetEntitiesByNameInSegment(StringId name, int segmentId);
-
     template<typename TEntity>
     std::vector<TEntity*> GetEntitiesByTypeInSegment(int segmentId);
-    Entity* GetFirstEntityByNameInSegment(StringId name, int segmentId);
 
     template <typename TEntity, typename ... Args>
     TEntity* CreateEntityInternal(const EntityDictionary& properties, Args&& ... constructorArgs);
@@ -314,8 +277,6 @@ public:
     void* AllocateMemory(int size) const;
     void FreeMemory(void* mem, int size) const;
 
-    std::vector<StringId> segmentsAdded;
-
     float deltaTime = 0;
     float timeSinceStart = 0;
     TimePointType lastFrameStart;
@@ -326,8 +287,6 @@ public:
 
     void SetSoundListener(Entity* entity);
 
-    float currentAmbientBrightness = 0.85;
-    int currentDifficulty = 1;
     ReplicationManager replicationManager;
 
 protected:
@@ -352,10 +311,6 @@ private:
 
     int BeginQuery() { return _nextQueryId++; }
 
-    LoadedSegment* RegisterSegment(int segmentId);
-    void UnregisterSegment(int segmentId);
-    LoadedSegment* GetLoadedSegment(int segmentId);
-
     StringId _mapSegmentName;
 
     Camera _camera;
@@ -371,16 +326,7 @@ private:
 
     TimerManager _timerManager;
 
-    Vector2 _segmentOffset = Vector2(0, 0);
-    Vector2 _entityOffset = Vector2(0, 0);
-    int _currentSegmentId = 0;
-
     LightManager* _lightManger;
-
-    static constexpr int MaxLoadedSegments = 128;
-    FixedSizeVector<LoadedSegment*, MaxLoadedSegments> _loadedSegments;
-    LoadedSegment _segmentPool[MaxLoadedSegments];
-    FreeList<LoadedSegment> _freeSegments;
 
     EntityManager _entityManager;
 };
@@ -392,7 +338,7 @@ TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& 
     entity->scene = this;
 
     new(entity) TEntity(std::forward<Args>(constructorArgs) ...);
-    entity->_position = properties.GetValueOrDefault<Vector2>("position", Vector2(0, 0)) + _entityOffset;
+    entity->_position = properties.GetValueOrDefault<Vector2>("position", Vector2(0, 0));
     entity->type = TEntity::Type;
 
     RegisterEntity(entity, properties);
@@ -405,35 +351,9 @@ std::vector<TEntity*> Scene::GetEntitiesOfType()
 {
     std::vector<TEntity*> foundEntities;
 
-    for(auto entity : _entities)
+    for(auto entity : _entityManager.entities)
     {
         TEntity* tEntity;
-        if(entity->Is<TEntity>(tEntity))
-        {
-            foundEntities.push_back(tEntity);
-        }
-    }
-
-    return foundEntities;
-}
-
-template <typename TEntity>
-std::vector<TEntity*> Scene::GetEntitiesByTypeInSegment(int segmentId)
-{
-    std::vector<TEntity*> foundEntities;
-
-    auto segment = GetLoadedSegment(segmentId);
-
-    if(segment == nullptr)
-    {
-        return { };
-    }
-
-    for (auto node = segment->firstLink.next; node != &segment->lastLink; node = node->next)
-    {
-        TEntity* tEntity;
-        auto entity = node->GetEntity();
-
         if(entity->Is<TEntity>(tEntity))
         {
             foundEntities.push_back(tEntity);
