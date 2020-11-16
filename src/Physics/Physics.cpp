@@ -104,7 +104,6 @@ void CollisionManager::PreSolve(b2Contact* contact, const b2Manifold* oldManifol
 float FindClosestRaycastCallback::ReportFixture(b2Fixture* fixture, const b2Vec2& point, const b2Vec2& normal, float fraction)
 {
     if ((!allowTriggers && fixture->IsSensor())
-        || ColliderHandle(fixture).OwningEntity() == self
         || includeFixture != nullptr && !includeFixture({ fixture }))
     {
         return lastFraction;

@@ -189,13 +189,12 @@ public:
 
     gsl::span<ColliderHandle> FindOverlappingColliders(const Rectangle& bounds, gsl::span<ColliderHandle> storage) const;
     gsl::span<Entity*> FindOverlappingEntities(const Rectangle& bounds, gsl::span<Entity*> storage);
-    bool RaycastExcludingSelf(
+    bool Raycast(
         Vector2 start,
         Vector2 end,
-        Entity* self,
         RaycastResult& outResult,
         bool allowTriggers = false,
-        const std::function<bool(ColliderHandle handle)>& includeFixture = nullptr);
+        const std::function<bool(ColliderHandle handle)>& includeFixture = nullptr) const;
 
     StringId MapSegmentName() const { return _mapSegmentName; }
 

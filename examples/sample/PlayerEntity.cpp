@@ -93,7 +93,7 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
         RaycastResult hitResult;
         if(attackTarget.TryGetValue(target)
             && (target->Center() - Center()).Length() < 200
-            && scene->RaycastExcludingSelf(Center(), target->Center(), nullptr, hitResult)
+            && scene->Raycast(Center(), target->Center(), hitResult)
             && hitResult.handle.OwningEntity() == target)
         {
             rigidBody->SetVelocity({ 0, 0 });
@@ -135,7 +135,7 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
         for (auto p : points)
         {
             RaycastResult result;
-            if (scene->RaycastExcludingSelf(p, client->flowField->target, nullptr, result)
+            if (scene->Raycast(p, client->flowField->target, result)
                 && (state != PlayerState::Attacking || result.handle.OwningEntity() != attackTarget.GetValueOrNull()))
             {
                 useBeeLine = false;
