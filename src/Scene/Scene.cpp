@@ -571,16 +571,16 @@ gsl::span<Entity*> Scene::FindOverlappingEntities(const Rectangle& bounds, gsl::
     return storage.subspan(0, totalOverlappingEntities);
 }
 
-bool Scene::RaycastExcludingSelf(Vector2 start, Vector2 end, Entity* self, RaycastResult& outResult, bool allowTriggers, const std::function<bool(ColliderHandle handle)>& includeFixture)
+bool Scene::Raycast(Vector2 start, Vector2 end, RaycastResult& outResult, bool allowTriggers, const std::function<bool(ColliderHandle handle)>& includeFixture) const
 {
-    FindClosestRaycastCallback callback(self, allowTriggers, includeFixture);
-
-    _world->RayCast(&callback, PixelToBox2D(start), PixelToBox2D(end));
-
     if (IsApproximately((end - start).TaxiCabDistance(), 0))
     {
         return false;
     }
+
+    FindClosestRaycastCallback callback(allowTriggers, includeFixture);
+
+    _world->RayCast(&callback, PixelToBox2D(start), PixelToBox2D(end));
 
     if (callback.lastFraction == 1)
     {
