@@ -105,7 +105,7 @@ void PathFinderService::RequestFlowField(Vector2 start, Vector2 end, Entity* own
 
 void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
 {
-    if(ev.Is<PreUpdateEvent>())
+    if(ev.Is<UpdateEvent>())
     {
         CalculatePaths();
     }

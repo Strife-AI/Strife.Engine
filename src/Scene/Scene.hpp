@@ -182,12 +182,12 @@ public:
 
     Entity* CreateEntity(const EntityDictionary& properties);
 
-    void DestroyEntity(Entity* entity);
+    void MarkEntityForDestruction(Entity* entity);
     void UpdateEntities(float deltaTime);
     void RenderEntities(Renderer* renderer);
     void RenderHud(Renderer* renderer);
 
-    void ForceFixedUpdate();
+    void StepPhysicsSimulation();
 
     template <typename TService, typename ... Args>
     TService* AddService(Args&& ...args)
@@ -219,8 +219,6 @@ public:
 
     void SendEvent(const IEntityEvent& ev)
     {
-        ReceiveEvent(ev);
-
         for (auto& service : _services)
         {
             service->SendEvent(ev, inEditor);
@@ -255,6 +253,10 @@ public:
         RaycastResult& outResult,
         bool allowTriggers = false,
         const std::function<bool(ColliderHandle handle)>& includeFixture = nullptr) const;
+    void NotifyUpdate(float deltaTime);
+    void NotifyServerUpdate(float deltaTime);
+    void NotifyFixedUpdate();
+    void NotifyServerFixedUpdate();
 
     StringId MapSegmentName() const { return _mapSegmentName; }
 
@@ -288,19 +290,6 @@ public:
     void SetSoundListener(Entity* entity);
 
     ReplicationManager replicationManager;
-
-protected:
-    virtual void ReceiveEvent(const IEntityEvent& ev) { }
-    virtual void PreFixedUpdate() { }
-    virtual void PostFixedUpdate() { }
-
-    virtual void PreUpdate() { }
-    virtual void PostUpdate() { }
-
-    virtual void PreRender() { }
-    virtual void PostRender() { }
-
-    virtual void DoRenderHud(Renderer* renderer) { }
 
 private:
     std::vector<std::unique_ptr<ISceneService>> _services;

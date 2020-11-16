@@ -53,8 +53,7 @@ enum EntityFlags
 {
     EnableBuoyancy = 1,
     WasTeleported = 2,
-    CastsShadows = 4,
-    PreventUnloading = 8
+    CastsShadows = 4
 };
 
 struct EntityProperty
@@ -193,15 +192,11 @@ private:
 
 struct Entity;
 
-struct SegmentLink : DLinkNode<SegmentLink>
-{
-    Entity* GetEntity();
-};
 
 /// <summary>
 /// The base class of all entities. Do not inherit from this directly. Instead, use the macro <see cref="DEFINE_ENTITY"/>
 /// </summary>
-struct Entity : SegmentLink
+struct Entity
 {
     static const int InvalidEntityId = -1;
 
