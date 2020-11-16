@@ -109,6 +109,6 @@ void NetworkPhysics::ClientFixedUpdate()
 {
     for(auto net : scene->replicationManager.components)
     {
-        net->owner->SetCenter(net->GetSnapshotPosition(scene->timeSinceStart - 0.2));
+        net->owner->SetCenter(net->GetSnapshotPosition(scene->relativeTime - 0.2));
     }
 }

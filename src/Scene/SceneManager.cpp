@@ -63,7 +63,6 @@ void SceneManager::DoSceneTransition()
         _scene->lastFrameStart = std::chrono::high_resolution_clock::now();
         _newScene = nullptr;
 
-        _scene->OnSceneLoaded();
         _scene->SendEvent(SceneLoadedEvent());
     }
 }
@@ -88,7 +87,6 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
     delete _newScene;
 
     _newScene = new Scene(_engine, mapSegment->name);
-    _newScene->SetLightManager(_engine->GetRenderer()->GetLightManager());
 
     auto screenSize = _engine->GetSdlManager()->WindowSize().AsVectorOfType<float>();
     _newScene->GetCamera()->SetScreenSize(screenSize);

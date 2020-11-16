@@ -27,7 +27,7 @@ void ParticleSystem::CreateParticle(Vector2 position, Vector2 velocity)
         ZeroGravityParticle particle;
         particle.velocity = velocity;
         particle.position = position;
-        particle.creationTime = scene->timeSinceStart;
+        particle.creationTime = scene->relativeTime;
         particle.color = spawnColor;
 
         particles->particles.PushBackIfRoom(particle);
@@ -57,7 +57,7 @@ void ParticleSystem::Render(Renderer* renderer, float deltaTime)
 
     if(particles.Value() == nullptr)
     {
-        lastSpawnTime = scene->timeSinceStart;
+        lastSpawnTime = scene->relativeTime;
         particles = g_particlePool.Borrow();
     }
 
@@ -68,7 +68,7 @@ void ParticleSystem::Render(Renderer* renderer, float deltaTime)
     {
         auto& particle = particles->particles[i];
         bool alive = expirationType == ParticleExpiration::Height && particle.position.y > minY
-            || expirationType == ParticleExpiration::Time && scene->timeSinceStart - particle.creationTime < expirationTime;
+            || expirationType == ParticleExpiration::Time && scene->relativeTime - particle.creationTime < expirationTime;
 
         if (alive)
         {
@@ -78,7 +78,7 @@ void ParticleSystem::Render(Renderer* renderer, float deltaTime)
             float transparency = 0;
 
             if (expirationType == ParticleExpiration::Height) transparency = Clamp((particle.position.y - minY) / 40, 0.0f, 1.0f);
-            else transparency = Clamp(1 - (scene->timeSinceStart - particle.creationTime) / expirationTime, 0.0f, 1.0f);
+            else transparency = Clamp(1 - (scene->relativeTime - particle.creationTime) / expirationTime, 0.0f, 1.0f);
             
             if (shape == ParticleShape::Square)
             {
@@ -116,7 +116,7 @@ void ParticleSystem::Update(float deltaTime)
         return;
     }
 
-    while (scene->timeSinceStart - lastSpawnTime > 1.0 / spawnRatePerSecond)
+    while (scene->relativeTime - lastSpawnTime > 1.0 / spawnRatePerSecond)
     {
         Vector2 position = Rand(
             spawnRegion.TopLeft() + Vector2(particleSize / 2),

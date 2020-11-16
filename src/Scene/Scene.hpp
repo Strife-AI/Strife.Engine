@@ -164,79 +164,29 @@ public:
     Scene(Engine* engine, StringId mapSegmentName);
     virtual ~Scene();
 
-    static b2Vec2 PixelToBox2D(Vector2 v)
-    {
-        auto scaled = v * PixelsToBox2DRatio;
-        return b2Vec2(scaled.x, scaled.y);
-    }
-
-    static Vector2 Box2DToPixel(b2Vec2 v)
-    {
-        return Vector2(v.x * Box2DToPixelsRatio.x, v.y * Box2DToPixelsRatio.y);
-    }
+    static b2Vec2 PixelToBox2D(Vector2 v);
+    static Vector2 Box2DToPixel(b2Vec2 v);
 
     Engine* GetEngine() const { return _engine; }
     Camera* GetCamera() { return &_camera; }
     CameraFollower* GetCameraFollower() { return &_cameraFollower; }
     b2World* GetWorld() const { return _world.get(); }
+    StringId MapSegmentName() const { return _mapSegmentName; }
+    auto& GetEntities() { return _entityManager.entities; }
+
+    void SetSoundListener(Entity* entity);
 
     Entity* CreateEntity(const EntityDictionary& properties);
 
-    void MarkEntityForDestruction(Entity* entity);
-    void UpdateEntities(float deltaTime);
-    void RenderEntities(Renderer* renderer);
-    void RenderHud(Renderer* renderer);
-
     void StepPhysicsSimulation();
 
-    template <typename TService, typename ... Args>
-    TService* AddService(Args&& ...args)
-    {
-        auto service = std::make_unique<TService>(std::forward<Args>(args)...);
-        auto servicePtr = service.get();
+    template <typename TService, typename ... Args> TService*   AddService(Args&& ...args);
+    template<typename TService> TService*                       GetService();
 
-        service->scene = this;
-        service->OnAdded();
-
-        _services.push_back(std::move(service));
-
-        return servicePtr;
-    }
-
-    template<typename TService>
-    TService* GetService()
-    {
-        for (auto& service : _services)
-        {
-            if (auto servicePtr = dynamic_cast<TService*>(service.get()))
-            {
-                return servicePtr;
-            }
-        }
-
-        FatalError("Missing service");
-    }
-
-    void SendEvent(const IEntityEvent& ev)
-    {
-        for (auto& service : _services)
-        {
-            service->SendEvent(ev, inEditor);
-        }
-    }
-
+    void SendEvent(const IEntityEvent& ev);
     void BroadcastEvent(const IEntityEvent& ev);
 
-    void SetLightManager(LightManager* lightManager)
-    {
-        _lightManger = lightManager;
-    }
-
-    LightManager* GetLightManager() const
-    {
-        return _lightManger;
-    }
-
+    LightManager* GetLightManager() const;
     SoundManager* GetSoundManager() const;
 
     void LoadMapSegment(StringId id);
@@ -253,50 +203,44 @@ public:
         RaycastResult& outResult,
         bool allowTriggers = false,
         const std::function<bool(ColliderHandle handle)>& includeFixture = nullptr) const;
-    void NotifyUpdate(float deltaTime);
-    void NotifyServerUpdate(float deltaTime);
-    void NotifyFixedUpdate();
-    void NotifyServerFixedUpdate();
 
-    StringId MapSegmentName() const { return _mapSegmentName; }
-
-    template<typename TEntity>
-    std::vector<TEntity*> GetEntitiesOfType();
-
-    template<typename TEntity>
-    TEntity* GetFirstNamedEntityOfType(StringId name);
-
-    template<typename TEntity>
-    std::vector<TEntity*> GetEntitiesByTypeInSegment(int segmentId);
+    template<typename TEntity> std::vector<TEntity*> GetEntitiesOfType();
+    template<typename TEntity> TEntity* GetFirstNamedEntityOfType(StringId name);
 
     template <typename TEntity, typename ... Args>
     TEntity* CreateEntityInternal(const EntityDictionary& properties, Args&& ... constructorArgs);
-
-    virtual void OnSceneLoaded() { }
-
-    auto& GetEntities() { return _entityManager.entities; }
 
     void* AllocateMemory(int size) const;
     void FreeMemory(void* mem, int size) const;
 
     float deltaTime = 0;
-    float timeSinceStart = 0;
+    float relativeTime = 0;
     TimePointType lastFrameStart;
     int levelId;
     bool isFirstFrame = true;
     bool inEditor = false;
     EntityReference<Entity> soundListener;
-
-    void SetSoundListener(Entity* entity);
-
     ReplicationManager replicationManager;
 
 private:
+    friend struct Entity;
+    friend class Engine;
+
     std::vector<std::unique_ptr<ISceneService>> _services;
 
+    void MarkEntityForDestruction(Entity* entity);
     void RegisterEntity(Entity* entity, const EntityDictionary& properties);
     void RemoveEntity(Entity* entity);
     void DestroyScheduledEntities();
+
+    void UpdateEntities(float deltaTime);
+    void RenderEntities(Renderer* renderer);
+    void RenderHud(Renderer* renderer);
+
+    void NotifyUpdate(float deltaTime);
+    void NotifyServerUpdate(float deltaTime);
+    void NotifyFixedUpdate();
+    void NotifyServerFixedUpdate();
 
     int BeginQuery() { return _nextQueryId++; }
 
@@ -309,14 +253,10 @@ private:
 
     std::unique_ptr<b2World> _world;
     float _physicsTimeLeft = 0;
-    
     CollisionManager _collisionManager;
     int _nextQueryId = 0;
 
     TimerManager _timerManager;
-
-    LightManager* _lightManger;
-
     EntityManager _entityManager;
 };
 
@@ -333,6 +273,34 @@ TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& 
     RegisterEntity(entity, properties);
 
     return entity;
+}
+
+template <typename TService, typename ... Args>
+TService* Scene::AddService(Args&&... args)
+{
+    auto service = std::make_unique<TService>(std::forward<Args>(args)...);
+    auto servicePtr = service.get();
+
+    service->scene = this;
+    service->OnAdded();
+
+    _services.push_back(std::move(service));
+
+    return servicePtr;
+}
+
+template <typename TService>
+TService* Scene::GetService()
+{
+    for (auto& service : _services)
+    {
+        if (auto servicePtr = dynamic_cast<TService*>(service.get()))
+        {
+            return servicePtr;
+        }
+    }
+
+    FatalError("Missing service");
 }
 
 template <typename TEntity>
