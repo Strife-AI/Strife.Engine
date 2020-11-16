@@ -51,8 +51,25 @@ void NetworkPhysics::ServerFixedUpdate()
 
                         if (player != nullptr)
                         {
-                            auto pathFinder = scene->GetService<PathFinderService>();
-                            pathFinder->RequestFlowField(player->owner->Center(), commandToExecute->target, player->owner);
+                            MoveToEvent moveTo;
+                            moveTo.position = commandToExecute->target;
+                            player->owner->SendEvent(moveTo);
+                        }
+                    }
+                    else if(commandToExecute->attackTarget)
+                    {
+                        NetComponent* player = scene->replicationManager.GetNetComponentById(commandToExecute->netId);
+
+                        if (player != nullptr)
+                        {
+                            NetComponent* attack = scene->replicationManager.GetNetComponentById(commandToExecute->attackNetId);
+
+                            if(attack != nullptr)
+                            {
+                                AttackEvent attackEvent;
+                                attackEvent.entity = attack->owner;
+                                player->owner->SendEvent(attackEvent);
+                            }
                         }
                     }
                 }

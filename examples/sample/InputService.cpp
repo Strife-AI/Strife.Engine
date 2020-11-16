@@ -95,12 +95,19 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
         if (net->IsServer())
         {
             Vector2 positions[2] = {
-                Vector2(1819.0f, 2023.0f),
-                Vector2(1819.0f + 64, 2023.0f),
+                Vector2(2048 - 1000, 2048 - 1000),
+                Vector2(2048 + 1000, 2048 + 1000),
             };
 
-            for (auto position : positions)
+            Vector2 offsets[4] =
             {
+                Vector2(-1, -1), Vector2(-1, 1), Vector2(1, -1), Vector2(1, 1)
+            };
+
+            for (auto offset : offsets)
+            {
+                auto position = positions[connectedEvent->id] + offset * 128;
+
                 auto player = static_cast<PlayerEntity*>(scene->CreateEntity({
                   EntityProperty::EntityType<PlayerEntity>(),
                   { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : position },
@@ -198,40 +205,28 @@ void InputService::HandleInput()
 
                 if(mouse->RightPressed())
                 {
-                    command.moveToTarget = true;
-                    command.target = scene->GetCamera()->ScreenToWorld(mouse->MousePosition());
+                    bool attack = false;
+                    for (auto player : players)
+                    {
+                        if (player->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
+                        {
+                            command.attackTarget = true;
+                            command.attackNetId = player->net->netId;
+                            attack = true;
+                            break;
+                        }
+                    }
+
+                    if (!attack)
+                    {
+                        command.moveToTarget = true;
+                        command.target = scene->GetCamera()->ScreenToWorld(mouse->MousePosition());
+                    }
                 }
 
                 scene->replicationManager.AddPlayerCommand(command);
             }
-
-            NetComponent* cc = nullptr;
-
-            for(auto c : scene->replicationManager.components)
-            {
-                if(c->netId == 0)
-                {
-                    cc = c;
-                }
-            }
-
-            float last = cc->snapshots.size() > 0
-                ? cc->snapshots[cc->snapshots.size() - 1].time
-                : 0;
-
-            static int count = 0;
-
-            static int lastCount = 0;
-
-            count = (count + 1) % 60;
-            if (count == 0)
-            {
-                status.VFormat("%f ms (%d added)", (scene->timeSinceStart - last) * 1000, (int)cc->snapshots.size() - lastCount);
-                lastCount = cc->snapshots.size();
-            }
         }
-
-
 
         scene->replicationManager.DoClientUpdate(scene->deltaTime, net);
     }

@@ -104,9 +104,11 @@ void Scene::RegisterEntity(Entity* entity, const EntityDictionary& properties)
     _entities.PushBackUnique(entity);
 
     AddIfImplementsInterface(_updatables, entity);
+    AddIfImplementsInterface(_serverUpdatables, entity);
     AddIfImplementsInterface(_fixedUpdatables, entity);
     AddIfImplementsInterface(_renderables, entity);
     AddIfImplementsInterface(_hudRenderables, entity);
+    AddIfImplementsInterface(_serverFixedUpdatables, entity);
 
     EntityHeader* header = _freeEntityHeaders.Borrow();
 
@@ -146,9 +148,11 @@ void Scene::RemoveEntity(Entity* entity)
     }
 
     RemoveIfImplementsInterface(_updatables, entity);
+    RemoveIfImplementsInterface(_serverUpdatables, entity);
     RemoveIfImplementsInterface(_fixedUpdatables, entity);
     RemoveIfImplementsInterface(_renderables, entity);
     RemoveIfImplementsInterface(_hudRenderables, entity);
+    RemoveIfImplementsInterface(_serverFixedUpdatables, entity);
 
     EntityHeader* header = entity->header;
     header->id = InvalidEntityHeaderId;
@@ -656,6 +660,14 @@ void Scene::UpdateEntities(float deltaTime)
             fixedUpdatable->FixedUpdate(PhysicsDeltaTime);
         }
 
+        if(_engine->GetNetworkManger()->IsServer())
+        {
+            for(auto serverFixedUpdatable : _serverFixedUpdatables)
+            {
+                serverFixedUpdatable->ServerFixedUpdate(PhysicsDeltaTime);
+            }
+        }
+
         SendEvent(FixedUpdateEvent());
 
         _world->Step(PhysicsDeltaTime, 8, 3);
@@ -669,6 +681,14 @@ void Scene::UpdateEntities(float deltaTime)
     for (auto updatable : _updatables)
     {
         updatable->Update(deltaTime);
+    }
+
+    if (_engine->GetNetworkManger()->IsServer())
+    {
+        for (auto serverUpdatable : _serverUpdatables)
+        {
+            serverUpdatable->ServerUpdate(deltaTime);
+        }
     }
 
     _timerManager.TickTimers(deltaTime);

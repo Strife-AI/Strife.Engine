@@ -278,10 +278,12 @@ private:
     FreeList<EntityHeader> _freeEntityHeaders;
 
     FixedSizeVector<IUpdatable*, MaxEntities> _updatables;
+    FixedSizeVector<IServerUpdatable*, MaxEntities> _serverUpdatables;
 
     std::unique_ptr<b2World> _world;
     float _physicsTimeLeft = 0;
     FixedSizeVector<IFixedUpdatable*, MaxEntities> _fixedUpdatables;
+    FixedSizeVector<IServerFixedUpdatable*, MaxEntities> _serverFixedUpdatables;
     CollisionManager _collisionManager;
     int _nextQueryId = 0;
 
