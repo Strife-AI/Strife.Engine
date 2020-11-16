@@ -97,10 +97,10 @@ Cipher GetDefaultCipher()
     Cipher addKeyCiper(a, b, 0x430b542d);
     Cipher xorKeyCiper(a, b, 0x1cba4856);
 
-    std::vector decryptedXorTable(encryptedXorTable, encryptedXorTable + sizeof(encryptedXorTable));
+    std::vector<byte> decryptedXorTable(encryptedXorTable, encryptedXorTable + sizeof(encryptedXorTable));
     xorKeyCiper.Decrypt(decryptedXorTable.data(), decryptedXorTable.data() + decryptedXorTable.size());
 
-    std::vector decryptedAddTable(encryptedAddTable, encryptedAddTable + sizeof(encryptedAddTable));
+    std::vector<byte> decryptedAddTable(encryptedAddTable, encryptedAddTable + sizeof(encryptedAddTable));
     addKeyCiper.Decrypt(decryptedAddTable.data(), decryptedAddTable.data() + decryptedAddTable.size());
 
     return Cipher(decryptedAddTable, decryptedXorTable, 0x35e41f03);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Scene/BaseEntity.hpp"
+#include "Scene/IEntityEvent.hpp"
 
 struct PlayerEntity;
 

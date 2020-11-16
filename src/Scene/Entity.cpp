@@ -5,6 +5,11 @@
 
 const EntityHeader InvalidEntityHeader::InvalidHeader;
 
+void* AllocateComponent(Scene* scene, int size)
+{
+    return scene->AllocateMemory(size);
+}
+
 std::unordered_map<unsigned, EntityUtil::EntityMetadata*>& GetEntityMetadataByType()
 {
     static std::unordered_map<unsigned int, EntityUtil::EntityMetadata*> metadataByType;

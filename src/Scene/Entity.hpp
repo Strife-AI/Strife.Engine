@@ -9,8 +9,6 @@
 #include <vcruntime_typeinfo.h>
 #endif
 
-#include <charconv>
-
 
 #include "EntityComponent.hpp"
 #include "Math/Vector2.hpp"
@@ -327,10 +325,12 @@ bool Entity::Is(TEntity*& outEntity)
     }
 }
 
+void* AllocateComponent(Scene* scene, int size);
+
 template <typename TComponent, typename ...Args>
 TComponent* Entity::AddComponent(const char* name, Args&& ...args)
 {
-    auto newComponent = static_cast<TComponent*>(scene->AllocateMemory(sizeof(TComponent)));
+    auto newComponent = static_cast<TComponent*>(AllocateComponent(scene, sizeof(TComponent)));
 
     new (newComponent) TComponent(std::forward<Args>(args)...);
     newComponent->owner = this;

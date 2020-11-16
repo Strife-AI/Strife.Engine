@@ -26,7 +26,7 @@ struct BreakoutGame : IGame
         if (scene->MapSegmentName() != "empty-map"_sid)
         {
             scene->AddService<InputService>();
-            scene->GetEngine()->GetConsole()->Execute("light 0");
+            //FIXME MW scene->GetEngine()->GetConsole()->Execute("light 0");
         }
     }
 };
