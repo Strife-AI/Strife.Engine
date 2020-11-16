@@ -1,17 +1,7 @@
 #include "Scene.hpp"
-
-#include <box2d/b2_fixture.h>
-#include <box2d/b2_world.h>
-#include <box2d/b2_polygon_shape.h>
-#include <box2d/b2_circle_shape.h>
-#include <box2d/b2_edge_shape.h>
-
-
-#include "AmbientLightEntity.hpp"
 #include "Engine.hpp"
 #include "Physics/Physics.hpp"
 #include "Renderer.hpp"
-#include "SceneManager.hpp"
 #include "SdlManager.hpp"
 #include "Physics/PathFinding.hpp"
 #include "Scene/TilemapEntity.hpp"
@@ -25,20 +15,15 @@ Scene::Scene(Engine* engine, StringId mapSegmentName)
     _world(std::make_unique<b2World>(b2Vec2(0, 0))),
     _collisionManager(_world.get())
 {
-    
-
     _world->SetContactListener(&_collisionManager);
-
     _camera.SetScreenSize(engine->GetSdlManager()->WindowSize().AsVectorOfType<float>());
 }
 
 Scene::~Scene()
 {
-    DestroyScheduledEntities();
-
-    for(auto entity : _entityManager.entities)
+    for (auto entity : _entityManager.entities)
     {
-        DestroyEntity(entity);
+        MarkEntityForDestruction(entity);
     }
 
     DestroyScheduledEntities();
@@ -79,14 +64,14 @@ void Scene::RemoveEntity(Entity* entity)
         entity->_componentList = nullptr;
     }
 
-    
-    entity->SegmentLink::Unlink();
-
     _entityManager.UnregisterEntity(entity);
 
-    auto memoryBlock = entity->GetMemoryBlock();
-    entity->~Entity();
-    FreeMemory(memoryBlock.second, memoryBlock.first);
+    // Free memory
+    {
+        auto memoryBlock = entity->GetMemoryBlock();
+        entity->~Entity();
+        FreeMemory(memoryBlock.second, memoryBlock.first);
+    }
 }
 
 Entity* Scene::CreateEntity(const EntityDictionary& properties)
@@ -96,7 +81,7 @@ Entity* Scene::CreateEntity(const EntityDictionary& properties)
     return result;
 }
 
-void Scene::DestroyEntity(Entity* entity)
+void Scene::MarkEntityForDestruction(Entity* entity)
 {
     if (entity->isDestroyed)
     {
@@ -112,7 +97,7 @@ void Scene::DestroyScheduledEntities()
 {
     auto& toBeDestroyed = _entityManager.toBeDestroyed;
 
-    while (toBeDestroyed.size() != 0)
+    while (!toBeDestroyed.empty())
     {
         auto entityToDestroy = toBeDestroyed[toBeDestroyed.size() - 1];
         toBeDestroyed.pop_back();
@@ -136,23 +121,10 @@ void Scene::SetSoundListener(Entity* entity)
     GetSoundManager()->SetListenerPosition(entity->Center(), { 0, 0});
 }
 
-static Vector2 ToVector2(b2Vec2 v)
-{
-    return Vector2(v.x, v.y);
-}
-
-static b2Vec2 ToB2Vec2(Vector2 v)
-{
-    return b2Vec2(v.x, v.y);
-}
-
 ConsoleVar<bool> g_drawColliders("colliders", false);
 
 void Scene::RenderEntities(Renderer* renderer)
 {
-    PreRender();
-    SendEvent(PreRenderEvent());
-
     SendEvent(RenderEvent(renderer));
 
     for (auto renderable : _entityManager.renderables)
@@ -169,57 +141,9 @@ void Scene::RenderEntities(Renderer* renderer)
         }
     }
 
-    PostRender();
-
     if (g_drawColliders.Value())
     {
-        for (auto body = _world->GetBodyList(); body != nullptr; body = body->GetNext())
-        {
-            for (auto fixture = body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
-            {
-                if (fixture->IsSensor()) continue;;
-
-                auto shape = fixture->GetShape();
-                switch (shape->GetType())
-                {
-                case b2Shape::e_circle:
-                {
-                    auto circle = static_cast<b2CircleShape*>(shape);
-
-                    renderer->RenderCircleOutline(Scene::Box2DToPixel(body->GetWorldPoint(circle->m_p)), circle->m_radius * Scene::Box2DToPixelsRatio.x, Color(0, 255, 0), 0);// FIXME MW DebugRenderLayer);
-                    break;
-                }
-                case b2Shape::e_edge:
-                {
-                    auto edge = static_cast<b2EdgeShape*>(shape);
-                    renderer->RenderLine(
-                        Box2DToPixel(body->GetWorldPoint(edge->m_vertex1)),
-                        Box2DToPixel(body->GetWorldPoint(edge->m_vertex2)),
-                        Color(255, 255, 255),
-                        0);//DebugRenderLayer); FIXME MW
-
-                    break;
-                }
-                case b2Shape::e_polygon:
-                {
-                    auto polygon = static_cast<b2PolygonShape*>(shape);
-
-                    for (int i = 0; i < polygon->m_count; ++i)
-                    {
-                        auto vertex = ToVector2(polygon->m_vertices[i] + body->GetPosition()) * Scene::Box2DToPixelsRatio;
-                        auto next = ToVector2(polygon->m_vertices[(i + 1) % polygon->m_count] + body->GetPosition()) * Scene::Box2DToPixelsRatio;
-
-                        renderer->RenderLine(vertex, next, Color::Red(), 0);// FIXME MW DebugRenderLayer);
-                    }
-
-                    break;
-                }
-                case b2Shape::e_chain: break;
-                case b2Shape::e_typeCount: break;
-                default:;
-                }
-            }
-        }
+        _collisionManager.RenderColliderOutlines(renderer);
     }
 }
 
@@ -230,46 +154,14 @@ void Scene::RenderHud(Renderer* renderer)
         hudRenderable->RenderHud(renderer);
     }
 
-    DoRenderHud(renderer);
     SendEvent(RenderHudEvent(renderer));
 }
 
-void Scene::ForceFixedUpdate()
+void Scene::StepPhysicsSimulation()
 {
     _world->Step(PhysicsDeltaTime, 8, 3);
     _collisionManager.UpdateEntityPositions();
 }
-
-struct FindFixturesQueryCallback : b2QueryCallback
-{
-    FindFixturesQueryCallback(gsl::span<ColliderHandle> foundFixtures_)
-        : foundFixtures(foundFixtures_)
-    {
-
-    }
-
-    bool ReportFixture(b2Fixture* fixture) override
-    {
-        if (count < foundFixtures.size())
-        {
-            foundFixtures[count++] = ColliderHandle(fixture);
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    gsl::span<ColliderHandle> Results() const
-    {
-        return foundFixtures.subspan(0, count);
-    }
-
-    gsl::span<ColliderHandle> foundFixtures;
-    int count = 0;
-};
-
 
 void Scene::BroadcastEvent(const IEntityEvent& ev)
 {
@@ -292,21 +184,6 @@ void Scene::LoadMapSegment(StringId id)
     LoadMapSegment(*mapSegment.Value());
 }
 
-void CameraCommand(ConsoleCommandBinder& binder)
-{
-    binder.Help("Shows info about camera");
-
-    auto position = Engine::GetInstance()->GetSceneManager()->GetScene()->GetCamera()->Position();
-    auto bounds = Engine::GetInstance()->GetSceneManager()->GetScene()->GetCamera()->Bounds();
-
-    binder.GetConsole()->Log("Position: %f %f\n", position.x, position.y);
-    binder.GetConsole()->Log("TopLeft: %f %f\n", bounds.TopLeft().x, bounds.TopLeft().y);
-    binder.GetConsole()->Log("BottomRight: %f %f\n", bounds.BottomRight().x, bounds.BottomRight().y);
-
-}
-
-ConsoleCmd cameraCmd("camera", CameraCommand);
-
 void Scene::LoadMapSegment(const MapSegment& segment)
 {
     EntityDictionary tilemapProperties
@@ -320,12 +197,7 @@ void Scene::LoadMapSegment(const MapSegment& segment)
     for (auto& instance : segment.entities)
     {
         EntityDictionary properties(instance.properties.get(), instance.totalProperties);
-        auto entity = CreateEntity(properties);
-
-        if (entity->flags & PreventUnloading)
-        {
-            entity->Unlink();
-        }
+        CreateEntity(properties);
     }
 }
 
@@ -343,8 +215,8 @@ gsl::span<ColliderHandle> Scene::FindOverlappingColliders(const Rectangle& bound
 {
     FindFixturesQueryCallback callback(storage);
     b2AABB aabb;
-    aabb.lowerBound = ToB2Vec2(bounds.TopLeft() * PixelsToBox2DRatio);
-    aabb.upperBound = ToB2Vec2(bounds.BottomRight() * PixelsToBox2DRatio);
+    aabb.lowerBound = PixelToBox2D(bounds.TopLeft());
+    aabb.upperBound = PixelToBox2D(bounds.BottomRight());
 
     _world->QueryAABB(&callback, aabb);
 
@@ -399,51 +271,62 @@ bool Scene::Raycast(Vector2 start, Vector2 end, RaycastResult& outResult, bool a
     }
 }
 
-extern ConsoleVar<bool> g_stressTest;
-
 void Scene::UpdateEntities(float deltaTime)
 {
     _physicsTimeLeft += deltaTime;
     timeSinceStart += deltaTime;
 
-    if (_physicsTimeLeft > 1)
-    {
-        // We're more than a second behind, it's better to just drop the time so we don't get too far behind
-        // trying to catch up
-        _physicsTimeLeft = 0;
-    }
-
     while (_physicsTimeLeft >= PhysicsDeltaTime)
     {
         _physicsTimeLeft -= PhysicsDeltaTime;
-        for (auto fixedUpdatable : _entityManager.fixedUpdatables)
-        {
-            fixedUpdatable->FixedUpdate(PhysicsDeltaTime);
-        }
 
-        if(_engine->GetNetworkManger()->IsServer())
-        {
-            for(auto serverFixedUpdatable : _entityManager.serverFixedUpdatables)
-            {
-                serverFixedUpdatable->ServerFixedUpdate(PhysicsDeltaTime);
-            }
-        }
-
-        SendEvent(FixedUpdateEvent());
-
-        _world->Step(PhysicsDeltaTime, 8, 3);
-
-        _collisionManager.UpdateEntityPositions();
+        NotifyFixedUpdate();
+        NotifyServerFixedUpdate();
+        StepPhysicsSimulation();
     }
 
-    PreUpdate();
-    SendEvent(PreUpdateEvent());
+    SendEvent(UpdateEvent());
 
+    NotifyUpdate(deltaTime);
+    NotifyServerUpdate(deltaTime);
+    _timerManager.TickTimers(deltaTime);
+
+    _cameraFollower.Update(deltaTime);
+
+    DestroyScheduledEntities();
+}
+
+void Scene::NotifyFixedUpdate()
+{
+    SendEvent(FixedUpdateEvent());
+
+    for (auto fixedUpdatable : _entityManager.fixedUpdatables)
+    {
+        fixedUpdatable->FixedUpdate(PhysicsDeltaTime);
+    }
+}
+
+void Scene::NotifyServerFixedUpdate()
+{
+    if (_engine->GetNetworkManger()->IsServer())
+    {
+        for (auto serverFixedUpdatable : _entityManager.serverFixedUpdatables)
+        {
+            serverFixedUpdatable->ServerFixedUpdate(PhysicsDeltaTime);
+        }
+    }
+}
+
+void Scene::NotifyUpdate(float deltaTime)
+{
     for (auto updatable : _entityManager.updatables)
     {
         updatable->Update(deltaTime);
     }
+}
 
+void Scene::NotifyServerUpdate(float deltaTime)
+{
     if (_engine->GetNetworkManger()->IsServer())
     {
         for (auto serverUpdatable : _entityManager.serverUpdatables)
@@ -451,13 +334,4 @@ void Scene::UpdateEntities(float deltaTime)
             serverUpdatable->ServerUpdate(deltaTime);
         }
     }
-
-    _timerManager.TickTimers(deltaTime);
-
-    PostUpdate();
-
-
-    DestroyScheduledEntities();
-
-    _cameraFollower.Update(deltaTime);
 }

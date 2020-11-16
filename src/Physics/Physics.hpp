@@ -6,6 +6,38 @@
 
 #include "ColliderHandle.hpp"
 
+class Renderer;
+
+struct FindFixturesQueryCallback : b2QueryCallback
+{
+    FindFixturesQueryCallback(gsl::span<ColliderHandle> foundFixtures_)
+        : foundFixtures(foundFixtures_)
+    {
+
+    }
+
+    bool ReportFixture(b2Fixture* fixture) override
+    {
+        if (count < foundFixtures.size())
+        {
+            foundFixtures[count++] = ColliderHandle(fixture);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    gsl::span<ColliderHandle> Results() const
+    {
+        return foundFixtures.subspan(0, count);
+    }
+
+    gsl::span<ColliderHandle> foundFixtures;
+    int count = 0;
+};
+
 class CollisionManager : public b2ContactListener
 {
 public:
@@ -16,6 +48,8 @@ public:
     }
 
     void UpdateEntityPositions();
+
+    void RenderColliderOutlines(Renderer* renderer);
 
 private:
 

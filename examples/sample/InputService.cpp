@@ -59,7 +59,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             });
         }
     }
-    if (ev.Is<PreUpdateEvent>())
+    if (ev.Is<UpdateEvent>())
     {
         HandleInput();
     }

@@ -108,11 +108,6 @@ std::map<std::string, std::string> EntityDictionaryBuilder::BuildMap()
     return result;
 }
 
-Entity* SegmentLink::GetEntity()
-{
-    return static_cast<Entity*>(this);
-}
-
 Entity::~Entity()
 {
     Entity* child = children;
@@ -152,7 +147,7 @@ Entity::~Entity()
 
 void Entity::Destroy()
 {
-    scene->DestroyEntity(this);
+    scene->MarkEntityForDestruction(this);
 }
 
 void Entity::SetCenter(const Vector2& newPosition)
