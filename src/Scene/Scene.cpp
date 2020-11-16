@@ -17,26 +17,6 @@
 #include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
 
-template <typename TContainer, typename TItem, int MaxSize>
-void AddIfImplementsInterface(FixedSizeVector<TContainer, MaxSize>& container, const TItem& item)
-{
-    TContainer asContainer;
-    if ((asContainer = dynamic_cast<TContainer>(item)) != nullptr)
-    {
-        container.PushBackUnique(asContainer);
-    }
-}
-
-template <typename TContainer, typename TItem, int MaxSize>
-void RemoveIfImplementsInterface(FixedSizeVector<TContainer, MaxSize>& container, const TItem& item)
-{
-    TContainer asContainer;
-    if ((asContainer = dynamic_cast<TContainer>(item)) != nullptr)
-    {
-        container.RemoveSingle(asContainer);
-    }
-}
-
 void LoadedSegment::Reset(int segmentId_)
 {
     segmentId = segmentId_;
@@ -66,15 +46,11 @@ Scene::Scene(Engine* engine, StringId mapSegmentName)
     _mapSegmentName(mapSegmentName),
     _cameraFollower(&_camera, engine->GetInput()),
     _engine(engine),
-    _freeEntityHeaders(_entityHeaders.begin(), MaxEntities),
     _world(std::make_unique<b2World>(b2Vec2(0, 0))),
     _collisionManager(_world.get()),
     _freeSegments(_segmentPool, MaxLoadedSegments)
 {
-    for (int i = 0; i < MaxEntities; ++i)
-    {
-        _entityHeaders[i].id = InvalidEntityHeaderId;
-    }
+    
 
     _world->SetContactListener(&_collisionManager);
 
@@ -85,9 +61,9 @@ Scene::~Scene()
 {
     DestroyScheduledEntities();
 
-    for (int i = _entities.Size() - 1; i >= 0; --i)
+    for(auto entity : _entityManager.entities)
     {
-        DestroyEntity(_entities[i]);
+        DestroyEntity(entity);
     }
 
     DestroyScheduledEntities();
@@ -101,22 +77,8 @@ void Scene::RegisterEntity(Entity* entity, const EntityDictionary& properties)
     std::string_view name = properties.GetValueOrDefault<std::string_view>("name", "");
     entity->name = StringId(name);
 
-    _entities.PushBackUnique(entity);
+    _entityManager.RegisterEntity(entity);
 
-    AddIfImplementsInterface(_updatables, entity);
-    AddIfImplementsInterface(_serverUpdatables, entity);
-    AddIfImplementsInterface(_fixedUpdatables, entity);
-    AddIfImplementsInterface(_renderables, entity);
-    AddIfImplementsInterface(_hudRenderables, entity);
-    AddIfImplementsInterface(_serverFixedUpdatables, entity);
-
-    EntityHeader* header = _freeEntityHeaders.Borrow();
-
-    header->id = _nextEntityId++;
-    header->entity = entity;
-
-    entity->id = header->id;
-    entity->header = header;
     entity->scene = this;
     _engine->GetSoundManager()->AddSoundEmitter(&entity->_soundEmitter, entity);
 
@@ -147,21 +109,13 @@ void Scene::RemoveEntity(Entity* entity)
         entity->_componentList = nullptr;
     }
 
-    RemoveIfImplementsInterface(_updatables, entity);
-    RemoveIfImplementsInterface(_serverUpdatables, entity);
-    RemoveIfImplementsInterface(_fixedUpdatables, entity);
-    RemoveIfImplementsInterface(_renderables, entity);
-    RemoveIfImplementsInterface(_hudRenderables, entity);
-    RemoveIfImplementsInterface(_serverFixedUpdatables, entity);
-
-    EntityHeader* header = entity->header;
-    header->id = InvalidEntityHeaderId;
-    _freeEntityHeaders.Return(header);
+    
     entity->SegmentLink::Unlink();
+
+    _entityManager.UnregisterEntity(entity);
 
     auto memoryBlock = entity->GetMemoryBlock();
     entity->~Entity();
-    _entities.RemoveSingle(entity);
     FreeMemory(memoryBlock.second, memoryBlock.first);
 }
 
@@ -181,15 +135,17 @@ void Scene::DestroyEntity(Entity* entity)
 
     entity->isDestroyed = true;
 
-    _toBeDestroyed.PushBack(entity);
+    _entityManager.toBeDestroyed.push_back(entity);
 }
 
 void Scene::DestroyScheduledEntities()
 {
-    while (_toBeDestroyed.Size() != 0)
+    auto& toBeDestroyed = _entityManager.toBeDestroyed;
+
+    while (toBeDestroyed.size() != 0)
     {
-        auto entityToDestroy = _toBeDestroyed[_toBeDestroyed.Size() - 1];
-        _toBeDestroyed.PopBack();
+        auto entityToDestroy = toBeDestroyed[toBeDestroyed.size() - 1];
+        toBeDestroyed.pop_back();
         RemoveEntity(entityToDestroy);
     }
 }
@@ -258,13 +214,13 @@ void Scene::RenderEntities(Renderer* renderer)
 
     SendEvent(RenderEvent(renderer));
 
-    for (auto renderable : _renderables)
+    for (auto renderable : _entityManager.renderables)
     {
         renderable->Render(renderer);
     }
 
     // TODO: more efficient way of rendering components
-    for(auto entity : _entities)
+    for(auto entity : _entityManager.entities)
     {
         for(IEntityComponent* component = entity->_componentList; component != nullptr; component = component->next)
         {
@@ -328,7 +284,7 @@ void Scene::RenderEntities(Renderer* renderer)
 
 void Scene::RenderHud(Renderer* renderer)
 {
-    for (auto hudRenderable : _hudRenderables)
+    for (auto hudRenderable : _entityManager.hudRenderables)
     {
         hudRenderable->RenderHud(renderer);
     }
@@ -376,7 +332,7 @@ struct FindFixturesQueryCallback : b2QueryCallback
 
 void Scene::BroadcastEvent(const IEntityEvent& ev)
 {
-    for (auto entity : _entities)
+    for (auto entity : _entityManager.entities)
     {
         entity->SendEvent(ev);
     }
@@ -660,14 +616,14 @@ void Scene::UpdateEntities(float deltaTime)
     while (_physicsTimeLeft >= PhysicsDeltaTime)
     {
         _physicsTimeLeft -= PhysicsDeltaTime;
-        for (auto fixedUpdatable : _fixedUpdatables)
+        for (auto fixedUpdatable : _entityManager.fixedUpdatables)
         {
             fixedUpdatable->FixedUpdate(PhysicsDeltaTime);
         }
 
         if(_engine->GetNetworkManger()->IsServer())
         {
-            for(auto serverFixedUpdatable : _serverFixedUpdatables)
+            for(auto serverFixedUpdatable : _entityManager.serverFixedUpdatables)
             {
                 serverFixedUpdatable->ServerFixedUpdate(PhysicsDeltaTime);
             }
@@ -683,14 +639,14 @@ void Scene::UpdateEntities(float deltaTime)
     PreUpdate();
     SendEvent(PreUpdateEvent());
 
-    for (auto updatable : _updatables)
+    for (auto updatable : _entityManager.updatables)
     {
         updatable->Update(deltaTime);
     }
 
     if (_engine->GetNetworkManger()->IsServer())
     {
-        for (auto serverUpdatable : _serverUpdatables)
+        for (auto serverUpdatable : _entityManager.serverUpdatables)
         {
             serverUpdatable->ServerUpdate(deltaTime);
         }
