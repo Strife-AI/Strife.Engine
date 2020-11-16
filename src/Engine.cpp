@@ -206,7 +206,7 @@ void Engine::RunFrame()
         realDeltaTime = renderDeltaTime = 0.1;
         targetFps.SetValue(1000);
 
-        if(scene->timeSinceStart > 0.1 * 60 * 60)
+        if(scene->relativeTime > 0.1 * 60 * 60)
         {
             QuitGame();
         }
@@ -293,7 +293,7 @@ void Engine::Render(Scene* scene, float deltaTime, float renderDeltaTime)
     scene->GetCamera()->SetZoom(1);// screenSize.y / (1080 / 2));
 
     auto camera = scene->GetCamera();
-    _renderer->BeginRender(camera, Vector2(0, 0), renderDeltaTime, scene->timeSinceStart);
+    _renderer->BeginRender(camera, Vector2(0, 0), renderDeltaTime, scene->relativeTime);
     scene->RenderEntities(_renderer);
 
     scene->SendEvent(RenderImguiEvent());
@@ -310,7 +310,7 @@ void Engine::Render(Scene* scene, float deltaTime, float renderDeltaTime)
     if (g_stressTest.Value())
     {
         char text[1024];
-        sprintf(text, "Time elapsed: %f hours", scene->timeSinceStart / 60.0f / 60.0f);
+        sprintf(text, "Time elapsed: %f hours", scene->relativeTime / 60.0f / 60.0f);
 
         _renderer->RenderString(
             FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid)),
@@ -326,7 +326,7 @@ void Engine::Render(Scene* scene, float deltaTime, float renderDeltaTime)
         Camera uiCamera;
         uiCamera.SetScreenSize(scene->GetCamera()->ScreenSize());
         uiCamera.SetZoom(screenSize.y / 768.0f);
-        _renderer->BeginRender(&uiCamera, uiCamera.TopLeft(), renderDeltaTime, scene->timeSinceStart);
+        _renderer->BeginRender(&uiCamera, uiCamera.TopLeft(), renderDeltaTime, scene->relativeTime);
         _input->GetMouse()->SetMouseScale(Vector2::Unit() * uiCamera.Zoom());
 
         scene->BroadcastEvent(RenderUiEvent(_renderer));

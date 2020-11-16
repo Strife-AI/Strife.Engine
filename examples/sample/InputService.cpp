@@ -199,7 +199,7 @@ void InputService::HandleInput()
 
                 command.keys = keyBits;
                 command.fixedUpdateCount = fixedUpdateCount;
-                command.timeRecorded = scene->timeSinceStart;
+                command.timeRecorded = scene->relativeTime;
                 command.netId = self->net->netId;
                 fixedUpdateCount = 0;
 

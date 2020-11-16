@@ -29,6 +29,17 @@ Scene::~Scene()
     DestroyScheduledEntities();
 }
 
+b2Vec2 Scene::PixelToBox2D(Vector2 v)
+{
+    auto scaled = v * PixelsToBox2DRatio;
+    return b2Vec2(scaled.x, scaled.y);
+}
+
+Vector2 Scene::Box2DToPixel(b2Vec2 v)
+{
+    return Vector2(v.x * Box2DToPixelsRatio.x, v.y * Box2DToPixelsRatio.y);
+}
+
 void Scene::RegisterEntity(Entity* entity, const EntityDictionary& properties)
 {
     entity->_dimensions = properties.GetValueOrDefault<Vector2>("dimensions", Vector2(0, 0));
@@ -163,6 +174,14 @@ void Scene::StepPhysicsSimulation()
     _collisionManager.UpdateEntityPositions();
 }
 
+void Scene::SendEvent(const IEntityEvent& ev)
+{
+    for (auto& service : _services)
+    {
+        service->SendEvent(ev, inEditor);
+    }
+}
+
 void Scene::BroadcastEvent(const IEntityEvent& ev)
 {
     for (auto entity : _entityManager.entities)
@@ -171,6 +190,11 @@ void Scene::BroadcastEvent(const IEntityEvent& ev)
     }
 
     SendEvent(ev);
+}
+
+LightManager* Scene::GetLightManager() const
+{
+    return _engine->GetRenderer()->GetLightManager();
 }
 
 SoundManager* Scene::GetSoundManager() const
@@ -274,7 +298,7 @@ bool Scene::Raycast(Vector2 start, Vector2 end, RaycastResult& outResult, bool a
 void Scene::UpdateEntities(float deltaTime)
 {
     _physicsTimeLeft += deltaTime;
-    timeSinceStart += deltaTime;
+    relativeTime += deltaTime;
 
     while (_physicsTimeLeft >= PhysicsDeltaTime)
     {
