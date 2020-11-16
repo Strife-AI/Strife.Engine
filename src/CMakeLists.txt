@@ -170,4 +170,3 @@ target_link_libraries(Strife.Engine PRIVATE Microsoft.GSL::GSL)
 
 set_property(TARGET Strife.Engine PROPERTY CXX_STANDARD 17)
 
-set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -DNOGDI -DWIN32")

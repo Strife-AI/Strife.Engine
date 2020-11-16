@@ -12,7 +12,6 @@ add_executable(Sample
 find_package(torch REQUIRED)
 
 set_property(TARGET Sample PROPERTY CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -DNOGDI -DWIN32")
 
 target_link_libraries(Sample Strife.Engine Strife.ML torch)
 
