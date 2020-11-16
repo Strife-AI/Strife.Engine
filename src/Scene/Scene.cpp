@@ -577,6 +577,11 @@ bool Scene::RaycastExcludingSelf(Vector2 start, Vector2 end, Entity* self, Rayca
 
     _world->RayCast(&callback, PixelToBox2D(start), PixelToBox2D(end));
 
+    if (IsApproximately((end - start).TaxiCabDistance(), 0))
+    {
+        return false;
+    }
+
     if (callback.lastFraction == 1)
     {
         return false;
