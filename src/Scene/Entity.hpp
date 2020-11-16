@@ -35,6 +35,9 @@ struct IHudRenderable { virtual void RenderHud(Renderer* renderer) = 0; };
 struct IUpdatable { virtual void Update(float deltaTime) = 0; };
 struct IFixedUpdatable { virtual void FixedUpdate(float deltaTime) = 0; };
 
+struct IServerFixedUpdatable { virtual void ServerFixedUpdate(float deltaTime) = 0; };
+struct IServerUpdatable { virtual void ServerUpdate(float deltaTime) = 0; };
+
 struct EntityHeader
 {
     EntityHeader()

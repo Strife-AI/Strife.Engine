@@ -5,7 +5,6 @@
 
 
 #include "Math/Vector2.hpp"
-#include "Memory/CircularQueue.hpp"
 #include "Scene/EntityComponent.hpp"
 #include "Scene/IEntityEvent.hpp"
 
@@ -18,6 +17,16 @@ enum class PlayerCommandStatus
 
 Vector2 GetDirectionFromKeyBits(unsigned int keyBits);
 
+DEFINE_EVENT(MoveToEvent)
+{
+    Vector2 position;
+};
+
+DEFINE_EVENT(AttackEvent)
+{
+    Entity* entity;
+};
+
 struct PlayerCommand
 {
     unsigned char fixedUpdateCount;
@@ -27,6 +36,9 @@ struct PlayerCommand
     uint32 netId;
     bool moveToTarget = false;
     Vector2 target;
+
+    bool attackTarget = false;
+    uint32 attackNetId;
 
     // Client only
     float timeRecorded;

@@ -108,12 +108,16 @@ struct PlayerCommandMessage
             .Add(fixedUpdateCount)
             .Add(moveToTarget)
             .Add(target)
-            .Add(netId);
+            .Add(netId)
+            .Add(attackTarget)
+            .Add(attackNetId);
     }
 
     uint8 keys;
     uint8 fixedUpdateCount;
     bool moveToTarget;
+    bool attackTarget;
+    uint32 attackNetId;
     Vector2 target;
     uint32 netId;
 };
@@ -245,6 +249,8 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
                 request.commands[commandCount].target = command.target;
                 request.commands[commandCount].moveToTarget = command.moveToTarget;
                 request.commands[commandCount].netId = command.netId;
+                request.commands[commandCount].moveToTarget = command.moveToTarget;
+                request.commands[commandCount].attackNetId = command.attackNetId;
 
                 if (++commandCount == ClientUpdateRequestMessage::MaxCommands)
                 {
@@ -286,6 +292,8 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
                 newCommand.moveToTarget = request.commands[i].moveToTarget;
                 newCommand.target = request.commands[i].target;
                 newCommand.netId = request.commands[i].netId;
+                newCommand.attackTarget = request.commands[i].attackTarget;
+                newCommand.attackNetId = request.commands[i].attackNetId;
                 client.lastServerSequenceNumber = currentId;
 
                 if (client.commands.IsFull())
