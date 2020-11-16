@@ -88,10 +88,104 @@ struct LoadedSegment
     EntityDictionary properties;
 };
 
+constexpr int MaxEntities = 8192;
+
+template<typename TInterface>
+using EntityList = std::unordered_set<TInterface>;
+
+struct EntityManager
+{
+    static constexpr int InvalidEntityHeaderId = -2;
+
+    EntityManager()
+        : freeEntityHeaders(entityHeaders.begin(), MaxEntities)
+    {
+        for (int i = 0; i < MaxEntities; ++i)
+        {
+            entityHeaders[i].id = InvalidEntityHeaderId;
+        }
+    }
+
+    void RegisterEntity(Entity* entity)
+    {
+        entities.insert(entity);
+
+        AddIfImplementsInterface(updatables, entity);
+        AddIfImplementsInterface(serverUpdatables, entity);
+
+        AddIfImplementsInterface(fixedUpdatables, entity);
+        AddIfImplementsInterface(serverFixedUpdatables, entity);
+
+        AddIfImplementsInterface(renderables, entity);
+        AddIfImplementsInterface(hudRenderables, entity);
+
+        EntityHeader* header = freeEntityHeaders.Borrow();
+
+        header->id = _nextEntityId++;
+        header->entity = entity;
+
+        entity->id = header->id;
+        entity->header = header;
+    }
+
+    void UnregisterEntity(Entity* entity)
+    {
+        entities.erase(entity);
+
+        RemoveIfImplementsInterface(updatables, entity);
+        RemoveIfImplementsInterface(serverUpdatables, entity);
+
+        RemoveIfImplementsInterface(fixedUpdatables, entity);
+        RemoveIfImplementsInterface(serverFixedUpdatables, entity);
+
+        RemoveIfImplementsInterface(renderables, entity);
+        RemoveIfImplementsInterface(hudRenderables, entity);
+
+        EntityHeader* header = entity->header;
+        header->id = InvalidEntityHeaderId;
+        freeEntityHeaders.Return(header);
+    }
+
+    template <typename TContainer, typename TItem>
+    void AddIfImplementsInterface(EntityList<TContainer>& container, const TItem& item)
+    {
+        TContainer asContainer;
+        if ((asContainer = dynamic_cast<TContainer>(item)) != nullptr)
+        {
+            container.insert(asContainer);
+        }
+    }
+
+    template <typename TContainer, typename TItem>
+    void RemoveIfImplementsInterface(EntityList<TContainer>& container, const TItem& item)
+    {
+        TContainer asContainer;
+        if ((asContainer = dynamic_cast<TContainer>(item)) != nullptr)
+        {
+            container.erase(asContainer);
+        }
+    }
+
+    EntityList<Entity*> entities;
+    FreeList<EntityHeader> freeEntityHeaders;
+
+    FixedSizeVector<EntityHeader, MaxEntities> entityHeaders;
+
+    EntityList<IUpdatable*> updatables;
+    EntityList<IServerUpdatable*> serverUpdatables;
+    EntityList<IFixedUpdatable*> fixedUpdatables;
+    EntityList<IServerFixedUpdatable*> serverFixedUpdatables;
+    EntityList<IRenderable*> renderables;
+    EntityList<IHudRenderable*> hudRenderables;
+
+    std::vector<Entity*> toBeDestroyed;
+
+    int _nextEntityId = 1;
+};
+
 class Scene
 {
 public:
-    static const int MaxEntities = 8192;
     static constexpr float PhysicsDeltaTime = 1.0f / 200;
     static constexpr Vector2 PixelsToBox2DRatio = Vector2(1.0f / 16, 1.0f / 16);
     static constexpr Vector2 Box2DToPixelsRatio = Vector2(1.0, 1.0) / PixelsToBox2DRatio;
@@ -215,7 +309,7 @@ public:
 
     virtual void OnSceneLoaded() { }
 
-    auto& GetEntities() { return _entities; }
+    auto& GetEntities() { return _entityManager.entities; }
 
     void* AllocateMemory(int size) const;
     void FreeMemory(void* mem, int size) const;
@@ -250,8 +344,6 @@ protected:
     virtual void DoRenderHud(Renderer* renderer) { }
 
 private:
-    static const int InvalidEntityHeaderId = -2;
-
     std::vector<std::unique_ptr<ISceneService>> _services;
 
     void RegisterEntity(Entity* entity, const EntityDictionary& properties);
@@ -271,25 +363,11 @@ private:
 
     Engine* _engine;
 
-    int _nextEntityId = 1;
-    FixedSizeVector<Entity*, MaxEntities> _entities;
-    FixedSizeVector<EntityHeader, MaxEntities> _entityHeaders;
-    FreeList<EntityHeader> _freeEntityHeaders;
-
-    FixedSizeVector<IUpdatable*, MaxEntities> _updatables;
-    FixedSizeVector<IServerUpdatable*, MaxEntities> _serverUpdatables;
-
     std::unique_ptr<b2World> _world;
     float _physicsTimeLeft = 0;
-    FixedSizeVector<IFixedUpdatable*, MaxEntities> _fixedUpdatables;
-    FixedSizeVector<IServerFixedUpdatable*, MaxEntities> _serverFixedUpdatables;
+    
     CollisionManager _collisionManager;
     int _nextQueryId = 0;
-
-    FixedSizeVector<IRenderable*, MaxEntities> _renderables;
-    FixedSizeVector<IHudRenderable*, MaxEntities> _hudRenderables;
-
-    FixedSizeVector<Entity*, MaxEntities> _toBeDestroyed;
 
     TimerManager _timerManager;
 
@@ -303,6 +381,8 @@ private:
     FixedSizeVector<LoadedSegment*, MaxLoadedSegments> _loadedSegments;
     LoadedSegment _segmentPool[MaxLoadedSegments];
     FreeList<LoadedSegment> _freeSegments;
+
+    EntityManager _entityManager;
 };
 
 template <typename TEntity, typename ... Args>

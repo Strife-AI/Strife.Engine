@@ -37,7 +37,7 @@ extern ConsoleVar<bool> g_developerMode("developer-mode", true, true);
 ConsoleVar<bool> g_stressTest("stress-test", false, false);
 int stressCount = 0;
 
-ConsoleVar<bool> isServer("server", true);
+ConsoleVar<bool> isServer("server", false);
 
 Engine* Engine::Initialize(const EngineConfig& config)
 {
