@@ -1,3 +1,4 @@
+#include <list>
 #include <functional>
 
 template<typename TEvent>

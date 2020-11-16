@@ -1,6 +1,7 @@
 #include "Entity.hpp"
 #include "BaseEntity.hpp"
 #include "Scene.hpp"
+#include "IEntityEvent.hpp"
 
 const EntityHeader InvalidEntityHeader::InvalidHeader;
 

@@ -9,6 +9,7 @@
 #include "Scene/Scene.hpp"
 #include "Memory/ResourceManager.hpp"
 #include <thread>
+#include <Scene/IEntityEvent.hpp>
 #include "Scene/IGame.hpp"
 #include "System/Input.hpp"
 #include "Renderer/SdlManager.hpp"
