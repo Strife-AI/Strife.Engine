@@ -94,9 +94,10 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if (net->IsServer())
         {
-            Vector2 positions[2] = {
+            Vector2 positions[3] = {
                 Vector2(2048 - 1000, 2048 - 1000),
                 Vector2(2048 + 1000, 2048 + 1000),
+                Vector2(2048 + 1000, 2048 - 1000),
             };
 
             Vector2 offsets[4] =
@@ -199,7 +200,7 @@ void InputService::HandleInput()
 
                 command.keys = keyBits;
                 command.fixedUpdateCount = fixedUpdateCount;
-                command.timeRecorded = scene->relativeTime;
+                command.timeRecorded = scene->relativeTime - command.fixedUpdateCount * Scene::PhysicsDeltaTime;
                 command.netId = self->net->netId;
                 fixedUpdateCount = 0;
 

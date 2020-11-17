@@ -62,9 +62,13 @@ void PlayerEntity::Render(Renderer* renderer)
 {
     auto position = Center();
 
-    auto color = net->ownerClientId == 0
-        ? Color::CornflowerBlue()
-        : Color::Green();
+    Color c[3] = {
+        Color::CornflowerBlue(),
+        Color::Green(),
+        Color::Orange()
+    };
+
+    auto color = c[net->ownerClientId];
 
     renderer->RenderRectangle(Rectangle(position - Dimensions() / 2, Dimensions()), color, -0.99);
 
