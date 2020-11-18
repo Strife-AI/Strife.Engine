@@ -6,6 +6,88 @@
 #include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
 
+int BitsNeeded(int value)
+{
+    int bits = 0;
+    while(value > 0)
+    {
+        ++bits;
+        value >>= 1;
+    }
+
+    return bits;
+}
+
+struct VarGroup
+{
+    ISyncVar* vars[32];
+    bool changed[32];
+    int changedCount = 0;
+    int varCount = 0;
+};
+
+void WriteVarGroup(VarGroup* group, uint32 lastClientSequenceId, SLNet::BitStream& out)
+{
+    for (int i = 0; i < group->varCount; ++i)
+    {
+        if (!group->vars[i]->IsBool())
+        {
+            out.Write(group->changed[i]);
+
+            if (group->changed[i])
+            {
+                group->vars[i]->WriteValueDeltaedFromSequence(lastClientSequenceId, out);
+            }
+        }
+        else
+        {
+            // Writing a bit for whether a bool has changed just wastes a bit, so just write the bit
+            group->vars[i]->WriteValueDeltaedFromSequence(lastClientSequenceId, out);
+        }
+    }
+}
+
+void WriteVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& out)
+{
+    VarGroup frequent;
+    VarGroup infrequent;
+
+    for (auto var = head; var != nullptr; var = var->next)
+    {
+        VarGroup* group = var->frequency == SyncVarUpdateFrequency::Frequent
+            ? &frequent
+            : &infrequent;
+
+        group->vars[group->varCount] = head;
+        group->changed[group->varCount] = var->CurrentValueChangedFromSequence(lastClientSequenceId);
+        group->changedCount += group->changed[group->varCount];
+    }
+
+    if (frequent.varCount == 0 && infrequent.varCount == 0)
+    {
+        out.Write0();
+        return;
+    }
+    else
+    {
+        out.Write1();
+
+        WriteVarGroup(&frequent, lastClientSequenceId, out);
+
+        if (infrequent.varCount > 1)
+        {
+            out.Write(infrequent.changedCount > 0);
+        }
+
+        // Don't write any of the infrequent vars if none of them have changed
+        if (infrequent.changedCount > 0)
+        {
+            WriteVarGroup(&infrequent, lastClientSequenceId, out);
+        }
+    }
+}
+
+
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
     rigidBody = AddComponent<RigidBodyComponent>("rb", b2_dynamicBody);

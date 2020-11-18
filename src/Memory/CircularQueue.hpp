@@ -37,6 +37,15 @@ public:
         return CircularQueueIterator(begin, current);
     }
 
+    CircularQueueIterator operator--()
+    {
+        current = current == begin
+            ? current + Size - 1
+            : current - 1;
+
+        return CircularQueueIterator(begin, current);
+    }
+
 private:
     T* begin;
     T* current;

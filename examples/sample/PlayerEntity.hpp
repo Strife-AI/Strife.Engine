@@ -56,6 +56,8 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
     RigidBodyComponent* rigidBody;
     NetComponent* net;
 
+    SyncVar<float> newHealth{ 5, SyncVarInterpolation::Linear };
+
     float health = 100;
     EntityReference<Entity> attackTarget;
     PlayerState state = PlayerState::None;
