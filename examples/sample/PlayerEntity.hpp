@@ -58,7 +58,7 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
     float attackCoolDown = 0;
 
     SyncVar<Vector2> position{ { 0, 0}, SyncVarInterpolation::Linear };
-    SyncVar<float> health{ 100, SyncVarInterpolation::None };
-    SyncVar<bool> showAttack = false;
+    SyncVar<float> health{ 100, SyncVarInterpolation::None, SyncVarUpdateFrequency::Infrequent };
+    SyncVar<bool> showAttack{ false, SyncVarInterpolation::None, SyncVarUpdateFrequency::Infrequent };
     SyncVar<Vector2> attackPosition { { 0, 0}, SyncVarInterpolation::Linear };
 };
