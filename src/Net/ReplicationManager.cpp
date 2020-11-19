@@ -373,15 +373,23 @@ void WriteVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& ou
 
         WriteVarGroup(&frequent, lastClientSequenceId, out);
 
-        if (infrequent.varCount > 1)
+        if(infrequent.varCount == 0)
         {
-            out.Write(infrequent.changedCount > 0);
+            return;
         }
-
-        // Don't write any of the infrequent vars if none of them have changed
-        if (infrequent.changedCount > 0)
+        else if(infrequent.varCount == 1)
         {
             WriteVarGroup(&infrequent, lastClientSequenceId, out);
+        }
+        else
+        {
+            bool anyInfrequentChanges = infrequent.changedCount > 0;
+            out.Write(anyInfrequentChanges);
+
+            if(anyInfrequentChanges)
+            {
+                WriteVarGroup(&infrequent, lastClientSequenceId, out);
+            }
         }
     }
 }
@@ -403,17 +411,22 @@ void ReadVars(ISyncVar* head, uint32 lastClientSequenceId, float time, SLNet::Bi
     {
         ReadVarGroup(&frequent, lastClientSequenceId, time, stream);
 
-        bool anyInfrequentChanged = false;
-
-        if (infrequent.varCount > 1)
+        if (infrequent.varCount == 0)
         {
-            anyInfrequentChanged = stream.ReadBit();
+            return;
         }
-
-        // Don't write any of the infrequent vars if none of them have changed
-        if (anyInfrequentChanged)
+        else if (infrequent.varCount == 1)
         {
             ReadVarGroup(&infrequent, lastClientSequenceId, time, stream);
+        }
+        else
+        {
+            bool anyInfrequentChanges = stream.ReadBit();
+
+            if (anyInfrequentChanges)
+            {
+                ReadVarGroup(&infrequent, lastClientSequenceId, time, stream);
+            }
         }
     }
 }
