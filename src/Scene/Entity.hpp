@@ -274,8 +274,6 @@ struct Entity
     template<typename TComponent> TComponent* GetComponent();
     void RemoveComponent(IEntityComponent* component);
 
-    void NetSerialize(NetSerializer& serializer);
-
     int id;
     StringId name;
     StringId type;
@@ -302,7 +300,6 @@ private:
     virtual void ReceiveServerEvent(const IEntityEvent& ev) { }
 
     virtual void DoSerialize(EntityDictionaryBuilder& writer) { }
-    virtual void DoNetSerialize(NetSerializer& serializer) { }
 
     virtual std::pair<int, void*> GetMemoryBlock() = 0;
 

@@ -286,91 +286,6 @@ struct SyncVar final : ISyncVar
     SyncVarDeltaMode deltaMode = SyncVarDeltaMode::Full;
 };
 
-struct NetVar
-{
-    bool operator==(const NetVar& rhs) const
-    {
-        if (sizeBytes != rhs.sizeBytes)
-        {
-            return false;
-        }
-
-        return memcmp(data, rhs.data, sizeBytes) == 0;
-    }
-
-    uint8* data;
-    int sizeBytes;
-    int sizeBits;
-};
-
-struct NetSerializationState
-{
-    FixedSizeVector<NetVar, 32> vars;
-    FixedSizeVector<uint8, 1024> data;
-};
-
-struct NetSerializer
-{
-    bool Add(bool& b)
-    {
-        if (isReading)
-        {
-            auto old = b;
-            b = stream->ReadBit();
-            return b != old;
-        }
-        else
-        {
-            uint8 data = b;
-            AddVar(&data, 1);
-            return false;
-        }
-    }
-
-    template<typename T>
-    bool Add(T& val)
-    {
-        if (isReading)
-        {
-            bool hasNewValue = stream->ReadBit();
-            if (!hasNewValue)
-                return false;
-
-            T old = val;
-            stream->ReadBits((unsigned char*)&val, sizeof(val) * 8);
-
-            return val != old;
-        }
-        else
-        {
-            AddVar(&val, sizeof(T) * 8);
-            return false;
-        }
-    }
-
-    void AddVar(void* data, int sizeBits)
-    {
-        NetVar v;
-        v.sizeBytes = NearestPowerOf2(sizeBits, 8) / 8;
-        v.sizeBits = sizeBits;
-        if (v.sizeBytes == 0) FatalError("Data takes 0 size");
-        v.data = Alloc(v.sizeBytes);
-        memcpy(v.data, data, v.sizeBytes);
-        state->vars.PushBack(v);
-    }
-
-    uint8* Alloc(int size)
-    {
-        uint8* mem = state->data.end();
-        state->data.Resize(state->data.Size() + size);
-        return mem;
-    }
-
-    NetSerializationState* state;
-    SLNet::BitStream* stream;
-    bool isReading;
-};
-
 DEFINE_COMPONENT(NetComponent)
 {
     void OnAdded() override;
@@ -386,6 +301,4 @@ DEFINE_COMPONENT(NetComponent)
 
     std::shared_ptr<FlowField> flowField;   // TODO: shouldn't be here
     Vector2 acceleration;
-
-    bool useNewSerializer = false;      // TODO MW: remove when done
 };

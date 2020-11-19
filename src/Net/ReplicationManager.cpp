@@ -501,25 +501,7 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
         {
             uint8 netId = c->netId;
             response.WriteBits(&netId, 8);
-
-            if (!c->useNewSerializer)
-            {
-                NetSerializer serializer;
-                NetSerializationState state;
-                serializer.isReading = false;
-                serializer.state = &state;
-                c->owner->NetSerialize(serializer);
-
-                for (auto& var : serializer.state->vars)
-                {
-                    if (var.sizeBits != 1) response.Write1();
-                    response.WriteBits(var.data, var.sizeBits);
-                }
-            }
-            else
-            {
-                WriteVars(c->owner->syncVarHead, 0, response);
-            }
+            WriteVars(c->owner->syncVarHead, 0, response);
         }
     }
 }
@@ -597,10 +579,6 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
         uint8 netId;
         stream.stream.ReadBits(&netId, 8);
 
-        NetSerializer serializer;
-        serializer.isReading = true;
-        serializer.stream = &stream.stream;
-
         auto player = _componentsByNetId.count(netId) != 0
             ? _componentsByNetId[netId]
             : nullptr;
@@ -610,33 +588,6 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
             FatalError("Missing entity %d\n", (int)netId);
         }
 
-        if (!player->useNewSerializer)
-        {
-            Vector2 oldPosition = player->owner->Center();
-
-            player->owner->NetSerialize(serializer);
-
-            auto lastCommandExecuted = client.GetCommandById(client.lastServedExecuted);
-
-            if (player == nullptr)
-            {
-                //_scene->SendEvent(PlayerConnectedEvent(message.entities[i].netId, message.entities[i].position));
-            }
-            else if (lastCommandExecuted != nullptr)
-            {
-                PlayerSnapshot snapshot;
-                snapshot.commandId = client.lastServedExecuted;
-                snapshot.time = lastCommandExecuted->timeRecorded;
-                snapshot.position = player->owner->Center();
-
-                player->AddSnapshot(snapshot);
-            }
-
-            player->owner->SetCenter(oldPosition);
-        }
-        else
-        {
-            ReadVars(player->owner->syncVarHead, 0, stream.stream);
-        }
+        ReadVars(player->owner->syncVarHead, 0, stream.stream);
     }
 }

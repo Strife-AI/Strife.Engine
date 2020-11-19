@@ -51,7 +51,6 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
     void ServerUpdate(float deltaTime) override;
 
     void SetMoveDirection(Vector2 direction);
-    void DoNetSerialize(NetSerializer& serializer) override;
 
     void Update(float deltaTime) override;
 

@@ -9,7 +9,6 @@ DEFINE_ENTITY(CastleEntity, "castle"), IUpdatable
     void Update(float deltaTime) override;
 
     void ReceiveServerEvent(const IEntityEvent& ev) override;
-    void DoNetSerialize(NetSerializer& serializer) override;
 
 private:
     float _colorChangeTime = 0;
