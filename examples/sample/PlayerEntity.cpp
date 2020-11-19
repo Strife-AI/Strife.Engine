@@ -19,8 +19,6 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
     scene->SendEvent(PlayerAddedToGame(this));
 
     scene->GetService<InputService>()->players.push_back(this);
-
-    net->useNewSerializer = true;
 }
 
 void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)
@@ -209,11 +207,6 @@ void PlayerEntity::ServerUpdate(float deltaTime)
 void PlayerEntity::SetMoveDirection(Vector2 direction)
 {
     rigidBody->SetVelocity(direction);
-}
-
-void PlayerEntity::DoNetSerialize(NetSerializer& serializer)
-{
-
 }
 
 void PlayerEntity::Update(float deltaTime)

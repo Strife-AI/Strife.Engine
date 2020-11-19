@@ -26,7 +26,7 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
 
     scene->GetService<PathFinderService>()->AddObstacle(Rectangle(Center() - size / 2, size));
 
-    AddComponent<NetComponent>()->useNewSerializer = true;
+    AddComponent<NetComponent>();
 }
 
 void CastleEntity::Update(float deltaTime)
@@ -58,9 +58,4 @@ void CastleEntity::ReceiveServerEvent(const IEntityEvent& ev)
             spriteComponent->blendColor = Color(0, 0, 0, 0);
         }
     }
-}
-
-void CastleEntity::DoNetSerialize(NetSerializer& serializer)
-{
-
 }
