@@ -49,13 +49,6 @@ struct PlayerCommand
     int fixedUpdateStartId;
 };
 
-struct PlayerSnapshot
-{
-    Vector2 position;
-    float time;
-    int commandId;
-};
-
 DEFINE_EVENT(SpawnedOnClientEvent)
 {
 
@@ -75,10 +68,10 @@ enum class SyncVarInterpolation
     Linear
 };
 
-template <class T>
+template<typename T>
 bool TryLerp(const T& start, const T& end, float t, T& outValue)
 {
-    if constexpr(std::is_integral_v<T>)
+    if constexpr (std::is_integral_v<T>)
     {
         outValue = Lerp(start, end, t);
         return true;
@@ -87,6 +80,13 @@ bool TryLerp(const T& start, const T& end, float t, T& outValue)
     {
         return false;
     }
+}
+
+template<>
+inline bool TryLerp(const Vector2& start, const Vector2& end, float t, Vector2& outValue)
+{
+    outValue = Lerp(start, end, t);
+    return true;
 }
 
 enum class SyncVarUpdateFrequency
@@ -136,13 +136,12 @@ struct ISyncVar
 
     virtual bool CurrentValueChangedFromSequence(uint32 sequenceId) = 0;
     virtual void WriteValueDeltaedFromSequence(uint32 sequenceId, SLNet::BitStream& stream) = 0;
-    virtual void ReadValueDeltaedFromSequence(uint32 sequenceId, SLNet::BitStream& stream) = 0;
+    virtual void ReadValueDeltaedFromSequence(uint32 sequenceId, float time, SLNet::BitStream& stream) = 0;
+    virtual void SetCurrentValueToValueAtTime(float time) = 0;
 
     virtual bool IsBool() = 0;
 
-    static float currentTime;
     static bool isServer;
-    static uint32 currentSequenceId;
 
     ISyncVar* next = nullptr;
     SyncVarUpdateFrequency frequency;
@@ -179,9 +178,16 @@ struct SyncVar final : ISyncVar
         WriteSyncVarDelta(T(), currentValue, deltaMode, stream);
     }
 
-    void ReadValueDeltaedFromSequence(uint32 sequenceId, SLNet::BitStream& stream) override
+    void ReadValueDeltaedFromSequence(uint32 sequenceId, float time, SLNet::BitStream& stream) override
     {
-        ReadSyncVarDelta(T(), currentValue, deltaMode, stream);
+        T newValue;
+        ReadSyncVarDelta(T(), newValue, deltaMode, stream);
+        AddValue(newValue, time, sequenceId);
+    }
+
+    void SetCurrentValueToValueAtTime(float time) override
+    {
+        currentValue = GetValueAtTime(time);
     }
 
     struct ValueInTime
@@ -191,7 +197,7 @@ struct SyncVar final : ISyncVar
             time(-1),
             sequenceId(0)
         {
-            
+
         }
 
         ValueInTime(const T& value_, float time_, uint32 sequenceId_)
@@ -199,7 +205,7 @@ struct SyncVar final : ISyncVar
             time(time_),
             sequenceId(sequenceId_)
         {
-            
+
         }
 
         T value;
@@ -224,7 +230,12 @@ struct SyncVar final : ISyncVar
 
     void AddValue(const T& value, float time, uint32 sequenceId)
     {
-        if(snapshots.IsFull())
+        if (!snapshots.IsEmpty() && time <= (*(--snapshots.end())).time)
+        {
+            return;
+        }
+
+        if (snapshots.IsFull())
         {
             snapshots.Dequeue();
         }
@@ -242,9 +253,14 @@ struct SyncVar final : ISyncVar
     {
         auto it = snapshots.begin();
 
-        if(snapshots.IsEmpty())
+        if (snapshots.IsEmpty())
         {
-            FatalError("No values for syncvar");
+            return currentValue;
+        }
+
+        if (time < snapshots.Peek().time)
+        {
+            return snapshots.Peek().value;
         }
 
         do
@@ -260,13 +276,13 @@ struct SyncVar final : ISyncVar
             auto& currentSnapshot = *it;
             auto& nextSnapshot = *next;
 
-            if(nextSnapshot.time > time)
+            if (nextSnapshot.time > time)
             {
-                if(interpolation == SyncVarInterpolation::Linear)
+                if (interpolation == SyncVarInterpolation::Linear)
                 {
                     T result;
                     float t = (time - currentSnapshot.time) / (nextSnapshot.time - currentSnapshot.time);
-                    if(TryLerp(currentSnapshot.value, nextSnapshot.value, t, result))
+                    if (TryLerp(currentSnapshot.value, nextSnapshot.value, t, result))
                     {
                         return result;
                     }
@@ -276,12 +292,12 @@ struct SyncVar final : ISyncVar
             }
 
             it = next;
-        } while(true);
+        } while (true);
     }
 
     T currentValue;
 
-    CircularQueue<ValueInTime, 32> snapshots;
+    CircularQueue<ValueInTime, 256> snapshots;
     SyncVarInterpolation interpolation;
     SyncVarDeltaMode deltaMode = SyncVarDeltaMode::Full;
 };
@@ -291,13 +307,8 @@ DEFINE_COMPONENT(NetComponent)
     void OnAdded() override;
     void OnRemoved() override;
 
-    Vector2 GetSnapshotPosition(float time);
-    void AddSnapshot(const PlayerSnapshot& snapshot);
-
     int netId;
     int ownerClientId;
-
-    std::vector<PlayerSnapshot> snapshots;
 
     std::shared_ptr<FlowField> flowField;   // TODO: shouldn't be here
     Vector2 acceleration;

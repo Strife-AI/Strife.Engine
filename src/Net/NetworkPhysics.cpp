@@ -100,8 +100,14 @@ void NetworkPhysics::ServerFixedUpdate()
                 break;
             }
         }
+    }
+}
 
-        // TODO: use flow grid
+void UpdateVarsToTime(ISyncVar* head, float time)
+{
+    for (auto var = head; var != nullptr; var = var->next)
+    {
+        var->SetCurrentValueToValueAtTime(time);
     }
 }
 
@@ -109,6 +115,6 @@ void NetworkPhysics::ClientFixedUpdate()
 {
     for(auto net : scene->replicationManager.components)
     {
-        net->owner->SetCenter(net->GetSnapshotPosition(scene->relativeTime - 0.2));
+        UpdateVarsToTime(net->owner->syncVarHead, scene->relativeTime - 0.2);
     }
 }

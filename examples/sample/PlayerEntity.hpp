@@ -1,11 +1,6 @@
 #pragma once
 
-#include <queue>
-
-
-
 #include "Components/NetComponent.hpp"
-#include "Memory/CircularQueue.hpp"
 #include "Scene/BaseEntity.hpp"
 
 struct PlayerEntity;
@@ -62,8 +57,8 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
     float updateTargetTimer = 0;
     float attackCoolDown = 0;
 
-    SyncVar<Vector2> position = Vector2(0, 0);
-    SyncVar<float> health = 100;
+    SyncVar<Vector2> position{ { 0, 0}, SyncVarInterpolation::Linear };
+    SyncVar<float> health{ 100, SyncVarInterpolation::None };
     SyncVar<bool> showAttack = false;
-    SyncVar<Vector2> attackPosition = Vector2(0, 0);
+    SyncVar<Vector2> attackPosition { { 0, 0}, SyncVarInterpolation::Linear };
 };

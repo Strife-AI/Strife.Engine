@@ -312,7 +312,7 @@ void WriteVarGroup(VarGroup* group, uint32 lastClientSequenceId, SLNet::BitStrea
     }
 }
 
-void ReadVarGroup(VarGroup* group, uint32 lastClientSequenceId, SLNet::BitStream& stream)
+void ReadVarGroup(VarGroup* group, uint32 lastClientSequenceId, float time, SLNet::BitStream& stream)
 {
     for (int i = 0; i < group->varCount; ++i)
     {
@@ -323,12 +323,12 @@ void ReadVarGroup(VarGroup* group, uint32 lastClientSequenceId, SLNet::BitStream
 
             if (wasChanged)
             {
-                group->vars[i]->ReadValueDeltaedFromSequence(lastClientSequenceId, stream);
+                group->vars[i]->ReadValueDeltaedFromSequence(lastClientSequenceId, time, stream);
             }
         }
         else
         {
-            group->vars[i]->ReadValueDeltaedFromSequence(lastClientSequenceId, stream);
+            group->vars[i]->ReadValueDeltaedFromSequence(lastClientSequenceId, time, stream);
         }
     }
 }
@@ -386,7 +386,7 @@ void WriteVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& ou
     }
 }
 
-void ReadVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& stream)
+void ReadVars(ISyncVar* head, uint32 lastClientSequenceId, float time, SLNet::BitStream& stream)
 {
     VarGroup frequent;
     VarGroup infrequent;
@@ -401,7 +401,7 @@ void ReadVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& str
     }
     else
     {
-        ReadVarGroup(&frequent, lastClientSequenceId, stream);
+        ReadVarGroup(&frequent, lastClientSequenceId, time, stream);
 
         bool anyInfrequentChanged = false;
 
@@ -413,7 +413,7 @@ void ReadVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& str
         // Don't write any of the infrequent vars if none of them have changed
         if (anyInfrequentChanged)
         {
-            ReadVarGroup(&infrequent, lastClientSequenceId, stream);
+            ReadVarGroup(&infrequent, lastClientSequenceId, time, stream);
         }
     }
 }
@@ -588,6 +588,12 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
             FatalError("Missing entity %d\n", (int)netId);
         }
 
-        ReadVars(player->owner->syncVarHead, 0, stream.stream);
+        auto cmd = client.GetCommandById(client.lastServedExecuted);
+
+        float time = cmd == nullptr
+            ? -1
+            : cmd->timeRecorded;
+
+        ReadVars(player->owner->syncVarHead, 0, time, stream.stream);
     }
 }
