@@ -88,7 +88,6 @@ void PlayerEntity::Render(Renderer* renderer)
 void PlayerEntity::ServerFixedUpdate(float deltaTime)
 {
     position.SetValue(Center());
-    health.SetValue(1);
 
     auto client = net;
 
