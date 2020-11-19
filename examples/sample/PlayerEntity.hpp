@@ -39,7 +39,7 @@ enum class PlayerState
     Attacking
 };
 
-DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable
+DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable, IUpdatable
 {
     void OnAdded(const EntityDictionary& properties) override;
     void ReceiveEvent(const IEntityEvent& ev) override;
@@ -53,16 +53,18 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
     void SetMoveDirection(Vector2 direction);
     void DoNetSerialize(NetSerializer& serializer) override;
 
+    void Update(float deltaTime) override;
+
     RigidBodyComponent* rigidBody;
     NetComponent* net;
 
-    SyncVar<float> newHealth{ 5, SyncVarInterpolation::Linear };
-
-    float health = 100;
     EntityReference<Entity> attackTarget;
     PlayerState state = PlayerState::None;
     float updateTargetTimer = 0;
     float attackCoolDown = 0;
-    bool showAttack = false;
-    Vector2 attackPosition;
+
+    SyncVar<Vector2> position = Vector2(0, 0);
+    SyncVar<float> health = 100;
+    SyncVar<bool> showAttack = false;
+    SyncVar<Vector2> attackPosition = Vector2(0, 0);
 };

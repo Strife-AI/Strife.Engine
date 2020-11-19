@@ -104,48 +104,84 @@ enum class SyncVarDeltaMode
 template<typename T>
 void WriteSyncVarDelta(const T& before, const T& after, SyncVarDeltaMode mode, SLNet::BitStream& stream)
 {
-    stream.Write(reinterpret_cast<const char*>(&before), sizeof(T));
+    stream.WriteBits(reinterpret_cast<const unsigned char*>(&after), sizeof(T) * 8);
 }
+
+template<typename T>
+void ReadSyncVarDelta(const T& before, T& result, SyncVarDeltaMode mode, SLNet::BitStream& stream)
+{
+    stream.ReadBits(reinterpret_cast<unsigned char*>(&result), sizeof(T) * 8);
+}
+
+template<>
+inline void WriteSyncVarDelta<bool>(const bool& before, const bool& after, SyncVarDeltaMode mode, SLNet::BitStream& stream)
+{
+    stream.Write(after);
+}
+
+template<>
+inline void ReadSyncVarDelta<bool>(const bool& before, bool& result, SyncVarDeltaMode mode, SLNet::BitStream& stream)
+{
+    result = stream.ReadBit();
+}
+
 
 struct ISyncVar
 {
+    ISyncVar(SyncVarUpdateFrequency frequency_ = SyncVarUpdateFrequency::Frequent);
+
+    ISyncVar(const ISyncVar& rhs) = delete;
+
+    virtual ~ISyncVar() = default;
+
     virtual bool CurrentValueChangedFromSequence(uint32 sequenceId) = 0;
     virtual void WriteValueDeltaedFromSequence(uint32 sequenceId, SLNet::BitStream& stream) = 0;
+    virtual void ReadValueDeltaedFromSequence(uint32 sequenceId, SLNet::BitStream& stream) = 0;
+
     virtual bool IsBool() = 0;
 
     static float currentTime;
     static bool isServer;
     static uint32 currentSequenceId;
 
-    ISyncVar* next;
+    ISyncVar* next = nullptr;
     SyncVarUpdateFrequency frequency;
 };
 
 template<typename T>
-struct SyncVar : ISyncVar
+struct SyncVar final : ISyncVar
 {
     SyncVar(const T& value)
-        : interpolation(SyncVarInterpolation::None)
+        : currentValue(value),
+        interpolation(SyncVarInterpolation::None)
     {
-        AddValue(value, -1, 0);
+
     }
 
-    SyncVar(const T& value, SyncVarInterpolation interpolation_)
-        : interpolation(interpolation_)
+    SyncVar(const T& value, SyncVarInterpolation interpolation_, SyncVarUpdateFrequency frequency = SyncVarUpdateFrequency::Frequent)
+        : ISyncVar(frequency),
+        currentValue(value),
+        interpolation(interpolation_)
     {
-        AddValue(value, -1, 0);
+
     }
 
     bool CurrentValueChangedFromSequence(uint32 sequenceId) override
     {
-        return GetValueAtSequence(sequenceId) == currentValue;
+        return true;
+        //return GetValueAtSequence(sequenceId) == currentValue;
     }
 
     bool IsBool() override { return std::is_same_v<T, bool>; }
 
     void WriteValueDeltaedFromSequence(uint32 sequenceId, SLNet::BitStream& stream) override
     {
-        
+        WriteSyncVarDelta(T(), currentValue, deltaMode, stream);
+    }
+
+    void ReadValueDeltaedFromSequence(uint32 sequenceId, SLNet::BitStream& stream) override
+    {
+        ReadSyncVarDelta(T(), currentValue, deltaMode, stream);
     }
 
     struct ValueInTime
@@ -173,7 +209,7 @@ struct SyncVar : ISyncVar
 
     void operator=(const T& value)
     {
-        SetValue(value);
+        currentValue = value;
     }
 
     void SetValue(const T& value)
@@ -183,23 +219,7 @@ struct SyncVar : ISyncVar
             FatalError("Trying to set syncvar from client");
         }
 
-        auto mostRecent = --snapshots.end();
-
-        if (snapshots.IsEmpty() || (*mostRecent).sequenceId != currentSequenceId)
-        {
-            ValueInTime snapshot(value, currentTime, currentSequenceId);
-
-            if (snapshots.IsFull())
-            {
-                snapshots.Dequeue();
-            }
-
-            snapshots.Enqueue(snapshot);
-        }
-        else
-        {
-            (*mostRecent).value = value;
-        }
+        currentValue = value;
     }
 
     void AddValue(const T& value, float time, uint32 sequenceId)
@@ -214,7 +234,8 @@ struct SyncVar : ISyncVar
 
     T GetValueAtSequence(uint32 sequenceId)
     {
-        
+        return T();
+        //if()
     }
 
     T GetValueAtTime(float time)
@@ -262,6 +283,7 @@ struct SyncVar : ISyncVar
 
     CircularQueue<ValueInTime, 32> snapshots;
     SyncVarInterpolation interpolation;
+    SyncVarDeltaMode deltaMode = SyncVarDeltaMode::Full;
 };
 
 struct NetVar
@@ -362,6 +384,8 @@ DEFINE_COMPONENT(NetComponent)
 
     std::vector<PlayerSnapshot> snapshots;
 
-    std::shared_ptr<FlowField> flowField;
+    std::shared_ptr<FlowField> flowField;   // TODO: shouldn't be here
     Vector2 acceleration;
+
+    bool useNewSerializer = false;      // TODO MW: remove when done
 };

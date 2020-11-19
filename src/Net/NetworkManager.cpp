@@ -13,6 +13,8 @@ NetworkManager::NetworkManager(bool isServer)
 {   
     _peerInterface = SLNet::RakPeerInterface::GetInstance();
 
+	ISyncVar::isServer = isServer;
+
     if (_isServer)
     {
         Log("Running as server\n");

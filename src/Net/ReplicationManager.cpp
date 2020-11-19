@@ -270,6 +270,154 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
     }
 }
 
+int BitsNeeded(int value)
+{
+    int bits = 0;
+    while (value > 0)
+    {
+        ++bits;
+        value >>= 1;
+    }
+
+    return bits;
+}
+
+struct VarGroup
+{
+    ISyncVar* vars[32];
+    bool changed[32];
+    int changedCount = 0;
+    int varCount = 0;
+};
+
+void WriteVarGroup(VarGroup* group, uint32 lastClientSequenceId, SLNet::BitStream& out)
+{
+    for (int i = 0; i < group->varCount; ++i)
+    {
+        if (!group->vars[i]->IsBool())
+        {
+            bool changed = group->changed[i];
+            out.Write(changed);
+
+            if (changed)
+            {
+                group->vars[i]->WriteValueDeltaedFromSequence(lastClientSequenceId, out);
+            }
+        }
+        else
+        {
+            // Writing a bit for whether a bool has changed just wastes a bit, so just write the bit
+            group->vars[i]->WriteValueDeltaedFromSequence(lastClientSequenceId, out);
+        }
+    }
+}
+
+void ReadVarGroup(VarGroup* group, uint32 lastClientSequenceId, SLNet::BitStream& stream)
+{
+    for (int i = 0; i < group->varCount; ++i)
+    {
+        if (!group->vars[i]->IsBool())
+        {
+            bool wasChanged;
+            stream.Read(wasChanged);
+
+            if (wasChanged)
+            {
+                group->vars[i]->ReadValueDeltaedFromSequence(lastClientSequenceId, stream);
+            }
+        }
+        else
+        {
+            group->vars[i]->ReadValueDeltaedFromSequence(lastClientSequenceId, stream);
+        }
+    }
+}
+
+void PartitionVars(ISyncVar* head, VarGroup* frequent, VarGroup* infrequent)
+{
+    for (auto var = head; var != nullptr; var = var->next)
+    {
+        VarGroup* group = var->frequency == SyncVarUpdateFrequency::Frequent
+            ? frequent
+            : infrequent;
+
+        group->vars[group->varCount++] = var;
+    }
+}
+
+void CheckForChangedVars(VarGroup* group, uint32 lastClientSequenceId)
+{
+    for (int i = 0; i < group->varCount; ++i)
+    {
+        group->changed[i] = group->vars[i]->CurrentValueChangedFromSequence(lastClientSequenceId);
+        group->changedCount += group->changed[i];
+    }
+}
+
+void WriteVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& out)
+{
+    VarGroup frequent;
+    VarGroup infrequent;
+
+    PartitionVars(head, &frequent, &infrequent);
+    CheckForChangedVars(&frequent, lastClientSequenceId);
+    CheckForChangedVars(&infrequent, lastClientSequenceId);
+
+    if (frequent.changedCount == 0 && infrequent.changedCount == 0)
+    {
+        out.Write0();
+    }
+    else
+    {
+        out.Write1();
+
+        WriteVarGroup(&frequent, lastClientSequenceId, out);
+
+        if (infrequent.varCount > 1)
+        {
+            out.Write(infrequent.changedCount > 0);
+        }
+
+        // Don't write any of the infrequent vars if none of them have changed
+        if (infrequent.changedCount > 0)
+        {
+            WriteVarGroup(&infrequent, lastClientSequenceId, out);
+        }
+    }
+}
+
+void ReadVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& stream)
+{
+    VarGroup frequent;
+    VarGroup infrequent;
+
+    PartitionVars(head, &frequent, &infrequent);
+
+    bool anyChanged = stream.ReadBit();
+
+    if (!anyChanged)
+    {
+        return;
+    }
+    else
+    {
+        ReadVarGroup(&frequent, lastClientSequenceId, stream);
+
+        bool anyInfrequentChanged = false;
+
+        if (infrequent.varCount > 1)
+        {
+            anyInfrequentChanged = stream.ReadBit();
+        }
+
+        // Don't write any of the infrequent vars if none of them have changed
+        if (anyInfrequentChanged)
+        {
+            ReadVarGroup(&infrequent, lastClientSequenceId, stream);
+        }
+    }
+}
+
 void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
 {
     auto& client = _clientStateByClientId[clientId];
@@ -349,22 +497,28 @@ void ReplicationManager::ProcessMessageFromClient(SLNet::BitStream& message, SLN
 
         responseMessage.ReadWrite(responseStream);
 
-        int i = 0;
         for (auto c : components)
         {
             uint8 netId = c->netId;
             response.WriteBits(&netId, 8);
 
-            NetSerializer serializer;
-            NetSerializationState state;
-            serializer.isReading = false;
-            serializer.state = &state;
-            c->owner->NetSerialize(serializer);
-
-            for(auto& var : serializer.state->vars)
+            if (!c->useNewSerializer)
             {
-                if(var.sizeBits != 1) response.Write1();
-                response.WriteBits(var.data, var.sizeBits);
+                NetSerializer serializer;
+                NetSerializationState state;
+                serializer.isReading = false;
+                serializer.state = &state;
+                c->owner->NetSerialize(serializer);
+
+                for (auto& var : serializer.state->vars)
+                {
+                    if (var.sizeBits != 1) response.Write1();
+                    response.WriteBits(var.data, var.sizeBits);
+                }
+            }
+            else
+            {
+                WriteVars(c->owner->syncVarHead, 0, response);
             }
         }
     }
@@ -456,26 +610,33 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
             FatalError("Missing entity %d\n", (int)netId);
         }
 
-        Vector2 oldPosition = player->owner->Center();
-
-        player->owner->NetSerialize(serializer);
-
-        auto lastCommandExecuted = client.GetCommandById(client.lastServedExecuted);
-
-        if (player == nullptr)
+        if (!player->useNewSerializer)
         {
-            //_scene->SendEvent(PlayerConnectedEvent(message.entities[i].netId, message.entities[i].position));
+            Vector2 oldPosition = player->owner->Center();
+
+            player->owner->NetSerialize(serializer);
+
+            auto lastCommandExecuted = client.GetCommandById(client.lastServedExecuted);
+
+            if (player == nullptr)
+            {
+                //_scene->SendEvent(PlayerConnectedEvent(message.entities[i].netId, message.entities[i].position));
+            }
+            else if (lastCommandExecuted != nullptr)
+            {
+                PlayerSnapshot snapshot;
+                snapshot.commandId = client.lastServedExecuted;
+                snapshot.time = lastCommandExecuted->timeRecorded;
+                snapshot.position = player->owner->Center();
+
+                player->AddSnapshot(snapshot);
+            }
+
+            player->owner->SetCenter(oldPosition);
         }
-        else if (lastCommandExecuted != nullptr)
+        else
         {
-            PlayerSnapshot snapshot;
-            snapshot.commandId = client.lastServedExecuted;
-            snapshot.time = lastCommandExecuted->timeRecorded;
-            snapshot.position = player->owner->Center();
-
-            player->AddSnapshot(snapshot);
+            ReadVars(player->owner->syncVarHead, 0, stream.stream);
         }
-
-        player->owner->SetCenter(oldPosition);
     }
 }

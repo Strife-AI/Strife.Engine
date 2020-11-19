@@ -6,6 +6,8 @@
 #include "Scene/Entity.hpp"
 #include "Scene/Scene.hpp"
 
+bool ISyncVar::isServer = false;
+
 Vector2 GetDirectionFromKeyBits(unsigned keyBits)
 {
     Vector2 moveDirection;
@@ -16,6 +18,19 @@ Vector2 GetDirectionFromKeyBits(unsigned keyBits)
     if (keyBits & 8) moveDirection.y += 1;
 
     return moveDirection;
+}
+
+ISyncVar::ISyncVar(SyncVarUpdateFrequency frequency_)
+    : frequency(frequency_)
+{
+    auto entity = Scene::entityUnderConstruction;
+    if(entity == nullptr)
+    {
+        FatalError("Syncvars can only be added to an entity");
+    }
+
+    next = entity->syncVarHead;
+    entity->syncVarHead = this;
 }
 
 void NetComponent::OnAdded()

@@ -126,6 +126,8 @@ public:
     EntityReference<Entity> soundListener;
     ReplicationManager replicationManager;
 
+    static Entity* entityUnderConstruction;
+
 private:
     friend struct Entity;
     friend class Engine;
@@ -167,10 +169,16 @@ private:
 template <typename TEntity, typename ... Args>
 TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& ... constructorArgs)
 {
+    auto oldEntityUnderConstruction = entityUnderConstruction;
+
     TEntity* entity = (TEntity*)AllocateMemory(sizeof(TEntity));
+
     entity->scene = this;
 
+    entityUnderConstruction = entity;
     new(entity) TEntity(std::forward<Args>(constructorArgs) ...);
+    entityUnderConstruction = oldEntityUnderConstruction;
+
     entity->_position = properties.GetValueOrDefault<Vector2>("position", Vector2(0, 0));
     entity->type = TEntity::Type;
 

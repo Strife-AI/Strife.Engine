@@ -26,7 +26,19 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
 
     scene->GetService<PathFinderService>()->AddObstacle(Rectangle(Center() - size / 2, size));
 
-    AddComponent<NetComponent>();
+    AddComponent<NetComponent>()->useNewSerializer = true;
+}
+
+void CastleEntity::Update(float deltaTime)
+{
+    if(_drawRed.currentValue)
+    {
+        spriteComponent->blendColor = Color(255, 0, 0, 128);
+    }
+    else
+    {
+        spriteComponent->blendColor = Color(0, 0, 0, 0);
+    }
 }
 
 void CastleEntity::ReceiveServerEvent(const IEntityEvent& ev)
@@ -37,12 +49,6 @@ void CastleEntity::ReceiveServerEvent(const IEntityEvent& ev)
         _colorChangeTime = 1;
         _drawRed = true;
         spriteComponent->blendColor = Color(255, 0, 0, 128);
-
-        PlayerEntity* player;
-        if(contactBegin->OtherIs(player))
-        {
-            player->health -= 10;
-        }
     }
     else if(ev.Is<ContactEndEvent>())
     {
@@ -56,10 +62,5 @@ void CastleEntity::ReceiveServerEvent(const IEntityEvent& ev)
 
 void CastleEntity::DoNetSerialize(NetSerializer& serializer)
 {
-    if(serializer.Add(_drawRed))
-    {
-        spriteComponent->blendColor = _drawRed
-            ? Color(255, 0, 0, 128)
-            : Color(0, 0, 0, 0);
-    }
+
 }

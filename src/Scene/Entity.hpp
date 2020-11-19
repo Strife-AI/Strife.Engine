@@ -191,7 +191,7 @@ private:
 };
 
 struct Entity;
-
+struct ISyncVar;
 
 /// <summary>
 /// The base class of all entities. Do not inherit from this directly. Instead, use the macro <see cref="DEFINE_ENTITY"/>
@@ -288,6 +288,8 @@ struct Entity
     Entity* parent = nullptr;
     Entity* nextSibling = nullptr;
     Entity* children = nullptr;
+
+    ISyncVar* syncVarHead = nullptr;
 
 protected:
     void NotifyMovement();
