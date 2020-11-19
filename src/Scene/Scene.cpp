@@ -7,6 +7,8 @@
 #include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
 
+Entity* Scene::entityUnderConstruction = nullptr;
+
 Scene::Scene(Engine* engine, StringId mapSegmentName)
     : replicationManager(this, engine->GetNetworkManger() != nullptr ? engine->GetNetworkManger()->IsServer() : false),
     _mapSegmentName(mapSegmentName),
