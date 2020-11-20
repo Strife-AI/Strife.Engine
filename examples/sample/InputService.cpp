@@ -9,6 +9,7 @@
 #include "Components/RigidBodyComponent.hpp"
 #include "Memory/Util.hpp"
 #include "Net/NetworkPhysics.hpp"
+#include "Net/ReplicationManager.hpp"
 #include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
 #include "Tools/Console.hpp"
@@ -88,7 +89,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto joinedServerEvent = ev.Is<JoinedServerEvent>())
     {
-        scene->replicationManager.localClientId = joinedServerEvent->selfId;
+        scene->replicationManager->localClientId = joinedServerEvent->selfId;
     }
     else if(auto connectedEvent = ev.Is<PlayerConnectedEvent>())
     {
@@ -146,14 +147,14 @@ void InputService::OnAdded()
 
         net->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
         {
-            scene->replicationManager.ProcessMessageFromClient(message, response, clientId);
+            scene->replicationManager->ProcessMessageFromClient(message, response, clientId);
         };
     }
     else
     {
         net->onUpdateResponse = [=](SLNet::BitStream& message)
         {
-            scene->replicationManager.UpdateClient(message);
+            scene->replicationManager->UpdateClient(message);
         };
     }
 }
@@ -177,7 +178,7 @@ void InputService::HandleInput()
             for(auto player : players)
             {
                 if(player->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition()))
-                    && player->net->ownerClientId == scene->replicationManager.localClientId)
+                    && player->net->ownerClientId == scene->replicationManager->localClientId)
                 {
                     activePlayer = player;
                     break;
@@ -225,11 +226,11 @@ void InputService::HandleInput()
                     }
                 }
 
-                scene->replicationManager.AddPlayerCommand(command);
+                scene->replicationManager->AddPlayerCommand(command);
             }
         }
 
-        scene->replicationManager.DoClientUpdate(scene->deltaTime, net);
+        scene->replicationManager->DoClientUpdate(scene->deltaTime, net);
     }
 }
 

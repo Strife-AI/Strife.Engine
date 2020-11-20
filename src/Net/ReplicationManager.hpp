@@ -6,6 +6,7 @@
 
 #include "Components/NetComponent.hpp"
 #include "Scene/Entity.hpp"
+#include "Scene/Scene.hpp"
 
 class NetworkManager;
 
@@ -43,7 +44,7 @@ struct ClientState
     CircularQueue<PlayerCommand, 128> commands;
 };
 
-class ReplicationManager
+class ReplicationManager : public ISceneService
 {
 public:
     ReplicationManager(Scene* scene, bool isServer)
@@ -92,6 +93,8 @@ public:
     int localClientId = -1;
 
 private:
+    void ReceiveEvent(const IEntityEvent& ev) override;
+
     void ProcessSpawnEntity(ReadWriteBitStream& stream);
     void ProcessEntitySnapshotMessage(ReadWriteBitStream& stream);
 
@@ -102,4 +105,6 @@ private:
     bool _isServer;
     Scene* _scene;
     float _sendUpdateTimer = 0;
+
+    uint32 _currentSnapshotId = 0;
 };

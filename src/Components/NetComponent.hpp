@@ -134,10 +134,11 @@ struct ISyncVar
 
     virtual ~ISyncVar() = default;
 
-    virtual bool CurrentValueChangedFromSequence(uint32 sequenceId) = 0;
-    virtual void WriteValueDeltaedFromSequence(uint32 sequenceId, SLNet::BitStream& stream) = 0;
-    virtual void ReadValueDeltaedFromSequence(uint32 sequenceId, float time, SLNet::BitStream& stream) = 0;
+    virtual bool CurrentValueChangedFromSequence(uint32 snapshotId) = 0;
+    virtual void WriteValueDeltaedFromSequence(uint32 snapshotId, SLNet::BitStream& stream) = 0;
+    virtual void ReadValueDeltaedFromSequence(uint32 snapshotId, float time, SLNet::BitStream& stream) = 0;
     virtual void SetCurrentValueToValueAtTime(float time) = 0;
+    virtual void AddCurrentValueToSnapshots(uint32 currentSnapshotId, float currentTime) = 0;
 
     virtual bool IsBool() = 0;
 
@@ -169,6 +170,11 @@ struct SyncVar final : ISyncVar
     {
         return true;
         //return GetValueAtSequence(sequenceId) == currentValue;
+    }
+
+    void AddCurrentValueToSnapshots(uint32 currentSnapshotId, float currentTime) override
+    {
+        AddValue(currentValue, currentTime, currentSnapshotId);
     }
 
     bool IsBool() override { return std::is_same_v<T, bool>; }
@@ -228,7 +234,7 @@ struct SyncVar final : ISyncVar
         currentValue = value;
     }
 
-    void AddValue(const T& value, float time, uint32 sequenceId)
+    void AddValue(const T& value, float time, uint32 snapshotId)
     {
         if (!snapshots.IsEmpty() && time <= (*(--snapshots.end())).time)
         {
@@ -240,7 +246,7 @@ struct SyncVar final : ISyncVar
             snapshots.Dequeue();
         }
 
-        snapshots.Enqueue({ value, time, sequenceId });
+        snapshots.Enqueue({ value, time, snapshotId });
     }
 
     T GetValueAtSequence(uint32 sequenceId)

@@ -1,4 +1,6 @@
 #include "NetComponent.hpp"
+
+#include "Net/ReplicationManager.hpp"
 #include "Scene/Entity.hpp"
 #include "Scene/Scene.hpp"
 
@@ -31,10 +33,10 @@ ISyncVar::ISyncVar(SyncVarUpdateFrequency frequency_)
 
 void NetComponent::OnAdded()
 {
-    GetScene()->replicationManager.AddNetComponent(this);
+    GetScene()->replicationManager->AddNetComponent(this);
 }
 
 void NetComponent::OnRemoved()
 {
-    GetScene()->replicationManager.RemoveNetComponent(this);
+    GetScene()->replicationManager->RemoveNetComponent(this);
 }

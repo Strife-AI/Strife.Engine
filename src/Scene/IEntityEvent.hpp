@@ -183,6 +183,7 @@ DEFINE_EVENT(RenderEvent)
 
 DEFINE_EMPTY_EVENT(RenderImguiEvent)
 DEFINE_EMPTY_EVENT(UpdateEvent)
+DEFINE_EMPTY_EVENT(EndOfUpdateEvent)
 DEFINE_EMPTY_EVENT(FixedUpdateEvent)
 
 /// <summary>
