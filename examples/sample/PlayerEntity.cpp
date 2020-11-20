@@ -3,6 +3,7 @@
 
 #include "InputService.hpp"
 #include "Components/RigidBodyComponent.hpp"
+#include "Net/ReplicationManager.hpp"
 #include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
 
@@ -25,7 +26,7 @@ void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)
 {
     if (ev.Is<SpawnedOnClientEvent>())
     {
-        if (net->ownerClientId == scene->replicationManager.localClientId)
+        if (net->ownerClientId == scene->replicationManager->localClientId)
         {
             scene->GetCameraFollower()->FollowMouse();
             scene->GetCameraFollower()->CenterOn(Center());

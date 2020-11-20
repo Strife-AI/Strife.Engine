@@ -2,6 +2,7 @@
 
 
 #include "Engine.hpp"
+#include "Components/NetComponent.hpp"
 #include "Components/RigidBodyComponent.hpp"
 #include "Math/Random.hpp"
 #include "Renderer/Renderer.hpp"

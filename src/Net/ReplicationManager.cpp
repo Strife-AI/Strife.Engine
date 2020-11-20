@@ -205,6 +205,7 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
     }
     else
     {
+        // TODO: this isn't necessary?
         networkManager->SendPacketToServer([&](SLNet::BitStream& message)
         {
             message.Write(PacketType::UpdateRequest);
@@ -220,7 +221,7 @@ void ReplicationManager::DoClientUpdate(float deltaTime, NetworkManager* network
     // Time to send new update to server with missing commands
     if (_sendUpdateTimer <= 0 || true)
     {
-        _sendUpdateTimer += 1.0 / 10;
+        _sendUpdateTimer += 1.0 / 30;
 
         auto& client = _clientStateByClientId[localClientId];
 
@@ -536,12 +537,29 @@ void ReplicationManager::AddPlayerCommand(const PlayerCommand& command)
 WorldState ReplicationManager::GetCurrentWorldState()
 {
     WorldState state;
-    for(auto component : components)
+    for (auto component : components)
     {
         state.entities.insert(component->netId);
     }
 
     return state;
+}
+
+void ReplicationManager::ReceiveEvent(const IEntityEvent& ev)
+{
+    if (ev.Is<EndOfUpdateEvent>())
+    {
+        if (_isServer)
+        {
+            for (auto c : components)
+            {
+                for (auto var = c->owner->syncVarHead; var != nullptr; var = var->next)
+                {
+                    var->AddCurrentValueToSnapshots(_currentSnapshotId, scene->relativeTime);
+                }
+            }
+        }
+    }
 }
 
 void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Components/NetComponent.hpp"
 #include "Components/SpriteComponent.hpp"
 #include "Scene/BaseEntity.hpp"
 

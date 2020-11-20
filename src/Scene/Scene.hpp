@@ -14,7 +14,6 @@
 #include "Memory/FreeList.hpp"
 #include "MapSegment.hpp"
 #include "Timer.hpp"
-#include "Net/ReplicationManager.hpp"
 
 class StringId;
 class Renderer;
@@ -56,6 +55,8 @@ struct RaycastResult
     Vector2 point;
     Vector2 normal;
 };
+
+class ReplicationManager;
 
 class Scene
 {
@@ -124,7 +125,7 @@ public:
     bool isFirstFrame = true;
     bool inEditor = false;
     EntityReference<Entity> soundListener;
-    ReplicationManager replicationManager;
+    ReplicationManager* replicationManager;
 
     static Entity* entityUnderConstruction;
 

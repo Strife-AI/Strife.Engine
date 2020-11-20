@@ -6,12 +6,12 @@
 #include "Physics/PathFinding.hpp"
 #include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
+#include "Net/ReplicationManager.hpp"
 
 Entity* Scene::entityUnderConstruction = nullptr;
 
 Scene::Scene(Engine* engine, StringId mapSegmentName)
-    : replicationManager(this, engine->GetNetworkManger() != nullptr ? engine->GetNetworkManger()->IsServer() : false),
-    _mapSegmentName(mapSegmentName),
+    : _mapSegmentName(mapSegmentName),
     _cameraFollower(&_camera, engine->GetInput()),
     _engine(engine),
     _world(std::make_unique<b2World>(b2Vec2(0, 0))),
@@ -19,6 +19,7 @@ Scene::Scene(Engine* engine, StringId mapSegmentName)
 {
     _world->SetContactListener(&_collisionManager);
     _camera.SetScreenSize(engine->GetSdlManager()->WindowSize().AsVectorOfType<float>());
+    replicationManager = AddService<ReplicationManager>(this, engine->GetNetworkManger() != nullptr ? engine->GetNetworkManger()->IsServer() : false);
 }
 
 Scene::~Scene()
@@ -315,6 +316,9 @@ void Scene::UpdateEntities(float deltaTime)
 
     NotifyUpdate(deltaTime);
     NotifyServerUpdate(deltaTime);
+
+    SendEvent(EndOfUpdateEvent());
+
     _timerManager.TickTimers(deltaTime);
 
     _cameraFollower.Update(deltaTime);

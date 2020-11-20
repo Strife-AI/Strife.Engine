@@ -1,6 +1,7 @@
 #include "NetworkPhysics.hpp"
 
 #include "Renderer.hpp"
+#include "ReplicationManager.hpp"
 #include "Components/NetComponent.hpp"
 #include "Scene/Scene.hpp"
 #include "Components/RigidBodyComponent.hpp"
@@ -19,7 +20,7 @@ void NetworkPhysics::ServerFixedUpdate()
 {
     ++currentFixedUpdateId;
 
-    for (auto& client : scene->replicationManager.GetClients())
+    for (auto& client : scene->replicationManager->GetClients())
     {
         PlayerCommand* commandToExecute = nullptr;
 
@@ -47,7 +48,7 @@ void NetworkPhysics::ServerFixedUpdate()
 
                     if(commandToExecute->moveToTarget)
                     {
-                        NetComponent* player = scene->replicationManager.GetNetComponentById(commandToExecute->netId);
+                        NetComponent* player = scene->replicationManager->GetNetComponentById(commandToExecute->netId);
 
                         if (player != nullptr)
                         {
@@ -58,11 +59,11 @@ void NetworkPhysics::ServerFixedUpdate()
                     }
                     else if(commandToExecute->attackTarget)
                     {
-                        NetComponent* player = scene->replicationManager.GetNetComponentById(commandToExecute->netId);
+                        NetComponent* player = scene->replicationManager->GetNetComponentById(commandToExecute->netId);
 
                         if (player != nullptr)
                         {
-                            NetComponent* attack = scene->replicationManager.GetNetComponentById(commandToExecute->attackNetId);
+                            NetComponent* attack = scene->replicationManager->GetNetComponentById(commandToExecute->attackNetId);
 
                             if(attack != nullptr)
                             {
@@ -113,7 +114,7 @@ void UpdateVarsToTime(ISyncVar* head, float time)
 
 void NetworkPhysics::ClientFixedUpdate()
 {
-    for(auto net : scene->replicationManager.components)
+    for(auto net : scene->replicationManager->components)
     {
         UpdateVarsToTime(net->owner->syncVarHead, scene->relativeTime - 0.2);
     }
