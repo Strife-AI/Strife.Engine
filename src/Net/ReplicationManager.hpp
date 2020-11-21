@@ -35,8 +35,9 @@ struct ClientState
 
     WorldState currentState;
     unsigned int lastServerSequenceNumber = 0;
+    unsigned int lastReceivedSnapshotId = 0;
     unsigned int nextCommandSequenceNumber = 0;
-    unsigned int lastServedExecuted = 0;
+    unsigned int lastServerExecuted = 0;
     int wasted = 0;
 
     unsigned int clientClock = 0;
@@ -79,13 +80,11 @@ public:
 
     auto& GetClients() { return _clientStateByClientId; }
 
-    void UpdateClient(SLNet::BitStream& stream);
+    void Client_ReceiveUpdateResponse(SLNet::BitStream& stream);
+    void Client_SendUpdateRequest(float deltaTime, NetworkManager* networkManager);
+    void Client_AddPlayerCommand(const PlayerCommand& command);
 
-    void DoClientUpdate(float deltaTime, NetworkManager* networkManager);
-
-    void ProcessMessageFromClient(SLNet::BitStream& message, SLNet::BitStream& response, int clientId);
-
-    void AddPlayerCommand(const PlayerCommand& command);
+    void Server_ProcessUpdateRequest(SLNet::BitStream& message, SLNet::BitStream& response, int clientId);
 
     WorldState GetCurrentWorldState();
 

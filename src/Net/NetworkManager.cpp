@@ -9,16 +9,17 @@
 #include "Tools/Console.hpp"
 
 /*
-- Add a server sequence number for snapshots
-- At the end of the frame, add the current value of every sync var to the list of snapshots
-    * Record the snapshot sequence number
-- In the server response, include the pactch info e.g. this is for 2 -> 5
+- Add a server sequence number for snapshots x 
+- At the end of the frame, add the current value of every sync var to the list of snapshots x
+    * Record the snapshot sequence number x 
+- In the server response, include the patch info e.g. this is for 2 -> 5 x 
 
-- On the client, read the server snapshot number from the response packet and record it
-    - Discard any duplicate/out of order updates
+- On the client, read the server snapshot number from the response packet and record it x
+    - Discard any duplicate/out of order updates x 
 - In the update request, include the last snapshot that arrived
 - On the server, read the last snapshot that arrived
 - On the server, keep track of the entities at each snapshot so we can send which ones were created
+- Making entity positions syncvars
  */
 
 
