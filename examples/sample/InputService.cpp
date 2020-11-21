@@ -147,14 +147,14 @@ void InputService::OnAdded()
 
         net->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
         {
-            scene->replicationManager->ProcessMessageFromClient(message, response, clientId);
+            scene->replicationManager->Server_ProcessUpdateRequest(message, response, clientId);
         };
     }
     else
     {
         net->onUpdateResponse = [=](SLNet::BitStream& message)
         {
-            scene->replicationManager->UpdateClient(message);
+            scene->replicationManager->Client_ReceiveUpdateResponse(message);
         };
     }
 }
@@ -226,11 +226,11 @@ void InputService::HandleInput()
                     }
                 }
 
-                scene->replicationManager->AddPlayerCommand(command);
+                scene->replicationManager->Client_AddPlayerCommand(command);
             }
         }
 
-        scene->replicationManager->DoClientUpdate(scene->deltaTime, net);
+        scene->replicationManager->Client_SendUpdateRequest(scene->deltaTime, net);
     }
 }
 

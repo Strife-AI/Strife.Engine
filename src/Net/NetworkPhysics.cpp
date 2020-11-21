@@ -79,7 +79,7 @@ void NetworkPhysics::ServerFixedUpdate()
                 {
                     commandToExecute->status = PlayerCommandStatus::Complete;
 
-                    client.second.lastServedExecuted = commandToExecute->id;
+                    client.second.lastServerExecuted = commandToExecute->id;
                 }
                 else
                 {
