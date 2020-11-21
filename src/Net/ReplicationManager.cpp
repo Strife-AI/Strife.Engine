@@ -118,6 +118,7 @@ struct ClientUpdateRequestMessage
 {
     void ReadWrite(ReadWriteBitStream& stream)
     {
+        stream.Add(lastReceivedSnapshotId);
         stream.Add(commandCount);
 
         if (commandCount > 0)
@@ -136,6 +137,7 @@ struct ClientUpdateRequestMessage
     uint8 commandCount;
     uint32 firstCommandId;
     PlayerCommandMessage commands[MaxCommands];
+    uint32 lastReceivedSnapshotId;
 };
 
 WorldDiff::WorldDiff(const WorldState& before, const WorldState& after)
@@ -239,6 +241,7 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, NetworkManage
         }
 
         request.commandCount = commandCount;
+        request.lastReceivedSnapshotId = client.lastReceivedSnapshotId;
 
         networkManager->SendPacketToServer([&](SLNet::BitStream& message)
         {
@@ -421,6 +424,8 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
         ReadWriteBitStream readMessage(message, true);
         request.ReadWrite(readMessage);
 
+        client.lastReceivedSnapshotId = Max(client.lastReceivedSnapshotId, request.lastReceivedSnapshotId);
+
         if (client.lastServerSequenceNumber + 1 <= request.firstCommandId)
         {
             for (int i = 0; i < request.commandCount; ++i)
@@ -449,9 +454,6 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
             }
         }
     }
-
-    // TODO: Record the last recieved SchnapshotId.
-    //client.lastReceivedSnapshotId = 
 
     ReadWriteBitStream responseStream(response, false);
 
@@ -504,10 +506,9 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
             response.WriteBits(&netId, 8);
             auto fromSnapshotId = client.lastReceivedSnapshotId;
             auto toSnapshotId = _currentSnapshotId;
+
             WriteVars(c->owner->syncVarHead, fromSnapshotId, toSnapshotId, response);
         }
-
-        client.lastReceivedSnapshotId = _currentSnapshotId;
     }
 }
 
@@ -619,4 +620,6 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
 
         ReadVars(player->owner->syncVarHead, 0, time, stream.stream);
     }
+
+    client.lastReceivedSnapshotId = Max(client.lastReceivedSnapshotId, message.snapshotTo);
 }
