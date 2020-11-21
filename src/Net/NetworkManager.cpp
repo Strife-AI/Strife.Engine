@@ -13,9 +13,10 @@
 - At the end of the frame, add the current value of every sync var to the list of snapshots x
     * Record the snapshot sequence number x 
 - In the server response, include the patch info e.g. this is for 2 -> 5 x 
-
+- On the server, when writing vars, write the value diffed from the last one the client has
 - On the client, read the server snapshot number from the response packet and record it x
-    - Discard any duplicate/out of order updates x 
+    - Discard any duplicate/out of order updates x
+- 
 - In the update request, include the last snapshot that arrived
 - On the server, read the last snapshot that arrived
 - On the server, keep track of the entities at each snapshot so we can send which ones were created

@@ -102,7 +102,7 @@ enum class SyncVarDeltaMode
 };
 
 template<typename T>
-void WriteSyncVarDelta(const T& before, const T& after, SyncVarDeltaMode mode, SLNet::BitStream& stream)
+void WriteSyncVarDelta(const T& before, const T& after, bool forceFullUpdate, SyncVarDeltaMode mode, SLNet::BitStream& stream)
 {
     stream.WriteBits(reinterpret_cast<const unsigned char*>(&after), sizeof(T) * 8);
 }
@@ -114,7 +114,7 @@ void ReadSyncVarDelta(const T& before, T& result, SyncVarDeltaMode mode, SLNet::
 }
 
 template<>
-inline void WriteSyncVarDelta<bool>(const bool& before, const bool& after, SyncVarDeltaMode mode, SLNet::BitStream& stream)
+inline void WriteSyncVarDelta<bool>(const bool& before, const bool& after, bool forceFullUpdate, SyncVarDeltaMode mode, SLNet::BitStream& stream)
 {
     stream.Write(after);
 }
@@ -135,7 +135,7 @@ struct ISyncVar
     virtual ~ISyncVar() = default;
 
     virtual bool CurrentValueChangedFromSequence(uint32 snapshotId) = 0;
-    virtual void WriteValueDeltaedFromSequence(uint32 snapshotId, SLNet::BitStream& stream) = 0;
+    virtual void WriteValueDeltaedFromSnapshot(uint32 fromSnapshotId, uint32 toSnapshotId, SLNet::BitStream& stream) = 0;
     virtual void ReadValueDeltaedFromSequence(uint32 snapshotId, float time, SLNet::BitStream& stream) = 0;
     virtual void SetCurrentValueToValueAtTime(float time) = 0;
     virtual void AddCurrentValueToSnapshots(uint32 currentSnapshotId, float currentTime) = 0;
@@ -166,10 +166,16 @@ struct SyncVar final : ISyncVar
 
     }
 
-    bool CurrentValueChangedFromSequence(uint32 sequenceId) override
+    bool CurrentValueChangedFromSequence(uint32 snapshotId) override
     {
-        return true;
-        //return GetValueAtSequence(sequenceId) == currentValue;
+        T value;
+        if (!TryGetValueAtSnapshot(snapshotId, value))
+        {
+            // Have to send full value
+            return true;
+        }
+
+        return value != currentValue;
     }
 
     void AddCurrentValueToSnapshots(uint32 currentSnapshotId, float currentTime) override
@@ -179,9 +185,18 @@ struct SyncVar final : ISyncVar
 
     bool IsBool() override { return std::is_same_v<T, bool>; }
 
-    void WriteValueDeltaedFromSequence(uint32 sequenceId, SLNet::BitStream& stream) override
+    void WriteValueDeltaedFromSnapshot(uint32 fromSnapshotId, uint32 toSnapshotId, SLNet::BitStream& stream) override
     {
-        WriteSyncVarDelta(T(), currentValue, deltaMode, stream);
+        T oldValue;
+        bool hasOldValue = TryGetValueAtSnapshot(fromSnapshotId, oldValue);
+
+        T newValue;
+        if (!TryGetValueAtSnapshot(toSnapshotId, newValue))
+        {
+            newValue = currentValue;
+        }
+
+        WriteSyncVarDelta(oldValue, newValue, !hasOldValue, deltaMode, stream);
     }
 
     void ReadValueDeltaedFromSequence(uint32 sequenceId, float time, SLNet::BitStream& stream) override
@@ -196,27 +211,27 @@ struct SyncVar final : ISyncVar
         currentValue = GetValueAtTime(time);
     }
 
-    struct ValueInTime
+    struct Snapshot
     {
-        ValueInTime()
+        Snapshot()
             : value(),
             time(-1),
-            sequenceId(0)
+            snapshotId(0)
         {
 
         }
 
-        ValueInTime(const T& value_, float time_, uint32 sequenceId_)
+        Snapshot(const T& value_, float time_, uint32 snapshotId_)
             : value(value_),
             time(time_),
-            sequenceId(sequenceId_)
+            snapshotId(snapshotId_)
         {
 
         }
 
         T value;
         float time;
-        uint32 sequenceId;
+        uint32 snapshotId;
     };
 
     void operator=(const T& value)
@@ -249,10 +264,18 @@ struct SyncVar final : ISyncVar
         snapshots.Enqueue({ value, time, snapshotId });
     }
 
-    T GetValueAtSequence(uint32 sequenceId)
+    bool TryGetValueAtSnapshot(uint32 snapshotId, T& outValue)
     {
-        return T();
-        //if()
+        for(auto& snapshot : snapshots)
+        {
+            if (snapshotId == snapshot.snapshotId)
+            {
+                outValue = snapshot.value;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     T GetValueAtTime(float time)
@@ -303,7 +326,7 @@ struct SyncVar final : ISyncVar
 
     T currentValue;
 
-    CircularQueue<ValueInTime, 256> snapshots;
+    CircularQueue<Snapshot, 256> snapshots;
     SyncVarInterpolation interpolation;
     SyncVarDeltaMode deltaMode = SyncVarDeltaMode::Full;
 };
