@@ -269,7 +269,7 @@ struct VarGroup
     int varCount = 0;
 };
 
-void WriteVarGroup(VarGroup* group, uint32 lastClientSequenceId, SLNet::BitStream& out)
+void WriteVarGroup(VarGroup* group, uint32 fromSnapshotId, uint32 toSnapshotId, SLNet::BitStream& out)
 {
     for (int i = 0; i < group->varCount; ++i)
     {
@@ -280,13 +280,13 @@ void WriteVarGroup(VarGroup* group, uint32 lastClientSequenceId, SLNet::BitStrea
 
             if (changed)
             {
-                group->vars[i]->WriteValueDeltaedFromSequence(lastClientSequenceId, out);
+                group->vars[i]->WriteValueDeltaedFromSnapshot(fromSnapshotId, toSnapshotId, out);
             }
         }
         else
         {
             // Writing a bit for whether a bool has changed just wastes a bit, so just write the bit
-            group->vars[i]->WriteValueDeltaedFromSequence(lastClientSequenceId, out);
+            group->vars[i]->WriteValueDeltaedFromSnapshot(fromSnapshotId, toSnapshotId, out);
         }
     }
 }
@@ -333,14 +333,14 @@ void CheckForChangedVars(VarGroup* group, uint32 lastClientSequenceId)
     }
 }
 
-void WriteVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& out)
+void WriteVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, SLNet::BitStream& out)
 {
     VarGroup frequent;
     VarGroup infrequent;
 
     PartitionVars(head, &frequent, &infrequent);
-    CheckForChangedVars(&frequent, lastClientSequenceId);
-    CheckForChangedVars(&infrequent, lastClientSequenceId);
+    CheckForChangedVars(&frequent, fromSnapshotId);
+    CheckForChangedVars(&infrequent, fromSnapshotId);
 
     if (frequent.changedCount == 0 && infrequent.changedCount == 0)
     {
@@ -350,7 +350,7 @@ void WriteVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& ou
     {
         out.Write1();
 
-        WriteVarGroup(&frequent, lastClientSequenceId, out);
+        WriteVarGroup(&frequent, fromSnapshotId, toSnapshotId, out);
 
         if(infrequent.varCount == 0)
         {
@@ -358,7 +358,7 @@ void WriteVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& ou
         }
         else if(infrequent.varCount == 1)
         {
-            WriteVarGroup(&infrequent, lastClientSequenceId, out);
+            WriteVarGroup(&infrequent, fromSnapshotId, toSnapshotId, out);
         }
         else
         {
@@ -367,7 +367,7 @@ void WriteVars(ISyncVar* head, uint32 lastClientSequenceId, SLNet::BitStream& ou
 
             if(anyInfrequentChanges)
             {
-                WriteVarGroup(&infrequent, lastClientSequenceId, out);
+                WriteVarGroup(&infrequent, fromSnapshotId, toSnapshotId, out);
             }
         }
     }
@@ -405,6 +405,7 @@ void ReadVars(ISyncVar* head, uint32 lastClientSequenceId, float time, SLNet::Bi
             if (anyInfrequentChanges)
             {
                 ReadVarGroup(&infrequent, lastClientSequenceId, time, stream);
+                Log("Infrequent var changed!\n");
             }
         }
     }
@@ -501,8 +502,12 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
         {
             uint8 netId = c->netId;
             response.WriteBits(&netId, 8);
-            WriteVars(c->owner->syncVarHead, 0, response);
+            auto fromSnapshotId = client.lastReceivedSnapshotId;
+            auto toSnapshotId = _currentSnapshotId;
+            WriteVars(c->owner->syncVarHead, fromSnapshotId, toSnapshotId, response);
         }
+
+        client.lastReceivedSnapshotId = _currentSnapshotId;
     }
 }
 
