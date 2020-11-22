@@ -20,6 +20,7 @@
 #include "Renderer/Color.hpp"
 #include "Sound/SoundManager.hpp"
 
+struct NetSerializer;
 class b2Body;
 struct IEntityEvent;
 struct MoveResult;
@@ -33,6 +34,9 @@ struct IRenderable { virtual void Render(Renderer* renderer) = 0; };
 struct IHudRenderable { virtual void RenderHud(Renderer* renderer) = 0; };
 struct IUpdatable { virtual void Update(float deltaTime) = 0; };
 struct IFixedUpdatable { virtual void FixedUpdate(float deltaTime) = 0; };
+
+struct IServerFixedUpdatable { virtual void ServerFixedUpdate(float deltaTime) = 0; };
+struct IServerUpdatable { virtual void ServerUpdate(float deltaTime) = 0; };
 
 struct EntityHeader
 {
@@ -49,8 +53,7 @@ enum EntityFlags
 {
     EnableBuoyancy = 1,
     WasTeleported = 2,
-    CastsShadows = 4,
-    PreventUnloading = 8
+    CastsShadows = 4
 };
 
 struct EntityProperty
@@ -188,16 +191,12 @@ private:
 };
 
 struct Entity;
-
-struct SegmentLink : DLinkNode<SegmentLink>
-{
-    Entity* GetEntity();
-};
+struct ISyncVar;
 
 /// <summary>
 /// The base class of all entities. Do not inherit from this directly. Instead, use the macro <see cref="DEFINE_ENTITY"/>
 /// </summary>
-struct Entity : SegmentLink
+struct Entity
 {
     static const int InvalidEntityId = -1;
 
@@ -241,7 +240,7 @@ struct Entity : SegmentLink
     /// Sends an event directly to an entity.
     /// </summary>
     /// <param name="ev"></param>
-    void SendEvent(const IEntityEvent& ev) { OnEvent(ev); }
+    void SendEvent(const IEntityEvent& ev);
 
     void Serialize(EntityDictionaryBuilder& builder);
 
@@ -284,10 +283,11 @@ struct Entity : SegmentLink
     int observedObjectType = 0;
 
     unsigned int flags = 0;
-    int segmentId;
     Entity* parent = nullptr;
     Entity* nextSibling = nullptr;
     Entity* children = nullptr;
+
+    ISyncVar* syncVarHead = nullptr;
 
 protected:
     void NotifyMovement();
@@ -296,8 +296,11 @@ private:
     friend class Scene;
     friend void MoveEntityRecursive(RigidBodyComponent* rigidBody, Vector2 offset);
 
-    virtual void OnEvent(const IEntityEvent& ev) { }
+    virtual void ReceiveEvent(const IEntityEvent& ev) { }
+    virtual void ReceiveServerEvent(const IEntityEvent& ev) { }
+
     virtual void DoSerialize(EntityDictionaryBuilder& writer) { }
+
     virtual std::pair<int, void*> GetMemoryBlock() = 0;
 
     Vector2 _position;

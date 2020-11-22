@@ -5,6 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 find_package(SDL2 REQUIRED)
 find_package(SDL2-image REQUIRED)
 find_package(unofficial-box2d CONFIG REQUIRED)
+find_package(slikenet CONFIG REQUIRED)
 
 add_library(Strife.Engine STATIC
         Engine.cpp
@@ -137,7 +138,22 @@ add_library(Strife.Engine STATIC
  		Components/RigidBodyComponent.cpp
 
         Memory/Util.hpp        
-)
+        "Net/NetworkManager.hpp"
+        "Net/NetworkManager.cpp"
+        "Scene/ReplicationManager.hpp"
+        "Scene/ReplicationManager.cpp"
+        "Memory/CircularQueue.hpp"
+        "Net/ReplicationManager.hpp"
+        "Net/ReplicationManager.cpp"
+        "Components/NetComponent.hpp"
+        "Components/NetComponent.cpp"
+        "Net/NetworkPhysics.hpp"
+        "Net/NetworkPhysics.cpp"
+        "Physics/PathFinding.hpp"
+        "Physics/PathFinding.cpp"
+        "Scene/EntityManager.cpp"
+        
+    )
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
@@ -160,6 +176,7 @@ target_link_libraries(Strife.Engine PUBLIC
     SDL2::SDL2_image
     unofficial::box2d::box2d
     OALWrapper
+    SLikeNet
     )
 
 target_compile_definitions(Strife.Engine PUBLIC IMGUI_IMPL_OPENGL_LOADER_GL3W)

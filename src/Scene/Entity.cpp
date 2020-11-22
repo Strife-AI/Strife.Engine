@@ -1,5 +1,6 @@
 #include "Entity.hpp"
 #include "BaseEntity.hpp"
+#include "Engine.hpp"
 #include "Scene.hpp"
 
 const EntityHeader InvalidEntityHeader::InvalidHeader;
@@ -107,11 +108,6 @@ std::map<std::string, std::string> EntityDictionaryBuilder::BuildMap()
     return result;
 }
 
-Entity* SegmentLink::GetEntity()
-{
-    return static_cast<Entity*>(this);
-}
-
 Entity::~Entity()
 {
     Entity* child = children;
@@ -151,7 +147,7 @@ Entity::~Entity()
 
 void Entity::Destroy()
 {
-    scene->DestroyEntity(this);
+    scene->MarkEntityForDestruction(this);
 }
 
 void Entity::SetCenter(const Vector2& newPosition)
@@ -176,6 +172,16 @@ void Entity::SetRotation(float angle)
 Engine* Entity::GetEngine() const
 {
     return scene->GetEngine();
+}
+
+void Entity::SendEvent(const IEntityEvent& ev)
+{
+    ReceiveEvent(ev);
+
+    if(GetEngine()->GetNetworkManger()->IsServer())
+    {
+        ReceiveServerEvent(ev);
+    }
 }
 
 void Entity::Serialize(EntityDictionaryBuilder& builder)

@@ -3,15 +3,14 @@
 
 #include <box2d/b2_world.h>
 #include <vector>
-#include <cassert>
 #include <Renderer/Camera.hpp>
 #include <memory>
 #include <gsl/span>
 
 #include "CameraFollower.hpp"
 #include "Entity.hpp"
+#include "EntityManager.hpp"
 #include "Renderer/Lighting.hpp"
-#include "Memory/FixedSizeVector.hpp"
 #include "Memory/FreeList.hpp"
 #include "MapSegment.hpp"
 #include "Timer.hpp"
@@ -38,6 +37,8 @@ struct ISceneService
         }
     }
 
+    virtual void OnAdded() { }
+
     virtual ~ISceneService() = default;
 
     int flags = 0;
@@ -55,207 +56,100 @@ struct RaycastResult
     Vector2 normal;
 };
 
-struct LoadedSegment
-{
-    LoadedSegment()
-        : segmentId(-1)
-    {
-        
-    }
-
-    LoadedSegment(int segmentId_)
-        : segmentId(segmentId_)
-    {
-        
-    }
-
-    void Reset(int segmentId_);
-    void AddEntity(Entity* entity);
-    void BroadcastEvent(const IEntityEvent& ev);
-
-    bool operator==(const LoadedSegment& rhs) const
-    {
-        return segmentId == rhs.segmentId;
-    }
-
-    int segmentId;
-    SegmentLink firstLink;
-    SegmentLink lastLink;
-
-    EntityDictionary properties;
-};
+class ReplicationManager;
 
 class Scene
 {
 public:
-    static const int MaxEntities = 8192;
-    static constexpr float PhysicsDeltaTime = 1.0f / 240;
+    static constexpr float PhysicsDeltaTime = 1.0f / 200;
     static constexpr Vector2 PixelsToBox2DRatio = Vector2(1.0f / 16, 1.0f / 16);
     static constexpr Vector2 Box2DToPixelsRatio = Vector2(1.0, 1.0) / PixelsToBox2DRatio;
     static constexpr Vector2 Gravity = Vector2(0, 0) * Box2DToPixelsRatio;
 
     Scene(Engine* engine, StringId mapSegmentName);
-    virtual ~Scene();
+    ~Scene();
 
-    static b2Vec2 PixelToBox2D(Vector2 v)
-    {
-        auto scaled = v * PixelsToBox2DRatio;
-        return b2Vec2(scaled.x, scaled.y);
-    }
-
-    static Vector2 Box2DToPixel(b2Vec2 v)
-    {
-        return Vector2(v.x * Box2DToPixelsRatio.x, v.y * Box2DToPixelsRatio.y);
-    }
+    static b2Vec2 PixelToBox2D(Vector2 v);
+    static Vector2 Box2DToPixel(b2Vec2 v);
 
     Engine* GetEngine() const { return _engine; }
     Camera* GetCamera() { return &_camera; }
     CameraFollower* GetCameraFollower() { return &_cameraFollower; }
     b2World* GetWorld() const { return _world.get(); }
-    Vector2 SegmentOffset() const { return _segmentOffset; }
-    int CurrentSegmentId() const { return _currentSegmentId; }
+    StringId MapSegmentName() const { return _mapSegmentName; }
+    auto& GetEntities() { return _entityManager.entities; }
+
+    void SetSoundListener(Entity* entity);
 
     Entity* CreateEntity(const EntityDictionary& properties);
 
-    void DestroyEntity(Entity* entity);
-    void UpdateEntities(float deltaTime);
-    void RenderEntities(Renderer* renderer);
-    void RenderHud(Renderer* renderer);
+    void StepPhysicsSimulation();
 
-    template <typename TService, typename ... Args>
-    TService* AddService(Args&& ...args)
-    {
-        auto service = std::make_unique<TService>(std::forward<Args>(args)...);
-        auto servicePtr = service.get();
+    template <typename TService, typename ... Args> TService*   AddService(Args&& ...args);
+    template<typename TService> TService*                       GetService();
 
-        service->scene = this;
-
-        _services.push_back(std::move(service));
-        return servicePtr;
-    }
-
-    template<typename TService>
-    TService* GetService()
-    {
-        for (auto& service : _services)
-        {
-            if (auto servicePtr = dynamic_cast<TService*>(service.get()))
-            {
-                return servicePtr;
-            }
-        }
-
-        FatalError("Missing service");
-    }
-
-    void SendEvent(const IEntityEvent& ev)
-    {
-        ReceiveEvent(ev);
-
-        for (auto& service : _services)
-        {
-            service->SendEvent(ev, inEditor);
-        }
-    }
-
+    void SendEvent(const IEntityEvent& ev);
     void BroadcastEvent(const IEntityEvent& ev);
 
-    void SetLightManager(LightManager* lightManager)
-    {
-        _lightManger = lightManager;
-    }
-
-    LightManager* GetLightManager() const
-    {
-        return _lightManger;
-    }
-
+    LightManager* GetLightManager() const;
     SoundManager* GetSoundManager() const;
 
-    int LoadMapSegment(StringId id);
-    int LoadMapSegment(const MapSegment& segment);
-    bool TryGetLoadedSegmentById(const int segmentId, LoadedSegment*& segment);
-    void UnloadSegmentsBefore(int segmentId);
+    void LoadMapSegment(StringId id);
+    void LoadMapSegment(const MapSegment& segment);
 
     void StartTimer(float timeSeconds, const std::function<void()>& callback);
     void StartEntityTimer(float timeSeconds, const std::function<void()>& callback, Entity* entity);
 
     gsl::span<ColliderHandle> FindOverlappingColliders(const Rectangle& bounds, gsl::span<ColliderHandle> storage) const;
     gsl::span<Entity*> FindOverlappingEntities(const Rectangle& bounds, gsl::span<Entity*> storage);
-    bool RaycastExcludingSelf(
+    bool Raycast(
         Vector2 start,
         Vector2 end,
-        Entity* self,
         RaycastResult& outResult,
         bool allowTriggers = false,
-        const std::function<bool(ColliderHandle handle)>& includeFixture = nullptr);
+        const std::function<bool(ColliderHandle handle)>& includeFixture = nullptr) const;
 
-    StringId MapSegmentName() const { return _mapSegmentName; }
-
-    template<typename TEntity>
-    std::vector<TEntity*> GetEntitiesOfType();
-
-    template<typename TEntity>
-    TEntity* GetFirstNamedEntityOfType(StringId name);
-
-    std::vector<Entity*> GetEntitiesByNameInSegment(StringId name, int segmentId);
-
-    template<typename TEntity>
-    std::vector<TEntity*> GetEntitiesByTypeInSegment(int segmentId);
-    Entity* GetFirstEntityByNameInSegment(StringId name, int segmentId);
+    template<typename TEntity> std::vector<TEntity*> GetEntitiesOfType();
+    template<typename TEntity> TEntity* GetFirstNamedEntityOfType(StringId name);
 
     template <typename TEntity, typename ... Args>
     TEntity* CreateEntityInternal(const EntityDictionary& properties, Args&& ... constructorArgs);
 
-    virtual void OnSceneLoaded() { }
-
-    auto& GetEntities() { return _entities; }
-
     void* AllocateMemory(int size) const;
     void FreeMemory(void* mem, int size) const;
 
-    std::vector<StringId> segmentsAdded;
-
     float deltaTime = 0;
-    float timeSinceStart = 0;
+    float relativeTime = 0;
     TimePointType lastFrameStart;
     int levelId;
     bool isFirstFrame = true;
     bool inEditor = false;
     EntityReference<Entity> soundListener;
+    ReplicationManager* replicationManager;
 
-    void SetSoundListener(Entity* entity);
-
-    float currentAmbientBrightness = 0.85;
-    int currentDifficulty = 1;
-
-protected:
-    virtual void ReceiveEvent(const IEntityEvent& ev) { }
-    virtual void PreFixedUpdate() { }
-    virtual void PostFixedUpdate() { }
-
-    virtual void PreUpdate() { }
-    virtual void PostUpdate() { }
-
-    virtual void PreRender() { }
-    virtual void PostRender() { }
-
-    virtual void DoRenderHud(Renderer* renderer) { }
+    static Entity* entityUnderConstruction;
 
 private:
-    static const int InvalidEntityHeaderId = -2;
+    friend struct Entity;
+    friend class Engine;
 
     std::vector<std::unique_ptr<ISceneService>> _services;
 
+    void MarkEntityForDestruction(Entity* entity);
     void RegisterEntity(Entity* entity, const EntityDictionary& properties);
     void RemoveEntity(Entity* entity);
     void DestroyScheduledEntities();
 
-    int BeginQuery() { return _nextQueryId++; }
+    void UpdateEntities(float deltaTime);
+    void RenderEntities(Renderer* renderer);
+    void RenderHud(Renderer* renderer);
 
-    LoadedSegment* RegisterSegment(int segmentId);
-    void UnregisterSegment(int segmentId);
-    LoadedSegment* GetLoadedSegment(int segmentId);
+    void NotifyUpdate(float deltaTime);
+    void NotifyServerUpdate(float deltaTime);
+    void NotifyFixedUpdate();
+    void NotifyServerFixedUpdate();
+
+    int BeginQuery() { return _nextQueryId++; }
 
     StringId _mapSegmentName;
 
@@ -264,46 +158,29 @@ private:
 
     Engine* _engine;
 
-    int _nextEntityId = 1;
-    FixedSizeVector<Entity*, MaxEntities> _entities;
-    FixedSizeVector<EntityHeader, MaxEntities> _entityHeaders;
-    FreeList<EntityHeader> _freeEntityHeaders;
-
-    FixedSizeVector<IUpdatable*, MaxEntities> _updatables;
-
     std::unique_ptr<b2World> _world;
     float _physicsTimeLeft = 0;
-    FixedSizeVector<IFixedUpdatable*, MaxEntities> _fixedUpdatables;
     CollisionManager _collisionManager;
     int _nextQueryId = 0;
 
-    FixedSizeVector<IRenderable*, MaxEntities> _renderables;
-    FixedSizeVector<IHudRenderable*, MaxEntities> _hudRenderables;
-
-    FixedSizeVector<Entity*, MaxEntities> _toBeDestroyed;
-
     TimerManager _timerManager;
-
-    Vector2 _segmentOffset = Vector2(0, 0);
-    Vector2 _entityOffset = Vector2(0, 0);
-    int _currentSegmentId = 0;
-
-    LightManager* _lightManger;
-
-    static constexpr int MaxLoadedSegments = 128;
-    FixedSizeVector<LoadedSegment*, MaxLoadedSegments> _loadedSegments;
-    LoadedSegment _segmentPool[MaxLoadedSegments];
-    FreeList<LoadedSegment> _freeSegments;
+    EntityManager _entityManager;
 };
 
 template <typename TEntity, typename ... Args>
 TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& ... constructorArgs)
 {
+    auto oldEntityUnderConstruction = entityUnderConstruction;
+
     TEntity* entity = (TEntity*)AllocateMemory(sizeof(TEntity));
+
     entity->scene = this;
 
+    entityUnderConstruction = entity;
     new(entity) TEntity(std::forward<Args>(constructorArgs) ...);
-    entity->_position = properties.GetValueOrDefault<Vector2>("position", Vector2(0, 0)) + _entityOffset;
+    entityUnderConstruction = oldEntityUnderConstruction;
+
+    entity->_position = properties.GetValueOrDefault<Vector2>("position", Vector2(0, 0));
     entity->type = TEntity::Type;
 
     RegisterEntity(entity, properties);
@@ -311,40 +188,42 @@ TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& 
     return entity;
 }
 
+template <typename TService, typename ... Args>
+TService* Scene::AddService(Args&&... args)
+{
+    auto service = std::make_unique<TService>(std::forward<Args>(args)...);
+    auto servicePtr = service.get();
+
+    service->scene = this;
+    service->OnAdded();
+
+    _services.push_back(std::move(service));
+
+    return servicePtr;
+}
+
+template <typename TService>
+TService* Scene::GetService()
+{
+    for (auto& service : _services)
+    {
+        if (auto servicePtr = dynamic_cast<TService*>(service.get()))
+        {
+            return servicePtr;
+        }
+    }
+
+    FatalError("Missing service");
+}
+
 template <typename TEntity>
 std::vector<TEntity*> Scene::GetEntitiesOfType()
 {
     std::vector<TEntity*> foundEntities;
 
-    for(auto entity : _entities)
+    for(auto entity : _entityManager.entities)
     {
         TEntity* tEntity;
-        if(entity->Is<TEntity>(tEntity))
-        {
-            foundEntities.push_back(tEntity);
-        }
-    }
-
-    return foundEntities;
-}
-
-template <typename TEntity>
-std::vector<TEntity*> Scene::GetEntitiesByTypeInSegment(int segmentId)
-{
-    std::vector<TEntity*> foundEntities;
-
-    auto segment = GetLoadedSegment(segmentId);
-
-    if(segment == nullptr)
-    {
-        return { };
-    }
-
-    for (auto node = segment->firstLink.next; node != &segment->lastLink; node = node->next)
-    {
-        TEntity* tEntity;
-        auto entity = node->GetEntity();
-
         if(entity->Is<TEntity>(tEntity))
         {
             foundEntities.push_back(tEntity);

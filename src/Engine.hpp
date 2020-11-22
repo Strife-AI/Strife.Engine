@@ -4,6 +4,7 @@
 
 
 #include "Memory/BlockAllocator.hpp"
+#include "Net/NetworkManager.hpp"
 #include "Tools/ConsoleCmd.hpp"
 #include "Tools/ConsoleVar.hpp"
 
@@ -28,6 +29,7 @@ struct EngineConfig
 
     int blockAllocatorSizeBytes = 32 * 1024 * 1024;
     std::optional<std::string> consoleVarsFile = "vars.cfg";
+    std::string initialConsoleCmd;
 };
 
 class Engine
@@ -47,6 +49,7 @@ public:
     SceneManager* GetSceneManager() { return _sceneManager; }
     BlockAllocator* GetDefaultBlockAllocator() { return _defaultBlockAllocator; }
     SoundManager* GetSoundManager() { return _soundManager; }
+    NetworkManager* GetNetworkManger() { return _networkManager; }
 
     bool ActiveGame() { return _activeGame; }
     void QuitGame() { _activeGame = false; }
@@ -96,6 +99,7 @@ private:
     SceneManager* _sceneManager = nullptr;
     BlockAllocator* _defaultBlockAllocator;
     SoundManager* _soundManager;
+    NetworkManager* _networkManager;
 
     IGame* _game = nullptr;
     bool _activeGame = true;

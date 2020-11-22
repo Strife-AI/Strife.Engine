@@ -1,5 +1,7 @@
 #pragma once
+
 #include <cstring>
+#include "Math/Vector2.hpp"
 
 template <typename T>
 class Grid
@@ -37,6 +39,11 @@ public:
         return &_data[CalculateIndex(0, row)];
     }
 
+    T& operator[](const Vector2& position)
+    {
+        return _data[CalculateIndex(position.x, position.y)];
+    }
+
     void FillWithZero()
     {
         memset(_data, 0, _rows * _cols * sizeof(T));
@@ -55,6 +62,11 @@ public:
 
     int Rows() const { return _rows; }
     int Cols() const { return _cols; }
+
+    Vector2 Dimensions() const
+    {
+        return Vector2(Cols(), Rows());
+    }
 
     T* Data() { return _data; }
 
@@ -114,3 +126,19 @@ bool FixedSizeGrid<T, NumRows, NumCols>::operator==(const FixedSizeGrid& rhs) co
 {
     return memcmp(_gridData, rhs._gridData, sizeof(_gridData)) == 0;
 }
+
+template<typename T>
+class VariableSizedGrid : public Grid<T>
+{
+public:
+    VariableSizedGrid(int rows, int cols)
+        : Grid<T>(rows, cols, new T[rows * cols])
+    {
+        
+    }
+
+    ~VariableSizedGrid()
+    {
+        delete [] _data;
+    }
+};
