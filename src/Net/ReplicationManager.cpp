@@ -102,7 +102,7 @@ struct PlayerCommandMessage
             .Add(target)
             .Add(netId)
             .Add(attackTarget)
-            .Add(attackNetId);
+            .Add(attackNetId);  
     }
 
     uint8 keys;
@@ -294,7 +294,7 @@ void WriteVarGroup(VarGroup* group, uint32 fromSnapshotId, uint32 toSnapshotId, 
     }
 }
 
-void ReadVarGroup(VarGroup* group, uint32 lastClientSequenceId, float time, SLNet::BitStream& stream)
+void ReadVarGroup(VarGroup* group, uint32 fromSnapshotId, uint32 toSnapshotId, float time, SLNet::BitStream& stream)
 {
     for (int i = 0; i < group->varCount; ++i)
     {
@@ -305,12 +305,12 @@ void ReadVarGroup(VarGroup* group, uint32 lastClientSequenceId, float time, SLNe
 
             if (wasChanged)
             {
-                group->vars[i]->ReadValueDeltaedFromSequence(lastClientSequenceId, time, stream);
+                group->vars[i]->ReadValueDeltaedFromSequence(fromSnapshotId, toSnapshotId,  time, stream);
             }
         }
         else
         {
-            group->vars[i]->ReadValueDeltaedFromSequence(lastClientSequenceId, time, stream);
+            group->vars[i]->ReadValueDeltaedFromSequence(fromSnapshotId, toSnapshotId, time, stream);
         }
     }
 }
@@ -376,7 +376,7 @@ void WriteVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, SLNet
     }
 }
 
-void ReadVars(ISyncVar* head, uint32 lastClientSequenceId, float time, SLNet::BitStream& stream)
+void ReadVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, float time, SLNet::BitStream& stream)
 {
     VarGroup frequent;
     VarGroup infrequent;
@@ -391,7 +391,7 @@ void ReadVars(ISyncVar* head, uint32 lastClientSequenceId, float time, SLNet::Bi
     }
     else
     {
-        ReadVarGroup(&frequent, lastClientSequenceId, time, stream);
+        ReadVarGroup(&frequent, fromSnapshotId, toSnapshotId, time, stream);
 
         if (infrequent.varCount == 0)
         {
@@ -399,7 +399,7 @@ void ReadVars(ISyncVar* head, uint32 lastClientSequenceId, float time, SLNet::Bi
         }
         else if (infrequent.varCount == 1)
         {
-            ReadVarGroup(&infrequent, lastClientSequenceId, time, stream);
+            ReadVarGroup(&infrequent, fromSnapshotId, toSnapshotId, time, stream);
         }
         else
         {
@@ -407,7 +407,7 @@ void ReadVars(ISyncVar* head, uint32 lastClientSequenceId, float time, SLNet::Bi
 
             if (anyInfrequentChanges)
             {
-                ReadVarGroup(&infrequent, lastClientSequenceId, time, stream);
+                ReadVarGroup(&infrequent, fromSnapshotId, toSnapshotId, time, stream);
                 Log("Infrequent var changed!\n");
             }
         }
@@ -618,7 +618,7 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
             ? -1
             : cmd->timeRecorded;
 
-        ReadVars(player->owner->syncVarHead, 0, time, stream.stream);
+        ReadVars(player->owner->syncVarHead, message.snapshotFrom, message.snapshotTo, time, stream.stream);
     }
 
     client.lastReceivedSnapshotId = Max(client.lastReceivedSnapshotId, message.snapshotTo);
