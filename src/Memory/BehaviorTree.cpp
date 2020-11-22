@@ -69,7 +69,7 @@ BehaviorStatus WaitBehavior::Update()
 
 float WaitBehavior::GetTime()
 {
-    return Engine::GetInstance()->GetSceneManager()->GetScene()->timeSinceStart;
+    return Engine::GetInstance()->GetSceneManager()->GetScene()->relativeTime;
 }
 
 void CompositeBehavior::OnStop(BehaviorStatus status)

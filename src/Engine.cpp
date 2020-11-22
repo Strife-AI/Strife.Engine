@@ -37,6 +37,8 @@ extern ConsoleVar<bool> g_developerMode("developer-mode", true, true);
 ConsoleVar<bool> g_stressTest("stress-test", false, false);
 int stressCount = 0;
 
+ConsoleVar<bool> isServer("server", false);
+
 Engine* Engine::Initialize(const EngineConfig& config)
 {
     InitializeLogging("log.txt");
@@ -63,6 +65,8 @@ Engine* Engine::Initialize(const EngineConfig& config)
         engine->_console->LoadVariables(config.consoleVarsFile.value().c_str());
     }
 
+    engine->_console->Execute(config.initialConsoleCmd);
+
     Log("==============================================================\n");
     Log("Initializing engine\n");
 
@@ -85,6 +89,17 @@ Engine* Engine::Initialize(const EngineConfig& config)
     engine->_soundManager = new SoundManager;
 
     engine->_sceneManager = new SceneManager(engine);
+
+    engine->_networkManager = new NetworkManager(isServer.Value());
+
+    if(isServer.Value())
+    {
+        engine->targetFps.SetValue(30);
+    }
+    else
+    {
+        engine->targetFps.SetValue(60);
+    }
 
     UiCanvas::Initialize(engine->_soundManager);
 
@@ -110,6 +125,7 @@ Engine::~Engine()
             delete _plotManager;
             delete _sdlManager;
             delete _input;
+            delete _networkManager;
         }
         catch(const std::exception& e)
         {
@@ -152,7 +168,7 @@ void ThrottleFrameRate()
     lastFrameStart = high_resolution_clock::now();
 }
 
-ConsoleVar<float> g_timeScale("time-scale", 1.125f);
+ConsoleVar<float> g_timeScale("time-scale", 1);
 
 void Engine::RunFrame()
 {
@@ -165,9 +181,7 @@ void Engine::RunFrame()
     }
 
     _input->Update();
-
     _sdlManager->Update();
-
     _sceneManager->DoSceneTransition();
 
     Scene* scene = _sceneManager->GetScene();
@@ -192,7 +206,7 @@ void Engine::RunFrame()
         realDeltaTime = renderDeltaTime = 0.1;
         targetFps.SetValue(1000);
 
-        if(scene->timeSinceStart > 0.1 * 60 * 60)
+        if(scene->relativeTime > 0.1 * 60 * 60)
         {
             QuitGame();
         }
@@ -214,6 +228,7 @@ void Engine::RunFrame()
     }
 
     scene->UpdateEntities(renderDeltaTime);
+    _networkManager->Update();
 
     if (g_developerMode.Value())
     {
@@ -278,7 +293,7 @@ void Engine::Render(Scene* scene, float deltaTime, float renderDeltaTime)
     scene->GetCamera()->SetZoom(1);// screenSize.y / (1080 / 2));
 
     auto camera = scene->GetCamera();
-    _renderer->BeginRender(camera, Vector2(0, 0), renderDeltaTime, scene->timeSinceStart);
+    _renderer->BeginRender(camera, Vector2(0, 0), renderDeltaTime, scene->relativeTime);
     scene->RenderEntities(_renderer);
 
     scene->SendEvent(RenderImguiEvent());
@@ -295,7 +310,7 @@ void Engine::Render(Scene* scene, float deltaTime, float renderDeltaTime)
     if (g_stressTest.Value())
     {
         char text[1024];
-        sprintf(text, "Time elapsed: %f hours", scene->timeSinceStart / 60.0f / 60.0f);
+        sprintf(text, "Time elapsed: %f hours", scene->relativeTime / 60.0f / 60.0f);
 
         _renderer->RenderString(
             FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid)),
@@ -311,7 +326,7 @@ void Engine::Render(Scene* scene, float deltaTime, float renderDeltaTime)
         Camera uiCamera;
         uiCamera.SetScreenSize(scene->GetCamera()->ScreenSize());
         uiCamera.SetZoom(screenSize.y / 768.0f);
-        _renderer->BeginRender(&uiCamera, uiCamera.TopLeft(), renderDeltaTime, scene->timeSinceStart);
+        _renderer->BeginRender(&uiCamera, uiCamera.TopLeft(), renderDeltaTime, scene->relativeTime);
         _input->GetMouse()->SetMouseScale(Vector2::Unit() * uiCamera.Zoom());
 
         scene->BroadcastEvent(RenderUiEvent(_renderer));

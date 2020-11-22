@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Components/NetComponent.hpp"
 #include "Scene/BaseEntity.hpp"
 
 struct PlayerEntity;
@@ -26,14 +27,38 @@ DEFINE_EVENT(PlayerRemovedFromGame)
     PlayerEntity* player;
 };
 
-DEFINE_ENTITY(PlayerEntity, "player"), IRenderable
+enum class PlayerState
+{
+    None,
+    Moving,
+    Attacking
+};
+
+DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable, IUpdatable
 {
     void OnAdded(const EntityDictionary& properties) override;
+    void ReceiveEvent(const IEntityEvent& ev) override;
+    void ReceiveServerEvent(const IEntityEvent& ev) override;
     void OnDestroyed() override;
 
     void Render(Renderer* renderer) override;
+    void ServerFixedUpdate(float deltaTime) override;
+    void ServerUpdate(float deltaTime) override;
 
     void SetMoveDirection(Vector2 direction);
 
+    void Update(float deltaTime) override;
+
     RigidBodyComponent* rigidBody;
+    NetComponent* net;
+
+    EntityReference<Entity> attackTarget;
+    PlayerState state = PlayerState::None;
+    float updateTargetTimer = 0;
+    float attackCoolDown = 0;
+
+    SyncVar<Vector2> position{ { 0, 0}, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent, SyncVarDeltaMode::SmallIntegerOffset };
+    SyncVar<float> health{ 100, SyncVarInterpolation::None, SyncVarUpdateFrequency::Infrequent };
+    SyncVar<bool> showAttack{ false, SyncVarInterpolation::None, SyncVarUpdateFrequency::Infrequent };
+    SyncVar<Vector2> attackPosition { { 0, 0}, SyncVarInterpolation::Linear };
 };

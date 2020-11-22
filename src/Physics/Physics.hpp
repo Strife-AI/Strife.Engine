@@ -6,6 +6,38 @@
 
 #include "ColliderHandle.hpp"
 
+class Renderer;
+
+struct FindFixturesQueryCallback : b2QueryCallback
+{
+    FindFixturesQueryCallback(gsl::span<ColliderHandle> foundFixtures_)
+        : foundFixtures(foundFixtures_)
+    {
+
+    }
+
+    bool ReportFixture(b2Fixture* fixture) override
+    {
+        if (count < foundFixtures.size())
+        {
+            foundFixtures[count++] = ColliderHandle(fixture);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    gsl::span<ColliderHandle> Results() const
+    {
+        return foundFixtures.subspan(0, count);
+    }
+
+    gsl::span<ColliderHandle> foundFixtures;
+    int count = 0;
+};
+
 class CollisionManager : public b2ContactListener
 {
 public:
@@ -16,6 +48,8 @@ public:
     }
 
     void UpdateEntityPositions();
+
+    void RenderColliderOutlines(Renderer* renderer);
 
 private:
 
@@ -31,9 +65,8 @@ struct Entity;
 class FindClosestRaycastCallback : public b2RayCastCallback
 {
 public:
-    FindClosestRaycastCallback(Entity* self_, bool allowTriggers_, const std::function<bool(ColliderHandle handle)>& includeFixture_ = nullptr)
-        : self(self_),
-        allowTriggers(allowTriggers_),
+    FindClosestRaycastCallback(bool allowTriggers_, const std::function<bool(ColliderHandle handle)>& includeFixture_ = nullptr)
+        : allowTriggers(allowTriggers_),
         includeFixture(includeFixture_)
     {
         
@@ -41,7 +74,6 @@ public:
 
     float ReportFixture(b2Fixture* fixture, const b2Vec2& point, const b2Vec2& normal, float fraction) override;
 
-    Entity* self;
     b2Fixture* closestFixture;
     b2Vec2 closestPoint;
     float lastFraction = 1;
