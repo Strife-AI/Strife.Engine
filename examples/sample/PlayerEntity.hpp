@@ -57,7 +57,7 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
     float updateTargetTimer = 0;
     float attackCoolDown = 0;
 
-    SyncVar<Vector2> position{ { 0, 0}, SyncVarInterpolation::Linear };
+    SyncVar<Vector2> position{ { 0, 0}, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent, SyncVarDeltaMode::SmallIntegerOffset };
     SyncVar<float> health{ 100, SyncVarInterpolation::None, SyncVarUpdateFrequency::Infrequent };
     SyncVar<bool> showAttack{ false, SyncVarInterpolation::None, SyncVarUpdateFrequency::Infrequent };
     SyncVar<Vector2> attackPosition { { 0, 0}, SyncVarInterpolation::Linear };

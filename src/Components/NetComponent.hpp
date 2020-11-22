@@ -98,7 +98,7 @@ enum class SyncVarUpdateFrequency
 enum class SyncVarDeltaMode
 {
     Full,
-    Delta
+    SmallIntegerOffset
 };
 
 template<typename T>
@@ -120,6 +120,71 @@ inline void WriteSyncVarDelta<bool>(const bool& before, const bool& after, bool 
 }
 
 template<>
+inline void WriteSyncVarDelta<Vector2>(const Vector2& before, const Vector2& after, bool forceFullUpdate, SyncVarDeltaMode mode, SLNet::BitStream& stream)
+{
+    if(mode == SyncVarDeltaMode::SmallIntegerOffset)
+    {
+        int beforeX = round(before.x);
+        int beforeY = round(before.y);
+
+        int afterX = round(after.x);
+        int afterY = round(after.y);
+
+        int offsetX = afterX - beforeX;
+        int offsetY = afterY - beforeY;
+
+        if(!forceFullUpdate
+            && offsetX >= -11 && offsetX <= 10
+            && offsetY >= -11 && offsetY <= 10)
+        {
+            unsigned int encodedOffsetX = offsetX + 11;
+            unsigned int encodedOffsetY = offsetY + 11;
+            unsigned int encodedValue = encodedOffsetX * 22 + encodedOffsetY;
+
+            stream.WriteBits(reinterpret_cast<const unsigned char*>(&encodedValue), 9);
+        }
+        else
+        {
+            unsigned int magicOffset = 511;
+            stream.WriteBits(reinterpret_cast<const unsigned char*>(&magicOffset), 9);
+            stream.WriteCasted<short>(afterX);
+            stream.WriteCasted<short>(afterY);
+        }
+    }
+    else
+    {
+        stream.Write(after.x);
+        stream.Write(after.y);
+    }
+}
+
+template<>
+inline void ReadSyncVarDelta<Vector2>(const Vector2& before, Vector2& result, SyncVarDeltaMode mode, SLNet::BitStream& stream)
+{
+    if (mode == SyncVarDeltaMode::SmallIntegerOffset)
+    {
+        unsigned int encodedOffset = 0;
+        stream.ReadBits(reinterpret_cast<unsigned char*>(&encodedOffset), 9);
+
+        if (encodedOffset == 511)
+        {
+            stream.ReadCasted<short>(result.x);
+            stream.ReadCasted<short>(result.y);
+        }
+        else
+        {
+            result.x = round(before.x) + static_cast<int>(encodedOffset / 22) - 11;
+            result.y = round(before.y) + static_cast<int>(encodedOffset % 22) - 11;
+        }
+    }
+    else
+    {
+        stream.Read(result.x);
+        stream.Read(result.y);
+    }
+}
+
+template<>
 inline void ReadSyncVarDelta<bool>(const bool& before, bool& result, SyncVarDeltaMode mode, SLNet::BitStream& stream)
 {
     result = stream.ReadBit();
@@ -136,7 +201,7 @@ struct ISyncVar
 
     virtual bool CurrentValueChangedFromSequence(uint32 snapshotId) = 0;
     virtual void WriteValueDeltaedFromSnapshot(uint32 fromSnapshotId, uint32 toSnapshotId, SLNet::BitStream& stream) = 0;
-    virtual void ReadValueDeltaedFromSequence(uint32 snapshotId, float time, SLNet::BitStream& stream) = 0;
+    virtual void ReadValueDeltaedFromSequence(uint32 fromSnapshotId, uint32 toSnapshotId, float time, SLNet::BitStream& stream) = 0;
     virtual void SetCurrentValueToValueAtTime(float time) = 0;
     virtual void AddCurrentValueToSnapshots(uint32 currentSnapshotId, float currentTime) = 0;
 
@@ -158,10 +223,11 @@ struct SyncVar final : ISyncVar
 
     }
 
-    SyncVar(const T& value, SyncVarInterpolation interpolation_, SyncVarUpdateFrequency frequency = SyncVarUpdateFrequency::Frequent)
+    SyncVar(const T& value, SyncVarInterpolation interpolation_, SyncVarUpdateFrequency frequency = SyncVarUpdateFrequency::Frequent, SyncVarDeltaMode deltaMode = SyncVarDeltaMode::Full)
         : ISyncVar(frequency),
         currentValue(value),
-        interpolation(interpolation_)
+        interpolation(interpolation_),
+        deltaMode(deltaMode)
     {
 
     }
@@ -199,11 +265,22 @@ struct SyncVar final : ISyncVar
         WriteSyncVarDelta(oldValue, newValue, !hasOldValue, deltaMode, stream);
     }
 
-    void ReadValueDeltaedFromSequence(uint32 sequenceId, float time, SLNet::BitStream& stream) override
+    void ReadValueDeltaedFromSequence(uint32 fromSnapshotId, uint32 toSnapshotId, float time, SLNet::BitStream& stream) override
     {
+        T oldValue;
+        if (!TryGetValueAtSnapshot(fromSnapshotId, oldValue))
+        {
+            oldValue = currentValue;
+        }
+
         T newValue;
-        ReadSyncVarDelta(T(), newValue, deltaMode, stream);
-        AddValue(newValue, time, sequenceId);
+        if (!TryGetValueAtSnapshot(toSnapshotId, newValue))
+        {
+            newValue = currentValue;
+        }
+
+        ReadSyncVarDelta(oldValue, newValue, deltaMode, stream);
+        AddValue(newValue, time, toSnapshotId);
     }
 
     void SetCurrentValueToValueAtTime(float time) override
