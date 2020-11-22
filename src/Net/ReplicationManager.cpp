@@ -80,26 +80,30 @@ struct DestroyEntityMessage
     uint8 netId;
 };
 
+struct UpdateResponseMessage
+{
+    void ReadWrite(ReadWriteBitStream& stream)
+    {
+        stream
+            .Add(snapshotFrom)
+            .Add(snapshotTo);
+    }
+
+    uint32 snapshotFrom;
+    uint32 snapshotTo;
+};
+
 struct EntitySnapshotMessage
 {
     void ReadWrite(ReadWriteBitStream& stream)
     {
         stream
             .Add(lastServerSequence)
-            .Add(lastServerExecuted)
-            .Add(snapshotFrom)
-            .Add(snapshotTo)
-            .Add(totalEntities);
+            .Add(lastServerExecuted);
     }
-
-    static constexpr int MaxEntities = 50;
 
     int lastServerSequence;
     int lastServerExecuted;
-    uint32 snapshotFrom;
-    uint32 snapshotTo;
-
-    uint8 totalEntities;
 };
 
 struct PlayerCommandMessage
@@ -201,6 +205,22 @@ void ReplicationManager::Client_ReceiveUpdateResponse(SLNet::BitStream& stream)
 {
     ReadWriteBitStream rw(stream, true);
 
+    UpdateResponseMessage responseMessage;
+    responseMessage.ReadWrite(rw);
+
+    if(localClientId == -1)
+    {
+        return;
+    }
+
+    auto& client = _clientStateByClientId[localClientId];
+    if(responseMessage.snapshotTo <= client.lastReceivedSnapshotId)
+    {
+        return;
+    }
+
+    client.lastReceivedSnapshotId = responseMessage.snapshotTo;
+
     while (stream.GetNumberOfUnreadBits() >= 8)
     {
         uint8 messageType;
@@ -213,7 +233,7 @@ void ReplicationManager::Client_ReceiveUpdateResponse(SLNet::BitStream& stream)
             break;
 
         case MessageType::EntitySnapshot:
-            ProcessEntitySnapshotMessage(rw);
+            ProcessEntitySnapshotMessage(rw, responseMessage.snapshotFrom);
             break;
 
         case MessageType::RemoveEntity:
@@ -502,6 +522,11 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
         return;
     }
 
+    UpdateResponseMessage responseMessage;
+    responseMessage.snapshotFrom = client.lastReceivedSnapshotId;
+    responseMessage.snapshotTo = _currentSnapshotId;
+    responseMessage.ReadWrite(responseStream);
+
     {
         auto currentState = GetWorldSnapshot(_currentSnapshotId);
         if (currentState == nullptr) FatalError("Missing current snapshot");
@@ -553,20 +578,15 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
         EntitySnapshotMessage responseMessage;
         responseMessage.lastServerSequence = client.lastServerSequenceNumber;
         responseMessage.lastServerExecuted = client.lastServerExecuted;
-        responseMessage.snapshotFrom = client.lastReceivedSnapshotId;
-        responseMessage.snapshotTo = _currentSnapshotId;
-        responseMessage.totalEntities = components.size();
 
         responseMessage.ReadWrite(responseStream);
 
-        for (auto c : components)
+        for (auto& c : _componentsByNetId)
         {
-            uint8 netId = c->netId;
-            response.WriteBits(&netId, 8);
             auto fromSnapshotId = client.lastReceivedSnapshotId;
             auto toSnapshotId = _currentSnapshotId;
 
-            WriteVars(c->owner->syncVarHead, fromSnapshotId, toSnapshotId, response);
+            WriteVars(c.second->owner->syncVarHead, fromSnapshotId, toSnapshotId, response);
         }
     }
 }
@@ -590,12 +610,13 @@ WorldState ReplicationManager::GetCurrentWorldState()
     WorldState state;
     state.snapshotId = _currentSnapshotId;
 
-    for (auto component : components)
+    for (auto& component : _componentsByNetId)
     {
-        state.entities.push_back(component->netId);
+        if (!component.second->owner->isDestroyed)
+        {
+            state.entities.push_back(component.first);
+        }
     }
-
-    std::sort(state.entities.begin(), state.entities.end());
 
     return state;
 }
@@ -668,11 +689,14 @@ void ReplicationManager::ProcessDestroyEntity(ReadWriteBitStream& stream)
 
     if (component != _componentsByNetId.end())
     {
-        component->second->owner->Destroy();
+        auto net = component->second;
+        components.erase(net);
+        _componentsByNetId.erase(component->second->netId);
+        net->owner->Destroy();
     }
 }
 
-void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream)
+void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream, uint32 snapshotFromId)
 {
     EntitySnapshotMessage message;
     message.ReadWrite(stream);
@@ -687,30 +711,16 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
     client.lastServerSequenceNumber = message.lastServerSequence;
     client.lastServerExecuted = message.lastServerExecuted;
 
-    for (int i = 0; i < message.totalEntities; ++i)
+    for (auto& c : _componentsByNetId)
     {
-        uint8 netId;
-        stream.stream.ReadBits(&netId, 8);
-
-        auto player = _componentsByNetId.count(netId) != 0
-            ? _componentsByNetId[netId]
-            : nullptr;
-
-        if(!player)
-        {
-            FatalError("Missing entity %d\n", (int)netId);
-        }
-
         auto cmd = client.GetCommandById(client.lastServerExecuted);
 
         float time = cmd == nullptr
             ? -1
             : cmd->timeRecorded;
 
-        ReadVars(player->owner->syncVarHead, message.snapshotFrom, message.snapshotTo, time, stream.stream);
+        ReadVars(c.second->owner->syncVarHead, snapshotFromId, client.lastReceivedSnapshotId, time, stream.stream);
     }
-
-    client.lastReceivedSnapshotId = Max(client.lastReceivedSnapshotId, message.snapshotTo);
 }
 
 WorldState* ReplicationManager::GetWorldSnapshot(uint32 snapshotId)

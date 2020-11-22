@@ -98,11 +98,11 @@ private:
 
     void ProcessSpawnEntity(ReadWriteBitStream& stream);
     void ProcessDestroyEntity(ReadWriteBitStream& stream);
-    void ProcessEntitySnapshotMessage(ReadWriteBitStream& stream);
+    void ProcessEntitySnapshotMessage(ReadWriteBitStream& stream, uint32 snapshotFromId);
 
     WorldState* GetWorldSnapshot(uint32 snapshotId);
 
-    std::unordered_map<int, NetComponent*> _componentsByNetId;
+    std::map<int, NetComponent*> _componentsByNetId;
     std::unordered_map<int, ClientState> _clientStateByClientId;
 
     int _nextNetId = 0;
