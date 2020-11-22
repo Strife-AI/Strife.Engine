@@ -9,6 +9,7 @@
 enum class MessageType : uint8
 {
     SpawnEntity,
+    RemoveEntity,
     EntitySnapshot
 };
 
@@ -62,11 +63,21 @@ struct SpawnEntityMessage
             .Add(ownerClientId);
     }
 
-    uint16 netId;
+    uint8 netId;
     uint8 ownerClientId;
     StringId type;
     Vector2 position;
     Vector2 dimensions;
+};
+
+struct DestroyEntityMessage
+{
+    void ReadWrite(ReadWriteBitStream& stream)
+    {
+        stream.Add(netId);
+    }
+
+    uint8 netId;
 };
 
 struct EntitySnapshotMessage
@@ -155,7 +166,7 @@ WorldDiff::WorldDiff(const WorldState& before, const WorldState& after)
         {
             addedEntities.push_back(after.entities[afterIndex++]);
         }
-        else if (before.entities[beforeIndex] == after.entities[afterIndex])
+        else
         {
             ++beforeIndex;
             ++afterIndex;
@@ -203,6 +214,10 @@ void ReplicationManager::Client_ReceiveUpdateResponse(SLNet::BitStream& stream)
 
         case MessageType::EntitySnapshot:
             ProcessEntitySnapshotMessage(rw);
+            break;
+
+        case MessageType::RemoveEntity:
+            ProcessDestroyEntity(rw);
             break;
 
         default:
@@ -487,7 +502,6 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
         return;
     }
 
-    // Send new entities that don't exist on the client
     {
         auto currentState = GetWorldSnapshot(_currentSnapshotId);
         if (currentState == nullptr) FatalError("Missing current snapshot");
@@ -504,12 +518,21 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
 
         WorldDiff diff(*lastClientState, *currentState);
 
-        for(auto addedEntity : diff.addedEntities)
+        // Send destroy messages for entities that the client doesn't know were destroyed
+        for (auto destroyedEntity : diff.destroyedEntities)
+        {
+            DestroyEntityMessage destroyMessage;
+            destroyMessage.netId = destroyedEntity;
+
+            response.Write(MessageType::RemoveEntity);
+            destroyMessage.ReadWrite(responseStream);
+        }
+
+        // Send new entities that don't exist on the client
+        for (auto addedEntity : diff.addedEntities)
         {   
             auto net = _componentsByNetId[addedEntity];
             auto entity = net->owner;
-
-            Log("Send entity id #%d (%s)\n", addedEntity, typeid(*entity).name());
 
             SpawnEntityMessage spawnMessage;
             spawnMessage.position = entity->Center();
@@ -633,6 +656,19 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
         components.insert(netComponent);
 
         entity->SendEvent(SpawnedOnClientEvent());
+    }
+}
+
+void ReplicationManager::ProcessDestroyEntity(ReadWriteBitStream& stream)
+{
+    DestroyEntityMessage message;
+    message.ReadWrite(stream);
+
+    auto component = _componentsByNetId.find(message.netId);
+
+    if (component != _componentsByNetId.end())
+    {
+        component->second->owner->Destroy();
     }
 }
 

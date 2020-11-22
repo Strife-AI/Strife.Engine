@@ -69,6 +69,7 @@ public:
     void RemoveNetComponent(NetComponent* component)
     {
         _componentsByNetId.erase(component->netId);
+        components.erase(component);
     }
 
     NetComponent* GetNetComponentById(int id) const
@@ -96,6 +97,7 @@ private:
     void ReceiveEvent(const IEntityEvent& ev) override;
 
     void ProcessSpawnEntity(ReadWriteBitStream& stream);
+    void ProcessDestroyEntity(ReadWriteBitStream& stream);
     void ProcessEntitySnapshotMessage(ReadWriteBitStream& stream);
 
     WorldState* GetWorldSnapshot(uint32 snapshotId);

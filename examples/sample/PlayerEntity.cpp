@@ -110,12 +110,11 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
                 PlayerEntity* player;
                 if (target->Is<PlayerEntity>(player))
                 {
-                    player->health.currentValue -= 10;
+                    player->health.currentValue -= 100;
 
                     if (player->health.currentValue <= 0)
                     {
-                        player->SetCenter({ -1000, -1000 });
-                        attackTarget = nullptr;
+                        player->Destroy();
                     }
 
                     attackCoolDown = 3;
