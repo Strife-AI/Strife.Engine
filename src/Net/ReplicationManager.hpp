@@ -19,7 +19,8 @@ struct ReadWriteBitStream;
 
 struct WorldState
 {
-    std::unordered_set<int> entities;
+    std::vector<int> entities;
+    unsigned int snapshotId;
 };
 
 struct WorldDiff
@@ -27,13 +28,13 @@ struct WorldDiff
     WorldDiff(const WorldState& before, const WorldState& after);
 
     std::vector<int> addedEntities;
+    std::vector<int> destroyedEntities;
 };
 
 struct ClientState
 {
     PlayerCommand* GetCommandById(int id);
 
-    WorldState currentState;
     unsigned int lastServerSequenceNumber = 0;
     unsigned int lastReceivedSnapshotId = 0;
     unsigned int nextCommandSequenceNumber = 0;
@@ -97,6 +98,8 @@ private:
     void ProcessSpawnEntity(ReadWriteBitStream& stream);
     void ProcessEntitySnapshotMessage(ReadWriteBitStream& stream);
 
+    WorldState* GetWorldSnapshot(uint32 snapshotId);
+
     std::unordered_map<int, NetComponent*> _componentsByNetId;
     std::unordered_map<int, ClientState> _clientStateByClientId;
 
@@ -106,4 +109,5 @@ private:
     float _sendUpdateTimer = 0;
 
     uint32 _currentSnapshotId = 0;
+    CircularQueue<WorldState, 32> _worldSnapshots;
 };

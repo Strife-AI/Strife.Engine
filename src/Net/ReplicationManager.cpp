@@ -142,12 +142,34 @@ struct ClientUpdateRequestMessage
 
 WorldDiff::WorldDiff(const WorldState& before, const WorldState& after)
 {
-    for(auto& currentEntity : after.entities)
+    int beforeIndex = 0;
+    int afterIndex = 0;
+
+    while (beforeIndex < before.entities.size() && afterIndex < after.entities.size())
     {
-        if(before.entities.count(currentEntity) == 0)
+        if (before.entities[beforeIndex] < after.entities[afterIndex])
         {
-            addedEntities.push_back(currentEntity);
+            destroyedEntities.push_back(before.entities[beforeIndex++]);
         }
+        else if(before.entities[beforeIndex] > after.entities[afterIndex])
+        {
+            addedEntities.push_back(after.entities[afterIndex++]);
+        }
+        else if (before.entities[beforeIndex] == after.entities[afterIndex])
+        {
+            ++beforeIndex;
+            ++afterIndex;
+        }
+    }
+
+    while(beforeIndex < before.entities.size())
+    {
+        destroyedEntities.push_back(before.entities[beforeIndex++]);
+    }
+
+    while(afterIndex < after.entities.size())
+    {
+        addedEntities.push_back(after.entities[afterIndex++]);
     }
 }
 
@@ -199,7 +221,7 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, NetworkManage
     }
 
     // Time to send new update to server with missing commands
-    if (_sendUpdateTimer <= 0 || true)
+    if (_sendUpdateTimer <= 0)
     {
         _sendUpdateTimer += 1.0 / 30;
 
@@ -408,11 +430,12 @@ void ReadVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, float 
             if (anyInfrequentChanges)
             {
                 ReadVarGroup(&infrequent, fromSnapshotId, toSnapshotId, time, stream);
-                Log("Infrequent var changed!\n");
             }
         }
     }
 }
+
+static WorldState g_emptyWorldState;
 
 void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
 {
@@ -459,12 +482,27 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
 
     response.Write(PacketType::UpdateResponse);
 
+    if(client.lastReceivedSnapshotId == _currentSnapshotId)
+    {
+        return;
+    }
+
     // Send new entities that don't exist on the client
     {
-        auto currentState = GetCurrentWorldState();
+        auto currentState = GetWorldSnapshot(_currentSnapshotId);
+        if (currentState == nullptr) FatalError("Missing current snapshot");
+
         auto& clientState = _clientStateByClientId[clientId];
 
-        WorldDiff diff(clientState.currentState, currentState);
+        auto lastClientState = GetWorldSnapshot(clientState.lastReceivedSnapshotId);
+
+        if (lastClientState == nullptr)
+        {
+            Log("Have to send from %d -> %d\n", clientState.lastReceivedSnapshotId, _currentSnapshotId);
+            lastClientState = &g_emptyWorldState;
+        }
+
+        WorldDiff diff(*lastClientState, *currentState);
 
         for(auto addedEntity : diff.addedEntities)
         {   
@@ -483,8 +521,6 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
             response.Write(MessageType::SpawnEntity);
             spawnMessage.ReadWrite(responseStream);
         }
-
-        clientState.currentState = currentState;
     }
 
     // Send the current state of the world
@@ -529,10 +565,14 @@ void ReplicationManager::Client_AddPlayerCommand(const PlayerCommand& command)
 WorldState ReplicationManager::GetCurrentWorldState()
 {
     WorldState state;
+    state.snapshotId = _currentSnapshotId;
+
     for (auto component : components)
     {
-        state.entities.insert(component->netId);
+        state.entities.push_back(component->netId);
     }
+
+    std::sort(state.entities.begin(), state.entities.end());
 
     return state;
 }
@@ -552,6 +592,13 @@ void ReplicationManager::ReceiveEvent(const IEntityEvent& ev)
                 }
             }
         }
+
+        if(_worldSnapshots.IsFull())
+        {
+            _worldSnapshots.Dequeue();
+        }
+
+        _worldSnapshots.Enqueue(GetCurrentWorldState());
     }
 }
 
@@ -559,6 +606,12 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
 {
     SpawnEntityMessage message;
     message.ReadWrite(stream);
+
+    if(_componentsByNetId.count(message.netId) != 0)
+    {
+        // Duplicate entity
+        return;
+    }
 
     EntityDictionary properties
     {
@@ -622,4 +675,17 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
     }
 
     client.lastReceivedSnapshotId = Max(client.lastReceivedSnapshotId, message.snapshotTo);
+}
+
+WorldState* ReplicationManager::GetWorldSnapshot(uint32 snapshotId)
+{
+    for(auto& worldSnapshot : _worldSnapshots)
+    {
+        if(worldSnapshot.snapshotId == snapshotId)
+        {
+            return &worldSnapshot;
+        }
+    }
+
+    return nullptr;
 }

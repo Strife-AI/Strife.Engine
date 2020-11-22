@@ -154,6 +154,8 @@ void InputService::OnAdded()
     {
         net->onUpdateResponse = [=](SLNet::BitStream& message)
         {
+            status.VFormat("%d bytes", NearestPowerOf2(message.GetNumberOfUnreadBits(), 8) / 8);
+
             scene->replicationManager->Client_ReceiveUpdateResponse(message);
         };
     }
