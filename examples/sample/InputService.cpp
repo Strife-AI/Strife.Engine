@@ -68,8 +68,14 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if (net->IsServer())
         {
-            status.VFormat("Total time: %d", totalTime);
-            totalTime = 0;
+            std::string result;
+
+            for(auto& c : scene->replicationManager->GetClients())
+            {
+                result += "[" + std::to_string(c.first) + "] = " + std::to_string((int)scene->replicationManager->GetCurrentSnapshotId() - (int)c.second.lastReceivedSnapshotId) + "\n";
+            }
+
+            status.VFormat("%s", result.c_str());
         }
 
         Render(renderEvent->renderer);

@@ -2,27 +2,18 @@
 
 #include "Engine.hpp"
 #include "Components/NetComponent.hpp"
+#include "Math/Random.hpp"
 #include "Scene/Scene.hpp"
 #include "Scene/SceneManager.hpp"
 #include "slikenet/peerinterface.h"
 #include "System/Logger.hpp"
 #include "Tools/Console.hpp"
 
-/*
-- Add a server sequence number for snapshots x 
-- At the end of the frame, add the current value of every sync var to the list of snapshots x
-    * Record the snapshot sequence number x 
-- In the server response, include the patch info e.g. this is for 2 -> 5 x 
-- On the server, when writing vars, write the value diffed from the last one the client has
-- On the client, read the server snapshot number from the response packet and record it x
-    - Discard any duplicate/out of order updates x
-- 
-- In the update request, include the last snapshot that arrived
-- On the server, read the last snapshot that arrived
-- On the server, keep track of the entities at each snapshot so we can send which ones were created
-- Making entity positions syncvars
- */
-
+bool SimulatePacketLoss()
+{
+	return false;
+	//return Rand(0, 1) < 0.5;
+}
 
 NetworkManager::NetworkManager(bool isServer)
     : _isServer(isServer)
@@ -97,9 +88,16 @@ void NetworkManager::Update()
 	for (packet = _peerInterface->Receive(); packet; _peerInterface->DeallocatePacket(packet), packet = _peerInterface->Receive())
 	{
 		SLNet::BitStream message(packet->data, packet->length, false);
-		message.IgnoreBytes(sizeof(SLNet::MessageID));		// Skip message header
+		uint8 messageId;
+
+		message.Read(messageId);
 
 		PacketType type = (PacketType)packet->data[0];
+
+		if((type == PacketType::UpdateRequest || type == PacketType::UpdateResponse) && SimulatePacketLoss())
+		{
+			continue;
+		}
 
 		if(_isServer)
 		{

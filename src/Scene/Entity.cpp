@@ -152,14 +152,19 @@ void Entity::Destroy()
 
 void Entity::SetCenter(const Vector2& newPosition)
 {
-    flags |= WasTeleported;
-    bool moved = _position != newPosition;
+    bool moved = _position.Value() != newPosition;
 
     if (moved)
     {
         _position = newPosition;
-        NotifyMovement();
+        DoTeleport();
     }
+}
+
+void Entity::DoTeleport()
+{
+    NotifyMovement();
+    flags |= WasTeleported;
 }
 
 
@@ -213,6 +218,16 @@ SoundChannel* Entity::GetChannel(int id)
     Assert(id >= 0 && id < SoundEmitter::MaxChannels);
 
     return _soundEmitter.channels + id;
+}
+
+void Entity::UpdateSyncVars()
+{
+    if (_position.Changed())
+    {
+        DoTeleport();
+    }
+
+    OnSyncVarsUpdated();
 }
 
 void Entity::RemoveComponent(IEntityComponent* component)

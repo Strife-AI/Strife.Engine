@@ -442,6 +442,8 @@ void ReadVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, float 
 
     bool anyChanged = stream.ReadBit();
 
+
+
     if (!anyChanged)
     {
         return;
@@ -452,7 +454,7 @@ void ReadVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, float 
 
         if (infrequent.varCount == 0)
         {
-            return;
+
         }
         else if (infrequent.varCount == 1)
         {
