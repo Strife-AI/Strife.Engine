@@ -7,12 +7,30 @@
 #include "Components/RigidBodyComponent.hpp"
 #include "Physics/PathFinding.hpp"
 
+void UpdateVarsToTime(ISyncVar* head, float time)
+{
+    for (auto var = head; var != nullptr; var = var->next)
+    {
+        var->SetCurrentValueToValueAtTime(time);
+    }
+}
+
 void NetworkPhysics::ReceiveEvent(const IEntityEvent& ev)
 {
     if(ev.Is<FixedUpdateEvent>())
     {
         if (_isServer)  ServerFixedUpdate();
-        else            ClientFixedUpdate();
+    }
+    else if(ev.Is<UpdateEvent>())
+    {
+        if (!_isServer)
+        {
+            for (auto net : scene->replicationManager->components)
+            {
+                UpdateVarsToTime(net->owner->syncVarHead, scene->relativeTime - 0.2);
+                net->owner->UpdateSyncVars();
+            }
+        }
     }
 }
 
@@ -101,21 +119,5 @@ void NetworkPhysics::ServerFixedUpdate()
                 break;
             }
         }
-    }
-}
-
-void UpdateVarsToTime(ISyncVar* head, float time)
-{
-    for (auto var = head; var != nullptr; var = var->next)
-    {
-        var->SetCurrentValueToValueAtTime(time);
-    }
-}
-
-void NetworkPhysics::ClientFixedUpdate()
-{
-    for(auto net : scene->replicationManager->components)
-    {
-        UpdateVarsToTime(net->owner->syncVarHead, scene->relativeTime - 0.2);
     }
 }

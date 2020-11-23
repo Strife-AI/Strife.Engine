@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <box2d/b2_body.h>
 #include <map>
 #include <string>
 #include <vcruntime_typeinfo.h>
@@ -12,10 +11,10 @@
 #include "Math/Vector2.hpp"
 #include "IEntityEvent.hpp"
 #include "Memory/Dictionary.hpp"
-#include "Memory/DLinkNode.hpp"
 #include "Memory/FixedLengthString.hpp"
 #include "Physics/Physics.hpp"
 #include "Memory/StringId.hpp"
+#include "Net/SyncVar.hpp"
 
 #include "Renderer/Color.hpp"
 #include "Sound/SoundManager.hpp"
@@ -217,8 +216,8 @@ struct Entity
     void SetCenter(const Vector2& newPosition);
     void SetRotation(float angle);
 
-    Vector2 TopLeft() const { return _position - _dimensions / 2; }
-    Vector2 Center() const { return _position; }
+    Vector2 TopLeft() const { return _position.Value() - _dimensions / 2; }
+    Vector2 Center() const { return _position.Value(); }
     Vector2 Dimensions() const { return _dimensions; }
     Rectangle Bounds() const { return Rectangle(TopLeft(), Dimensions()); }
     float Rotation() const { return _rotation; }
@@ -270,6 +269,8 @@ struct Entity
 
     SoundChannel* GetChannel(int id);
 
+    void UpdateSyncVars();
+
     template<typename TComponent, typename ...Args> TComponent* AddComponent(const char* name = "<default>", Args&& ...args);
     template<typename TComponent> TComponent* GetComponent();
     void RemoveComponent(IEntityComponent* component);
@@ -298,12 +299,16 @@ private:
 
     virtual void ReceiveEvent(const IEntityEvent& ev) { }
     virtual void ReceiveServerEvent(const IEntityEvent& ev) { }
+    void DoTeleport();
 
     virtual void DoSerialize(EntityDictionaryBuilder& writer) { }
 
     virtual std::pair<int, void*> GetMemoryBlock() = 0;
 
-    Vector2 _position;
+    virtual void OnSyncVarsUpdated() { }
+
+    SyncVar<Vector2> _position{ { 0, 0}, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent, SyncVarDeltaMode::SmallIntegerOffset };
+
     Vector2 _dimensions;
     float _rotation;
     int _lastQueryId = -1;

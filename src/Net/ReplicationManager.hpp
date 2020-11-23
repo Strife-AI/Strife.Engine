@@ -90,6 +90,8 @@ public:
 
     WorldState GetCurrentWorldState();
 
+    uint32 GetCurrentSnapshotId() const { return _currentSnapshotId; }
+
     std::unordered_set<NetComponent*> components;
     int localClientId = -1;
 
