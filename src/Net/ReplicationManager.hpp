@@ -8,6 +8,8 @@
 #include "Scene/Entity.hpp"
 #include "Scene/Scene.hpp"
 
+struct ClientGame;
+struct NetworkInterface;
 class NetworkManager;
 
 namespace SLNet {
@@ -83,7 +85,7 @@ public:
     auto& GetClients() { return _clientStateByClientId; }
 
     void Client_ReceiveUpdateResponse(SLNet::BitStream& stream);
-    void Client_SendUpdateRequest(float deltaTime, NetworkManager* networkManager);
+    void Client_SendUpdateRequest(float deltaTime, ClientGame* game);
     void Client_AddPlayerCommand(const PlayerCommand& command);
 
     void Server_ProcessUpdateRequest(SLNet::BitStream& message, SLNet::BitStream& response, int clientId);

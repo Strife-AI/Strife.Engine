@@ -50,6 +50,8 @@ public:
     SceneManager* GetSceneManager() { return _sceneManager; }
     BlockAllocator* GetDefaultBlockAllocator() { return _defaultBlockAllocator; }
     SoundManager* GetSoundManager() { return _soundManager; }
+    ServerGame* GetServerGame() { return _serverGame.get(); }
+    ClientGame* GetClientGame() { return _clientGame.get(); }
 
     bool ActiveGame() { return _activeGame; }
     void QuitGame() { _activeGame = false; }

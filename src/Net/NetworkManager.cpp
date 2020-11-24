@@ -128,13 +128,11 @@ bool NetworkManager::ProcessServerPacket(SLNet::BitStream& message, PacketType t
 		    ++_clientId;
 			_clientIdByGuid[SLNet::RakNetGUID::ToUint32(packet->guid)] = _clientId;
 
-		    response.Write(PacketType::NewConnectionResponse);
-		    response.Write(_clientId);
-			GetScene()->SendEvent(PlayerConnectedEvent(_clientId));
+		    
 		    return true;
 
 		case PacketType::UpdateRequest:
-			onUpdateRequest(message, response, _clientIdByGuid[SLNet::RakNetGUID::ToUint32(packet->guid)]);
+			//onUpdateRequest(message, response, _clientIdByGuid[SLNet::RakNetGUID::ToUint32(packet->guid)]);
 			return true;
 	}
 
@@ -145,14 +143,11 @@ void NetworkManager::ProcessClientPacket(SLNet::BitStream& message, PacketType t
 {
 	switch(type)
 	{
-	    case PacketType::NewConnectionResponse:
-			message.Read(_clientId);
-			Log("Assigned client id %d\n", _clientId);
-			GetScene()->SendEvent(JoinedServerEvent(_clientId));
+	    
 			break;
 
 		case PacketType::UpdateResponse:
-			onUpdateResponse(message);
+			//onUpdateResponse(message);
 			break;
 	}
 }

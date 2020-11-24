@@ -60,9 +60,6 @@ public:
 
     void SendPacketToServer(const std::function<void(SLNet::BitStream&)>& writeFunc);
 
-    std::function<void(SLNet::BitStream& message, SLNet::BitStream& response, int clientId)> onUpdateRequest;
-    std::function<void(SLNet::BitStream& message)> onUpdateResponse;
-
 private:
     bool ProcessServerPacket(SLNet::BitStream& message, PacketType type, SLNet::Packet* packet, SLNet::BitStream& response);
     void ProcessClientPacket(SLNet::BitStream& message, PacketType type);

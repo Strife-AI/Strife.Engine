@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <list>
 #include <memory>
 #include <queue>
@@ -20,7 +21,8 @@ enum class PacketType : unsigned char
 
     NewConnectionResponse = (unsigned char)ID_USER_PACKET_ENUM + 1,
     UpdateRequest,
-    UpdateResponse
+    UpdateResponse,
+    ServerFull
 };
 
 enum class ClientConnectionStatus
@@ -42,6 +44,8 @@ struct NetworkInterface
         if(address == localAddress)
         {
             auto packet = raknetInterface->AllocatePacket(data.size_bytes());
+            packet->systemAddress = localInterface->localAddress.systemAddress;
+
             memcpy(packet->data, data.data(), data.size_bytes());
             localInterface->AddLocalPacket(packet);
         }
@@ -63,6 +67,8 @@ struct NetworkInterface
         if (address == localAddress)
         {
             auto packet = raknetInterface->AllocatePacket(data.size_bytes());
+            packet->systemAddress = localInterface->localAddress.systemAddress;
+
             memcpy(packet->data, data.data(), data.size_bytes());
             localInterface->AddLocalPacket(packet);
         }
@@ -77,6 +83,16 @@ struct NetworkInterface
                 address,
                 false);
         }
+    }
+
+    void SendReliable(const SLNet::AddressOrGUID& address, SLNet::BitStream& stream)
+    {
+        SendReliable(address, gsl::span<unsigned char>(stream.GetData(), stream.GetNumberOfBytesUsed()));
+    }
+
+    void SendUnreliable(const SLNet::AddressOrGUID& address, SLNet::BitStream& stream)
+    {
+        SendUnreliable(address, gsl::span<unsigned char>(stream.GetData(), stream.GetNumberOfBytesUsed()));
     }
 
     bool TryGetPacket(SLNet::Packet*& outPacket)
@@ -138,6 +154,7 @@ struct BaseGameInstance
 
     void RunFrame();
     void Render(Scene* scene, float deltaTime, float renderDeltaTime);
+    Scene* GetScene() { return sceneManager.GetScene(); }
 
     virtual void UpdateNetwork() = 0;
 
@@ -159,7 +176,12 @@ struct ServerGame : BaseGameInstance
         isHeadless = true;
     }
 
+    void HandleNewConnection(SLNet::Packet* packet);
     void UpdateNetwork() override;
+    int AddClient(const SLNet::AddressOrGUID& address);
+    int GetClientId(const SLNet::AddressOrGUID& address);
+
+    std::function<void(SLNet::BitStream& message, SLNet::BitStream& response, int clientId)> onUpdateRequest;
 
     ServerGameClient clients[MaxClients];
 };
@@ -176,5 +198,7 @@ struct ClientGame : BaseGameInstance
 
     void UpdateNetwork() override;
 
-    ServerGameClient clients[MaxClients];
+    std::function<void(SLNet::BitStream& message)> onUpdateResponse;
+    int clientId = -1;
+    SLNet::AddressOrGUID serverAddress;
 };
