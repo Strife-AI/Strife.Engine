@@ -164,6 +164,7 @@ struct BaseGameInstance
     Engine* engine;
     bool isHeadless = false;
     float targetTickRate;
+    float nextUpdateTime = 0;
 };
 
 struct ServerGame : BaseGameInstance
@@ -174,6 +175,7 @@ struct ServerGame : BaseGameInstance
         : BaseGameInstance(engine, raknetInterface, localAddress_, true)
     {
         isHeadless = true;
+        targetTickRate = 30;
     }
 
     void HandleNewConnection(SLNet::Packet* packet);
@@ -194,6 +196,7 @@ struct ClientGame : BaseGameInstance
         : BaseGameInstance(engine, raknetInterface, localAddress_, false)
     {
         isHeadless = false;
+        targetTickRate = 60;
     }
 
     void UpdateNetwork() override;

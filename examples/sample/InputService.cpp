@@ -179,6 +179,11 @@ void InputService::HandleInput()
 
     if (!scene->isServer)
     {
+        if(scene->deltaTime == 0)
+        {
+            return;
+        }
+
         auto mouse = scene->GetEngine()->GetInput()->GetMouse();
 
         if(mouse->LeftPressed())

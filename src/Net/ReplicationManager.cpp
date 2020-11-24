@@ -627,6 +627,11 @@ void ReplicationManager::ReceiveEvent(const IEntityEvent& ev)
 {
     if (ev.Is<EndOfUpdateEvent>())
     {
+        if(scene->deltaTime == 0)
+        {
+            return;
+        }
+
         ++_currentSnapshotId;
         if (_isServer)
         {
