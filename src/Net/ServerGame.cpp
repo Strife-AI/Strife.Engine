@@ -97,6 +97,7 @@ void BaseGameInstance::RunFrame()
     }
 
     scene->UpdateEntities(renderDeltaTime);
+    UpdateNetwork();
 
     bool allowConsole = !isHeadless && g_developerMode.Value();
     auto console = engine->GetConsole();
@@ -209,4 +210,25 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
 
     plotManager->RenderPlots();
     sdlManager->EndRender();
+}
+
+void ServerGame::UpdateNetwork()
+{
+    SLNet::Packet* packet;
+    while(networkInterface.TryGetPacket(packet))
+    {
+        if(packet->data[0] == (unsigned char)PacketType::NewConnection)
+        {
+            Log("Got connection request");
+        }
+    }
+}
+
+void ClientGame::UpdateNetwork()
+{
+    SLNet::Packet* packet;
+    while (networkInterface.TryGetPacket(packet))
+    {
+
+    }
 }

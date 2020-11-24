@@ -174,6 +174,10 @@ void Engine::StartLocalServer(int port, StringId mapName)
 
     _clientGame->sceneManager.TrySwitchScene(mapName);
     _serverGame->sceneManager.TrySwitchScene(mapName);
+
+    unsigned char data[1] = { (unsigned char)PacketType::NewConnection };
+
+    _clientGame->networkInterface.SendReliable(_serverGame->localAddress, data);
 }
 
 static void ReloadResources(ConsoleCommandBinder& binder)

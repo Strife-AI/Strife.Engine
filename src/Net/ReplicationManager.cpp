@@ -2,7 +2,7 @@
 
 #include <slikenet/BitStream.h>
 
-
+#include "Net/ServerGame.hpp"
 #include "NetworkManager.hpp"
 #include "Scene/Scene.hpp"
 
