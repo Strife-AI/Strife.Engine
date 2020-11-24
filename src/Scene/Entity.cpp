@@ -183,7 +183,7 @@ void Entity::SendEvent(const IEntityEvent& ev)
 {
     ReceiveEvent(ev);
 
-    if(GetEngine()->GetNetworkManger()->IsServer())
+    if(scene->isServer)
     {
         ReceiveServerEvent(ev);
     }

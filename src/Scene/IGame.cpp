@@ -41,6 +41,8 @@ void IGame::Run()
 
     // Run the game
     {
+        OnGameStart();
+
         while (_engine->ActiveGame())
         {
             _engine->RunFrame();

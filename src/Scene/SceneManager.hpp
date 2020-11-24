@@ -10,7 +10,7 @@ struct Entity;
 class SceneManager
 {
 public:
-    SceneManager(Engine* engine);
+    SceneManager(Engine* engine, bool isServer);
     virtual ~SceneManager() = default;
 
     Scene* GetScene() const { return _scene; }
@@ -30,4 +30,5 @@ private:
 
     Scene* _scene = nullptr;
     Scene* _newScene = nullptr;
+    bool _isServer = false;
 };

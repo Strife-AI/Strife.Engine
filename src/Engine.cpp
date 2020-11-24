@@ -81,11 +81,7 @@ Engine* Engine::Initialize(const EngineConfig& config)
     Log("Initializing sound\n");
     engine->_soundManager = new SoundManager;
 
-    engine->_sceneManager = new SceneManager(engine);
-
-    engine->_networkManager = new NetworkManager(isServer.Value());
-
-    engine->_serverGame = std::make_unique<ServerGame>(engine, engine->_networkManager->GetPeerInterface(), SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.1", 1)));
+    engine->_sceneManager = new SceneManager(engine, false);
 
     if(isServer.Value())
     {
@@ -120,7 +116,6 @@ Engine::~Engine()
             delete _plotManager;
             delete _sdlManager;
             delete _input;
-            delete _networkManager;
         }
         catch(const std::exception& e)
         {
@@ -139,31 +134,46 @@ Engine::~Engine()
 
 void Engine::RunFrame()
 {
-    _serverGame->RunFrame();
+    if (_serverGame != nullptr)
+    {
+        _serverGame->RunFrame();
+    }
+
+    if(_clientGame != nullptr)
+    {
+        _clientGame->RunFrame();
+    }
 }
 
 void Engine::PauseGame()
 {
-    if (isPaused)
-    {
-        return;
-    }
-    else
-    {
-        isPaused = true;
-    }
+    isPaused = true;
 }
 
 void Engine::ResumeGame()
 {
-    if (!isPaused)
+    isPaused = false;
+}
+
+void Engine::StartLocalServer(int port, StringId mapName)
+{
+    SLNet::SocketDescriptor sd;
+    auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+    auto result = peerInterface->Startup(1, &sd, 1);
+
+    if (result != SLNet::RAKNET_STARTED)
     {
-        return;
+        FatalError("Failed to startup client");
     }
-    else
-    {
-        isPaused = false;
-    }
+
+    _serverGame = std::make_unique<ServerGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.1", 1)));
+    _clientGame = std::make_unique<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.1", 2)));
+
+    _serverGame->networkInterface.SetLocalAddress(&_clientGame->networkInterface, _clientGame->localAddress);
+    _clientGame->networkInterface.SetLocalAddress(&_serverGame->networkInterface, _serverGame->localAddress);
+
+    _clientGame->sceneManager.TrySwitchScene(mapName);
+    _serverGame->sceneManager.TrySwitchScene(mapName);
 }
 
 static void ReloadResources(ConsoleCommandBinder& binder)

@@ -11,7 +11,7 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
     auto spriteName = StringId(properties.GetValueOrDefault("sprite", "castle"));
     spriteComponent = AddComponent<SpriteComponent>("sprite", spriteName);
 
-    if(GetEngine()->GetNetworkManger()->IsClient() && !properties.HasProperty("net"))
+    if(!scene->isServer && !properties.HasProperty("net"))
     {
         Destroy();
     }

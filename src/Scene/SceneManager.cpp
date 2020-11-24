@@ -42,9 +42,10 @@ void SegmentCmd(ConsoleCommandBinder& binder)
 }
 ConsoleCmd segmentCmd("segment", SegmentCmd);
 
-SceneManager::SceneManager(Engine* engine)
+SceneManager::SceneManager(Engine* engine, bool isServer)
     : _engine(engine),
-    _scene(new Scene(engine, ""_sid))
+    _scene(new Scene(engine, ""_sid, isServer)),
+    _isServer(isServer)
 {
     auto emptyMapSegment = new MapSegment;
     emptyMapSegment->name = "empty-map"_sid;
@@ -86,7 +87,7 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
 {
     delete _newScene;
 
-    _newScene = new Scene(_engine, mapSegment->name);
+    _newScene = new Scene(_engine, mapSegment->name, _isServer);
 
     auto screenSize = _engine->GetSdlManager()->WindowSize().AsVectorOfType<float>();
     _newScene->GetCamera()->SetScreenSize(screenSize);

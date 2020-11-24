@@ -66,7 +66,7 @@ public:
     static constexpr Vector2 Box2DToPixelsRatio = Vector2(1.0, 1.0) / PixelsToBox2DRatio;
     static constexpr Vector2 Gravity = Vector2(0, 0) * Box2DToPixelsRatio;
 
-    Scene(Engine* engine, StringId mapSegmentName);
+    Scene(Engine* engine, StringId mapSegmentName, bool isServer);
     ~Scene();
 
     static b2Vec2 PixelToBox2D(Vector2 v);
@@ -126,6 +126,7 @@ public:
     bool inEditor = false;
     EntityReference<Entity> soundListener;
     ReplicationManager* replicationManager;
+    bool isServer;
 
     static Entity* entityUnderConstruction;
 

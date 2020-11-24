@@ -10,8 +10,9 @@
 
 Entity* Scene::entityUnderConstruction = nullptr;
 
-Scene::Scene(Engine* engine, StringId mapSegmentName)
-    : _mapSegmentName(mapSegmentName),
+Scene::Scene(Engine* engine, StringId mapSegmentName, bool isServer)
+    : isServer(isServer),
+    _mapSegmentName(mapSegmentName),
     _cameraFollower(&_camera, engine->GetInput()),
     _engine(engine),
     _world(std::make_unique<b2World>(b2Vec2(0, 0))),
@@ -19,7 +20,7 @@ Scene::Scene(Engine* engine, StringId mapSegmentName)
 {
     _world->SetContactListener(&_collisionManager);
     _camera.SetScreenSize(engine->GetSdlManager()->WindowSize().AsVectorOfType<float>());
-    replicationManager = AddService<ReplicationManager>(this, engine->GetNetworkManger() != nullptr ? engine->GetNetworkManger()->IsServer() : false);
+    replicationManager = AddService<ReplicationManager>(this, isServer);
 }
 
 Scene::~Scene()
@@ -338,7 +339,7 @@ void Scene::NotifyFixedUpdate()
 
 void Scene::NotifyServerFixedUpdate()
 {
-    if (_engine->GetNetworkManger()->IsServer())
+    if (isServer)
     {
         for (auto serverFixedUpdatable : _entityManager.serverFixedUpdatables)
         {
@@ -357,7 +358,7 @@ void Scene::NotifyUpdate(float deltaTime)
 
 void Scene::NotifyServerUpdate(float deltaTime)
 {
-    if (_engine->GetNetworkManger()->IsServer())
+    if (isServer)
     {
         for (auto serverUpdatable : _entityManager.serverUpdatables)
         {
