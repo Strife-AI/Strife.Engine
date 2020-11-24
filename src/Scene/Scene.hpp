@@ -131,7 +131,7 @@ public:
 
 private:
     friend struct Entity;
-    friend class Engine;
+    friend class BaseGameInstance;
 
     std::vector<std::unique_ptr<ISceneService>> _services;
 

@@ -5,6 +5,7 @@
 
 #include "Memory/BlockAllocator.hpp"
 #include "Net/NetworkManager.hpp"
+#include "Net/ServerGame.hpp"
 #include "Tools/ConsoleCmd.hpp"
 #include "Tools/ConsoleVar.hpp"
 
@@ -100,6 +101,8 @@ private:
     BlockAllocator* _defaultBlockAllocator;
     SoundManager* _soundManager;
     NetworkManager* _networkManager;
+
+    std::unique_ptr<ServerGame> _serverGame;
 
     IGame* _game = nullptr;
     bool _activeGame = true;
