@@ -132,17 +132,73 @@ Engine::~Engine()
     }
 }
 
+void SleepMicroseconds(unsigned int microseconds)
+{
+    std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
+}
+
+static float GetTimeSeconds()
+{
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto now = std::chrono::high_resolution_clock::now();
+    auto deltaTimeMicroseconds = std::chrono::duration_cast<std::chrono::microseconds>(now - startTime);
+    return static_cast<float>(deltaTimeMicroseconds.count()) / 1000000;
+}
+
+void AccurateSleepFor(float seconds)
+{
+    auto bias = 0.01f;
+    auto diff = seconds - bias;
+    auto desiredEndTime = std::chrono::high_resolution_clock::now() + std::chrono::microseconds((int)(seconds * 1000000));
+
+    if (diff > 0)
+    {
+        SleepMicroseconds(1000000 * diff);
+    }
+
+    while (std::chrono::high_resolution_clock::now() < desiredEndTime)
+    {
+        // No-op
+    }
+}
+
 void Engine::RunFrame()
 {
+    BaseGameInstance* games[2];
+    int totalGames = 0;
+
     if (_serverGame != nullptr)
     {
-        _serverGame->RunFrame();
+        games[totalGames++] = _serverGame.get();
     }
 
     if(_clientGame != nullptr)
     {
-        _clientGame->RunFrame();
+        games[totalGames++] = _clientGame.get();
     }
+
+    if (totalGames == 0)
+    {
+        return;
+    }
+
+    BaseGameInstance* nextGameToRun = games[0];
+
+    for(int i = 1; i < totalGames; ++i)
+    {
+        if(games[i]->nextUpdateTime < nextGameToRun->nextUpdateTime)
+        {
+            nextGameToRun = games[i];
+        }
+    }
+
+    float now = GetTimeSeconds();
+    float timeUntilUpdate = nextGameToRun->nextUpdateTime - now;
+
+    AccurateSleepFor(timeUntilUpdate);
+    nextGameToRun->RunFrame();
+    nextGameToRun->nextUpdateTime = GetTimeSeconds() + 1.0f / nextGameToRun->targetTickRate;
 }
 
 void Engine::PauseGame()

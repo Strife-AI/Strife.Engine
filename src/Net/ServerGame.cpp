@@ -15,46 +15,10 @@
 ConsoleVar<bool> g_stressTest("stress-test", false, false);
 int stressCount = 0;
 
-static TimePointType lastFrameStart;    // FIXME: shouldn't be global
-
 ConsoleVar<float> g_timeScale("time-scale", 1);
-
-void SleepMicroseconds(unsigned int microseconds)
-{
-    std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
-}
-
-void ThrottleFrameRate()
-{
-    auto currentFrameStart = std::chrono::high_resolution_clock::now();
-    auto deltaTimeMicroseconds = std::chrono::duration_cast<std::chrono::microseconds>(currentFrameStart - lastFrameStart);
-    auto realDeltaTime = static_cast<float>(deltaTimeMicroseconds.count()) / 1000000;
-    auto desiredDeltaTime = 1.0f / Engine::GetInstance()->targetFps.Value();
-
-    auto diffBias = 0.01f;
-    auto diff = desiredDeltaTime - realDeltaTime - diffBias;
-    auto desiredEndTime = lastFrameStart + std::chrono::microseconds((int)(desiredDeltaTime * 1000000));
-
-    if (diff > 0)
-    {
-        SleepMicroseconds(1000000 * diff);
-    }
-
-    while (std::chrono::high_resolution_clock::now() < desiredEndTime)
-    {
-
-    }
-
-    lastFrameStart = std::chrono::high_resolution_clock::now();
-}
 
 void BaseGameInstance::RunFrame()
 {
-    if (!g_stressTest.Value())
-    {
-        ThrottleFrameRate();
-    }
-
     auto input = engine->GetInput();
     auto sdlManager = engine->GetSdlManager();
 
