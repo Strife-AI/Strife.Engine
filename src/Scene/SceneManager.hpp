@@ -22,7 +22,7 @@ protected:
     Engine* _engine;
 
 private:
-    friend class Engine;
+    friend class BaseGameInstance;
 
     void DoSceneTransition();
     void BuildNewScene(const MapSegment* map);

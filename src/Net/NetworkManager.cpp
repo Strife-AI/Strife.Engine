@@ -24,16 +24,7 @@ NetworkManager::NetworkManager(bool isServer)
 
     if (_isServer)
     {
-        Log("Running as server\n");
-        SLNet::SocketDescriptor sd(Port, nullptr);
-        auto result = _peerInterface->Startup(MaxPlayers, &sd, 1);
 
-		if(result != SLNet::RAKNET_STARTED)
-		{
-			FatalError("Failed to startup server");
-		}
-
-        _peerInterface->SetMaximumIncomingConnections(MaxPlayers);
     }
     else
     {

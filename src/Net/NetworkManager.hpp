@@ -44,6 +44,7 @@ enum class PacketType : unsigned char
     UpdateResponse
 };
 
+
 class NetworkManager
 {
 public:
