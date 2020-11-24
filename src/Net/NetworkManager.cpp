@@ -29,13 +29,6 @@ NetworkManager::NetworkManager(bool isServer)
     else
     {
         Log("Running as client\n");
-		SLNet::SocketDescriptor sd;
-        auto result = _peerInterface->Startup(1, &sd, 1);
-
-		if (result != SLNet::RAKNET_STARTED)
-		{
-			FatalError("Failed to startup client");
-		}
     }
 }
 
@@ -58,7 +51,7 @@ void ConnectCommand(ConsoleCommandBinder& binder)
 		.Bind(address, "serverAddress")
 		.Help("Connects to a server");
 
-	Engine::GetInstance()->GetNetworkManger()->ConnectToServer(address.c_str());
+	//Engine::GetInstance()->GetNetworkManger()->ConnectToServer(address.c_str());
 }
 
 ConsoleCmd connectCmd("connect", ConnectCommand);

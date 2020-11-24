@@ -88,9 +88,10 @@ struct NetworkInterface
         return lastPacket != nullptr;
     }
 
-    void SetLocalAddress()
+    void SetLocalAddress(NetworkInterface* localInterface_, SLNet::AddressOrGUID localAddress_)
     {
-        
+        localInterface = localInterface_;
+        localAddress = localAddress_;
     }
 
     void AddLocalPacket(SLNet::Packet* packet)
@@ -109,14 +110,13 @@ struct ServerGameClient
 {
     ClientConnectionStatus status = ClientConnectionStatus::NotConnected;
     SLNet::AddressOrGUID address;
-    bool isLocalConnection;
     int clientId;
 };
 
 struct BaseGameInstance
 {
-    BaseGameInstance(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_)
-        : sceneManager(engine),
+    BaseGameInstance(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_, bool isServer)
+        : sceneManager(engine, isServer),
         networkInterface(raknetInterface),
         localAddress(localAddress_),
         engine(engine)
@@ -140,9 +140,22 @@ struct ServerGame : BaseGameInstance
     static constexpr int MaxClients = 8;
 
     ServerGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_)
-        : BaseGameInstance(engine, raknetInterface, localAddress_)
+        : BaseGameInstance(engine, raknetInterface, localAddress_, true)
     {
-        
+        isHeadless = true;
+    }
+
+    ServerGameClient clients[MaxClients];
+};
+
+struct ClientGame : BaseGameInstance
+{
+    static constexpr int MaxClients = 8;
+
+    ClientGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_)
+        : BaseGameInstance(engine, raknetInterface, localAddress_, false)
+    {
+        isHeadless = false;
     }
 
     ServerGameClient clients[MaxClients];

@@ -14,7 +14,7 @@ void PuckEntity::OnAdded(const EntityDictionary& properties)
 
     box->SetFriction(1);
 
-    if(GetEngine()->GetNetworkManger()->IsClient())
+    if(!scene->isServer)
     {
         //rb->body->SetType(b2_kinematicBody);
     }

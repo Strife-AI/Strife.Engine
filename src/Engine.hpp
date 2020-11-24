@@ -50,7 +50,6 @@ public:
     SceneManager* GetSceneManager() { return _sceneManager; }
     BlockAllocator* GetDefaultBlockAllocator() { return _defaultBlockAllocator; }
     SoundManager* GetSoundManager() { return _soundManager; }
-    NetworkManager* GetNetworkManger() { return _networkManager; }
 
     bool ActiveGame() { return _activeGame; }
     void QuitGame() { _activeGame = false; }
@@ -83,6 +82,8 @@ public:
         _loadResources();
     }
 
+    void StartLocalServer(int port, StringId mapName);
+
 private:
     Engine() = default;
 
@@ -100,9 +101,9 @@ private:
     SceneManager* _sceneManager = nullptr;
     BlockAllocator* _defaultBlockAllocator;
     SoundManager* _soundManager;
-    NetworkManager* _networkManager;
 
     std::unique_ptr<ServerGame> _serverGame;
+    std::unique_ptr<ClientGame> _clientGame;
 
     IGame* _game = nullptr;
     bool _activeGame = true;

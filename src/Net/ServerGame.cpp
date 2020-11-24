@@ -97,7 +97,6 @@ void BaseGameInstance::RunFrame()
     }
 
     scene->UpdateEntities(renderDeltaTime);
-    engine->GetNetworkManger()->Update();
 
     bool allowConsole = !isHeadless && g_developerMode.Value();
     auto console = engine->GetConsole();
@@ -125,20 +124,18 @@ void BaseGameInstance::RunFrame()
             }
         }
     }
-    else if (console->IsOpen())
+
+    if (!isHeadless)
     {
-        console->Close();
-        engine->ResumeGame();
+        Render(scene, realDeltaTime, renderDeltaTime);
+
+        {
+            float fps = 1.0f / realDeltaTime;
+            engine->GetMetricsManager()->GetOrCreateMetric("fps")->Add(fps);
+        }
+
+        input->GetMouse()->SetMouseScale(Vector2::Unit() * scene->GetCamera()->Zoom());
     }
-
-    Render(scene, realDeltaTime, renderDeltaTime);
-
-    {
-        float fps = 1.0f / realDeltaTime;
-        engine->GetMetricsManager()->GetOrCreateMetric("fps")->Add(fps);
-    }
-
-    input->GetMouse()->SetMouseScale(Vector2::Unit() * scene->GetCamera()->Zoom());
 
     scene->lastFrameStart = currentFrameStart;
 

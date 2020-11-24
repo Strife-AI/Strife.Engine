@@ -78,6 +78,8 @@ public:
 
     virtual void ConfigureEngine(EngineConfig& config) { }
 
+    virtual void OnGameStart() { }
+
     Engine* GetEngine() const { return _engine; }
     void Run();
 
