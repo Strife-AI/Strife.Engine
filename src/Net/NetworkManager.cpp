@@ -8,6 +8,7 @@
 #include "slikenet/peerinterface.h"
 #include "System/Logger.hpp"
 #include "Tools/Console.hpp"
+#include "Net/ServerGame.hpp"
 
 bool SimulatePacketLoss()
 {
@@ -41,6 +42,7 @@ NetworkManager::~NetworkManager()
 namespace SLNet
 {
 	const RakNetGUID UNASSIGNED_RAKNET_GUID((uint64_t)-1);
+	const SystemAddress UNASSIGNED_SYSTEM_ADDRESS;
 }
 
 void ConnectCommand(ConsoleCommandBinder& binder)

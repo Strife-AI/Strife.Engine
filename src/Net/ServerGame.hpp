@@ -4,6 +4,7 @@
 #include <queue>
 #include <gsl/span>
 #include <slikenet/BitStream.h>
+#include <slikenet/MessageIdentifiers.h>
 #include <slikenet/peerinterface.h>
 
 
@@ -12,6 +13,15 @@
 namespace SLNet {
     class BitStream;
 }
+
+enum class PacketType : unsigned char
+{
+    NewConnection = (unsigned char)ID_NEW_INCOMING_CONNECTION,
+
+    NewConnectionResponse = (unsigned char)ID_USER_PACKET_ENUM + 1,
+    UpdateRequest,
+    UpdateResponse
+};
 
 enum class ClientConnectionStatus
 {
@@ -31,7 +41,8 @@ struct NetworkInterface
     {
         if(address == localAddress)
         {
-            auto packet = raknetInterface->AllocatePacket(data.size());
+            auto packet = raknetInterface->AllocatePacket(data.size_bytes());
+            memcpy(packet->data, data.data(), data.size_bytes());
             localInterface->AddLocalPacket(packet);
         }
         else
@@ -51,7 +62,8 @@ struct NetworkInterface
     {
         if (address == localAddress)
         {
-            auto packet = raknetInterface->AllocatePacket(data.size());
+            auto packet = raknetInterface->AllocatePacket(data.size_bytes());
+            memcpy(packet->data, data.data(), data.size_bytes());
             localInterface->AddLocalPacket(packet);
         }
         else
@@ -127,6 +139,8 @@ struct BaseGameInstance
     void RunFrame();
     void Render(Scene* scene, float deltaTime, float renderDeltaTime);
 
+    virtual void UpdateNetwork() = 0;
+
     SceneManager sceneManager;
     NetworkInterface networkInterface;
     SLNet::AddressOrGUID localAddress;
@@ -145,6 +159,8 @@ struct ServerGame : BaseGameInstance
         isHeadless = true;
     }
 
+    void UpdateNetwork() override;
+
     ServerGameClient clients[MaxClients];
 };
 
@@ -157,6 +173,8 @@ struct ClientGame : BaseGameInstance
     {
         isHeadless = false;
     }
+
+    void UpdateNetwork() override;
 
     ServerGameClient clients[MaxClients];
 };
