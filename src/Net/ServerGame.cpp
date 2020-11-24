@@ -212,14 +212,41 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
     sdlManager->EndRender();
 }
 
+void ServerGame::HandleNewConnection(SLNet::Packet* packet)
+{
+    SLNet::BitStream response;
+    int clientId = AddClient(packet->systemAddress);
+    sceneManager.GetScene()->SendEvent(PlayerConnectedEvent(clientId));
+
+    response.Write(PacketType::NewConnectionResponse);
+    response.Write(clientId);
+    networkInterface.SendReliable(packet->systemAddress, response);
+}
+
 void ServerGame::UpdateNetwork()
 {
     SLNet::Packet* packet;
-    while(networkInterface.TryGetPacket(packet))
+    while (networkInterface.TryGetPacket(packet))
     {
-        if(packet->data[0] == (unsigned char)PacketType::NewConnection)
+        switch ((PacketType)packet->data[0])
         {
-            Log("Got connection request");
+        case PacketType::NewConnection:
+            HandleNewConnection(packet);
+            break;
+
+        case PacketType::UpdateRequest:
+        {
+            int clientId = GetClientId(packet->systemAddress);
+            if (clientId == -1) continue;
+
+            SLNet::BitStream request(packet->data, packet->length, false);
+            SLNet::BitStream response;
+
+            request.IgnoreBytes(1);
+            onUpdateRequest(request, response, clientId);
+            networkInterface.SendUnreliable(packet->systemAddress, response);
+            break;
+        }
         }
     }
 }
@@ -229,6 +256,57 @@ void ClientGame::UpdateNetwork()
     SLNet::Packet* packet;
     while (networkInterface.TryGetPacket(packet))
     {
+        switch ((PacketType)packet->data[0])
+        {
+        case PacketType::NewConnectionResponse:
+        {
+            SLNet::BitStream message(packet->data, packet->length, false);
+            message.IgnoreBytes(1);
 
+            message.Read(clientId);
+            Log("Assigned client id %d\n", clientId);
+            serverAddress = packet->systemAddress;
+            GetScene()->SendEvent(JoinedServerEvent(clientId));
+            break;
+        }
+        case PacketType::UpdateResponse:
+        {
+            SLNet::BitStream stream(packet->data, packet->length, false);
+            stream.IgnoreBytes(1);
+            onUpdateResponse(stream);
+            break;
+        }
+        }
     }
+}
+
+int ServerGame::AddClient(const SLNet::AddressOrGUID& address)
+{
+    for (int i = 0; i < MaxClients; ++i)
+    {
+        if (clients[i].status != ClientConnectionStatus::Connected)
+        {
+            clients[i].status = ClientConnectionStatus::Connected;
+            clients[i].clientId = i;
+            clients[i].address = address;
+
+            return i;
+        }
+    }
+
+    // TODO MW
+    FatalError("Server full");
+}
+
+int ServerGame::GetClientId(const SLNet::AddressOrGUID& address)
+{
+    for (auto& client : clients)
+    {
+        if (client.status == ClientConnectionStatus::Connected && client.address == address)
+        {
+            return client.clientId;
+        }
+    }
+
+    return -1;
 }

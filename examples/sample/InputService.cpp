@@ -144,25 +144,30 @@ PlayerEntity* InputService::GetPlayerByNetId(int netId)
 
 void InputService::OnAdded()
 {
-    //auto net = scene->GetEngine()->GetNetworkManger();
-    //if(net->IsServer())
-    //{
-    //    scene->GetCameraFollower()->FollowMouse();
+    if(scene->isServer)
+    {
+        scene->GetCameraFollower()->FollowMouse();
 
-    //    net->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
-    //    {
-    //        scene->replicationManager->Server_ProcessUpdateRequest(message, response, clientId);
-    //    };
-    //}
-    //else
-    //{
-    //    net->onUpdateResponse = [=](SLNet::BitStream& message)
-    //    {
-    //        status.VFormat("%d bytes", NearestPowerOf2(message.GetNumberOfUnreadBits(), 8) / 8);
+        if (scene->GetEngine()->GetServerGame())
+        {
+            scene->GetEngine()->GetServerGame()->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
+            {
+                scene->replicationManager->Server_ProcessUpdateRequest(message, response, clientId);
+            };
+        }
+    }
+    else
+    {
+        if (scene->GetEngine()->GetClientGame())
+        {
+            scene->GetEngine()->GetClientGame()->onUpdateResponse = [=](SLNet::BitStream& message)
+            {
+                status.VFormat("%d bytes", NearestPowerOf2(message.GetNumberOfUnreadBits(), 8) / 8);
 
-    //        scene->replicationManager->Client_ReceiveUpdateResponse(message);
-    //    };
-    //}
+                scene->replicationManager->Client_ReceiveUpdateResponse(message);
+            };
+        }
+    }
 }
 
 void InputService::HandleInput()
@@ -233,7 +238,7 @@ void InputService::HandleInput()
             }
         }
 
-        //scene->replicationManager->Client_SendUpdateRequest(scene->deltaTime, net);
+        scene->replicationManager->Client_SendUpdateRequest(scene->deltaTime, scene->GetEngine()->GetClientGame());
     }
 }
 

@@ -246,7 +246,7 @@ void ReplicationManager::Client_ReceiveUpdateResponse(SLNet::BitStream& stream)
     }
 }
 
-void ReplicationManager::Client_SendUpdateRequest(float deltaTime, NetworkManager* networkManager)
+void ReplicationManager::Client_SendUpdateRequest(float deltaTime, ClientGame* game)
 {
     _sendUpdateTimer -= _scene->deltaTime;
 
@@ -300,12 +300,12 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, NetworkManage
         request.commandCount = commandCount;
         request.lastReceivedSnapshotId = client.lastReceivedSnapshotId;
 
-        networkManager->SendPacketToServer([&](SLNet::BitStream& message)
-        {
-            message.Write(PacketType::UpdateRequest);
-            ReadWriteBitStream stream(message, false);
-            request.ReadWrite(stream);
-        });
+        SLNet::BitStream message;
+        message.Write(PacketType::UpdateRequest);
+        ReadWriteBitStream stream(message, false);
+        request.ReadWrite(stream);
+
+        game->networkInterface.SendUnreliable(game->serverAddress, message);
     }
 }
 

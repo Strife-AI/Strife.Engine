@@ -167,7 +167,7 @@ void Engine::StartLocalServer(int port, StringId mapName)
     }
 
     _serverGame = std::make_unique<ServerGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.1", 1)));
-    _clientGame = std::make_unique<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.1", 2)));
+    _clientGame = std::make_unique<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
 
     _serverGame->networkInterface.SetLocalAddress(&_clientGame->networkInterface, _clientGame->localAddress);
     _clientGame->networkInterface.SetLocalAddress(&_serverGame->networkInterface, _serverGame->localAddress);
