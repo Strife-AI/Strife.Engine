@@ -307,8 +307,7 @@ void Renderer::DoRendering()
         _deferredLightingColorBuffer->Unbind();
         glClearColor(0, 0, 0, 1);
         glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-        auto scene = Engine::GetInstance()->GetSceneManager()->GetScene();
-        _lightManager.UpdateVisibleLights(_camera, scene, _deferredLightingColorBuffer->ColorBuffer());
+        _lightManager.UpdateVisibleLights(_camera, _scene, _deferredLightingColorBuffer->ColorBuffer());
 
         // Copy over the depth buffer
         glBindFramebuffer(GL_READ_FRAMEBUFFER, _deferredLightingColorBuffer->Id());
@@ -352,9 +351,10 @@ void Renderer::RenderSpriteBatch()
     _lineRenderer.Render(_camera->ViewMatrix());
 }
 
-void Renderer::BeginRender(Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime)
+void Renderer::BeginRender(Scene* scene, Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime)
 {
     _camera = camera;
+    _scene = scene;
     _deltaTime = deltaTime;
     _absoluteTime = absoluteTime;
 

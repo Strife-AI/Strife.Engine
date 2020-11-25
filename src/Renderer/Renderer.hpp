@@ -72,7 +72,7 @@ public:
 
     void RenderCustomTransparency(const ICustomTransparencyRenderer* renderer, float depth);
 
-    void BeginRender(Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime);
+    void BeginRender(Scene* scene, Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime);
     void DoRendering();
     void RenderSpriteBatch();
 
@@ -109,6 +109,7 @@ private:
 
     Camera* _camera;
     Vector2 _renderOffset;
+    Scene* _scene;
 
     std::unique_ptr<FrameBuffer> _deferredLightingColorBuffer;
 

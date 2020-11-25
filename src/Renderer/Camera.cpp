@@ -50,12 +50,14 @@ void CameraCommand(ConsoleCommandBinder& binder)
 {
     binder.Help("Shows info about camera");
 
-    auto position = Engine::GetInstance()->GetSceneManager()->GetScene()->GetCamera()->Position();
-    auto bounds = Engine::GetInstance()->GetSceneManager()->GetScene()->GetCamera()->Bounds();
 
-    binder.GetConsole()->Log("Position: %f %f\n", position.x, position.y);
-    binder.GetConsole()->Log("TopLeft: %f %f\n", bounds.TopLeft().x, bounds.TopLeft().y);
-    binder.GetConsole()->Log("BottomRight: %f %f\n", bounds.BottomRight().x, bounds.BottomRight().y);
+
+    //auto position = Engine::GetInstance()->GetSceneManager()->GetScene()->GetCamera()->Position();
+    //auto bounds = Engine::GetInstance()->GetSceneManager()->GetScene()->GetCamera()->Bounds();
+
+    //binder.GetConsole()->Log("Position: %f %f\n", position.x, position.y);
+    //binder.GetConsole()->Log("TopLeft: %f %f\n", bounds.TopLeft().x, bounds.TopLeft().y);
+    //binder.GetConsole()->Log("BottomRight: %f %f\n", bounds.BottomRight().x, bounds.BottomRight().y);
 
 }
 ConsoleCmd cameraCmd("camera", CameraCommand);
