@@ -11,19 +11,16 @@
 void MapCmd(ConsoleCommandBinder& binder)
 {
     std::string mapName;
+    int port = 6666;
 
     binder
-        .Bind(mapName, "map-name")
-        .Help("Change scene to specified map.");
+        .Bind(mapName, "map-name");
 
-    auto sceneManager = Engine::GetInstance()->GetSceneManager();
-    if(!sceneManager->TrySwitchScene(StringId(mapName.c_str())))
-    {
-        Engine::GetInstance()->GetConsole()->Log("Failed to execute scene transition\n");
-        return;
-    }
+    binder.TryBind(port, "port", true);
 
-    Log("Map: %s\n", mapName.c_str());
+    binder.Help("Change scene to specified map.");
+
+    Engine::GetInstance()->StartLocalServer(port, StringId(mapName));
 }
 ConsoleCmd mapCmd("map", MapCmd);
 

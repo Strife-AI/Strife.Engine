@@ -41,7 +41,7 @@ struct NetworkInterface
 
     void SendUnreliable(const SLNet::AddressOrGUID& address, gsl::span<unsigned char> data)
     {
-        if(address == localAddress)
+        if(address == localAddress && localInterface != nullptr)
         {
             auto packet = raknetInterface->AllocatePacket(data.size_bytes());
             packet->systemAddress = localInterface->localAddress.systemAddress;
@@ -64,7 +64,7 @@ struct NetworkInterface
 
     void SendReliable(const SLNet::AddressOrGUID& address, gsl::span<unsigned char> data)
     {
-        if (address == localAddress)
+        if (address == localAddress && localInterface != nullptr)
         {
             auto packet = raknetInterface->AllocatePacket(data.size_bytes());
             packet->systemAddress = localInterface->localAddress.systemAddress;
@@ -128,7 +128,7 @@ struct NetworkInterface
     }
 
     SLNet::RakPeerInterface* raknetInterface;
-    NetworkInterface* localInterface;
+    NetworkInterface* localInterface = nullptr;
     SLNet::AddressOrGUID localAddress;
     std::queue<SLNet::Packet*> localPackets;
     SLNet::Packet* lastPacket = nullptr;
@@ -143,6 +143,8 @@ struct ServerGameClient
 
 struct BaseGameInstance
 {
+    virtual ~BaseGameInstance() = default;
+
     BaseGameInstance(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_, bool isServer)
         : sceneManager(engine, isServer),
         networkInterface(raknetInterface),
@@ -175,7 +177,7 @@ struct ServerGame : BaseGameInstance
         : BaseGameInstance(engine, raknetInterface, localAddress_, true)
     {
         isHeadless = true;
-        targetTickRate = 30;
+        targetTickRate = 60;
     }
 
     void HandleNewConnection(SLNet::Packet* packet);

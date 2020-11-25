@@ -162,7 +162,11 @@ void InputService::OnAdded()
         {
             scene->GetEngine()->GetClientGame()->onUpdateResponse = [=](SLNet::BitStream& message)
             {
-                status.VFormat("%d bytes", NearestPowerOf2(message.GetNumberOfUnreadBits(), 8) / 8);
+                auto& c = scene->replicationManager->GetClients()[scene->replicationManager->localClientId].commands;
+
+                auto last = c.IsEmpty() ? 0.0f : (*(--c.end())).timeRecorded;
+
+                status.VFormat("%d bytes (%f ms)", NearestPowerOf2(message.GetNumberOfUnreadBits(), 8) / 8, (scene->relativeTime - last) * 1000);
 
                 scene->replicationManager->Client_ReceiveUpdateResponse(message);
             };

@@ -45,19 +45,6 @@ namespace SLNet
 	const SystemAddress UNASSIGNED_SYSTEM_ADDRESS;
 }
 
-void ConnectCommand(ConsoleCommandBinder& binder)
-{
-	std::string address;
-
-	binder
-		.Bind(address, "serverAddress")
-		.Help("Connects to a server");
-
-	//Engine::GetInstance()->GetNetworkManger()->ConnectToServer(address.c_str());
-}
-
-ConsoleCmd connectCmd("connect", ConnectCommand);
-
 void NetworkManager::Update()
 {
 	SLNet::Packet* packet;

@@ -85,6 +85,7 @@ public:
     }
 
     void StartLocalServer(int port, StringId mapName);
+    void ConnectToServer(const char* address, int port);
 
 private:
     Engine() = default;

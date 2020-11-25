@@ -8,6 +8,8 @@
 #include "Scene/Scene.hpp"
 #include "Tools/Console.hpp"
 
+ConsoleVar<int> g_serverPort("port", 6666);
+
 struct BreakoutGame : IGame
 {
     void ConfigureGame(GameConfig& config) override
@@ -39,7 +41,7 @@ struct BreakoutGame : IGame
 
     void OnGameStart() override
     {
-        GetEngine()->StartLocalServer(6666, "isengard"_sid);
+        GetEngine()->StartLocalServer(g_serverPort.Value(), "isengard"_sid);
     }
 
     std::string initialConsoleCmd;

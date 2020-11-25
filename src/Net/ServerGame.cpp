@@ -104,10 +104,12 @@ void BaseGameInstance::RunFrame()
 
     scene->lastFrameStart = currentFrameStart;
 
-    if (sdlManager->ReceivedQuit())
+    if (!isHeadless)
     {
-        // FIXME MW
-        //_activeGame = false;
+        if (sdlManager->ReceivedQuit())
+        {
+            engine->QuitGame();
+        }
     }
 }
 
@@ -184,7 +186,10 @@ void ServerGame::HandleNewConnection(SLNet::Packet* packet)
 
     response.Write(PacketType::NewConnectionResponse);
     response.Write(clientId);
+    response.Write(sceneManager.GetScene()->MapSegmentName().key);
     networkInterface.SendReliable(packet->systemAddress, response);
+
+    Log("Client %d connected\n", clientId);
 }
 
 void ServerGame::UpdateNetwork()
@@ -228,9 +233,18 @@ void ClientGame::UpdateNetwork()
             message.IgnoreBytes(1);
 
             message.Read(clientId);
+
+            StringId mapName;
+            message.Read(mapName.key);
+            if(!sceneManager.TrySwitchScene(mapName))
+            {
+                Log("Failed to switch scene\n");
+                return;
+            }
+
             Log("Assigned client id %d\n", clientId);
             serverAddress = packet->systemAddress;
-            GetScene()->SendEvent(JoinedServerEvent(clientId));
+            sceneManager.GetNewScene()->SendEvent(JoinedServerEvent(clientId));
             break;
         }
         case PacketType::UpdateResponse:
