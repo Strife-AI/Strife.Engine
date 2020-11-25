@@ -13,7 +13,6 @@ public:
 private:
     void ReceiveEvent(const IEntityEvent& ev) override;
     void ServerFixedUpdate();
-    void ClientFixedUpdate();
 
     bool _isServer;
     int currentFixedUpdateId = 0;

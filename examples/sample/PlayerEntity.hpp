@@ -34,7 +34,7 @@ enum class PlayerState
     Attacking
 };
 
-DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable, IUpdatable
+DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable
 {
     void OnAdded(const EntityDictionary& properties) override;
     void ReceiveEvent(const IEntityEvent& ev) override;
@@ -47,8 +47,6 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
 
     void SetMoveDirection(Vector2 direction);
 
-    void Update(float deltaTime) override;
-
     RigidBodyComponent* rigidBody;
     NetComponent* net;
 
@@ -57,7 +55,6 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
     float updateTargetTimer = 0;
     float attackCoolDown = 0;
 
-    SyncVar<Vector2> position{ { 0, 0}, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent, SyncVarDeltaMode::SmallIntegerOffset };
     SyncVar<float> health{ 100, SyncVarInterpolation::None, SyncVarUpdateFrequency::Infrequent };
     SyncVar<bool> showAttack{ false, SyncVarInterpolation::None, SyncVarUpdateFrequency::Infrequent };
     SyncVar<Vector2> attackPosition { { 0, 0}, SyncVarInterpolation::Linear };

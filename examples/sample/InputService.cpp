@@ -38,11 +38,9 @@ ConsoleVar<bool> autoConnect("auto-connect", false);
 
 void InputService::ReceiveEvent(const IEntityEvent& ev)
 {
-    auto net = scene->GetEngine()->GetNetworkManger();
-
     if(ev.Is<SceneLoadedEvent>())
     {
-        if(net->IsClient() && autoConnect.Value())
+        if(!scene->isServer && autoConnect.Value())
         {
             Sleep(2000);
             scene->GetEngine()->GetConsole()->Execute("connect 127.0.0.1");
@@ -51,7 +49,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             //scene->GetCameraFollower()->CenterOn({ 800, 800});
         }
 
-        if(net->IsServer())
+        if(scene->isServer)
         {
             scene->CreateEntity({
                 EntityProperty::EntityType<PuckEntity>(),
@@ -66,17 +64,23 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        if (net->IsServer())
+        if (scene->isServer)
         {
-            status.VFormat("Total time: %d", totalTime);
-            totalTime = 0;
+            std::string result;
+
+            for(auto& c : scene->replicationManager->GetClients())
+            {
+                result += "[" + std::to_string(c.first) + "] = " + std::to_string((int)scene->replicationManager->GetCurrentSnapshotId() - (int)c.second.lastReceivedSnapshotId) + "\n";
+            }
+
+            status.VFormat("%s", result.c_str());
         }
 
         Render(renderEvent->renderer);
     }
     else if (auto fixedUpdateEvent = ev.Is<FixedUpdateEvent>())
     {
-        if (net->IsServer())
+        if (scene->isServer)
         {
 
         }
@@ -93,7 +97,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto connectedEvent = ev.Is<PlayerConnectedEvent>())
     {
-        if (net->IsServer())
+        if (scene->isServer)
         {
             Vector2 positions[3] = {
                 Vector2(2048 - 1000, 2048 - 1000),
@@ -140,39 +144,50 @@ PlayerEntity* InputService::GetPlayerByNetId(int netId)
 
 void InputService::OnAdded()
 {
-    auto net = scene->GetEngine()->GetNetworkManger();
-    if(net->IsServer())
+    if(scene->isServer)
     {
         scene->GetCameraFollower()->FollowMouse();
 
-        net->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
+        if (scene->GetEngine()->GetServerGame())
         {
-            scene->replicationManager->Server_ProcessUpdateRequest(message, response, clientId);
-        };
+            scene->GetEngine()->GetServerGame()->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
+            {
+                scene->replicationManager->Server_ProcessUpdateRequest(message, response, clientId);
+            };
+        }
     }
     else
     {
-        net->onUpdateResponse = [=](SLNet::BitStream& message)
+        if (scene->GetEngine()->GetClientGame())
         {
-            status.VFormat("%d bytes", NearestPowerOf2(message.GetNumberOfUnreadBits(), 8) / 8);
+            scene->GetEngine()->GetClientGame()->onUpdateResponse = [=](SLNet::BitStream& message)
+            {
+                auto& c = scene->replicationManager->GetClients()[scene->replicationManager->localClientId].commands;
 
-            scene->replicationManager->Client_ReceiveUpdateResponse(message);
-        };
+                auto last = c.IsEmpty() ? 0.0f : (*(--c.end())).timeRecorded;
+
+                status.VFormat("%d bytes (%f ms)", NearestPowerOf2(message.GetNumberOfUnreadBits(), 8) / 8, (scene->relativeTime - last) * 1000);
+
+                scene->replicationManager->Client_ReceiveUpdateResponse(message);
+            };
+        }
     }
 }
 
 void InputService::HandleInput()
 {
-    auto net = scene->GetEngine()->GetNetworkManger();
-    auto peer = net->GetPeerInterface();
-
     if (g_quit.IsPressed())
     {
         scene->GetEngine()->QuitGame();
     }
 
-    if (net->IsClient())
+    if (!scene->isServer)
     {
+        if(scene->deltaTime == 0)
+        {
+            return;
+        }
+
         auto mouse = scene->GetEngine()->GetInput()->GetMouse();
 
         if(mouse->LeftPressed())
@@ -232,7 +247,7 @@ void InputService::HandleInput()
             }
         }
 
-        scene->replicationManager->Client_SendUpdateRequest(scene->deltaTime, net);
+        scene->replicationManager->Client_SendUpdateRequest(scene->deltaTime, scene->GetEngine()->GetClientGame());
     }
 }
 

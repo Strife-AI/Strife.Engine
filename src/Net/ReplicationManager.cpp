@@ -2,7 +2,7 @@
 
 #include <slikenet/BitStream.h>
 
-
+#include "Net/ServerGame.hpp"
 #include "NetworkManager.hpp"
 #include "Scene/Scene.hpp"
 
@@ -246,7 +246,7 @@ void ReplicationManager::Client_ReceiveUpdateResponse(SLNet::BitStream& stream)
     }
 }
 
-void ReplicationManager::Client_SendUpdateRequest(float deltaTime, NetworkManager* networkManager)
+void ReplicationManager::Client_SendUpdateRequest(float deltaTime, ClientGame* game)
 {
     _sendUpdateTimer -= _scene->deltaTime;
 
@@ -300,12 +300,12 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, NetworkManage
         request.commandCount = commandCount;
         request.lastReceivedSnapshotId = client.lastReceivedSnapshotId;
 
-        networkManager->SendPacketToServer([&](SLNet::BitStream& message)
-        {
-            message.Write(PacketType::UpdateRequest);
-            ReadWriteBitStream stream(message, false);
-            request.ReadWrite(stream);
-        });
+        SLNet::BitStream message;
+        message.Write(PacketType::UpdateRequest);
+        ReadWriteBitStream stream(message, false);
+        request.ReadWrite(stream);
+
+        game->networkInterface.SendUnreliable(game->serverAddress, message);
     }
 }
 
@@ -442,6 +442,8 @@ void ReadVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, float 
 
     bool anyChanged = stream.ReadBit();
 
+
+
     if (!anyChanged)
     {
         return;
@@ -452,7 +454,7 @@ void ReadVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, float 
 
         if (infrequent.varCount == 0)
         {
-            return;
+
         }
         else if (infrequent.varCount == 1)
         {
@@ -602,6 +604,12 @@ void ReplicationManager::Client_AddPlayerCommand(const PlayerCommand& command)
     auto& client = _clientStateByClientId[localClientId];
 
     copy.id = ++client.nextCommandSequenceNumber;
+
+    if(client.commands.IsFull())
+    {
+        client.commands.Dequeue();
+    }
+
     client.commands.Enqueue(copy);
 }
 
@@ -625,6 +633,11 @@ void ReplicationManager::ReceiveEvent(const IEntityEvent& ev)
 {
     if (ev.Is<EndOfUpdateEvent>())
     {
+        if(scene->deltaTime == 0)
+        {
+            return;
+        }
+
         ++_currentSnapshotId;
         if (_isServer)
         {
