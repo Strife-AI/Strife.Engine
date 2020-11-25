@@ -42,8 +42,6 @@ public:
     Console* GetConsole() const { return _console; }
     const std::vector<std::string>& Args() const { return _args; }
 
-    Scene* GetScene();
-
 private:
     std::vector<std::string> _args;
     std::string _usage;

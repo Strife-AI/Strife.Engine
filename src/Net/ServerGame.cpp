@@ -5,6 +5,7 @@
 
 #include "Engine.hpp"
 #include "Renderer.hpp"
+#include "ReplicationManager.hpp"
 #include "SdlManager.hpp"
 #include "Scene/Scene.hpp"
 #include "System/Input.hpp"
@@ -128,7 +129,7 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
     scene->GetCamera()->SetZoom(1);// screenSize.y / (1080 / 2));
 
     auto camera = scene->GetCamera();
-    renderer->BeginRender(camera, Vector2(0, 0), renderDeltaTime, scene->relativeTime);
+    renderer->BeginRender(scene, camera, Vector2(0, 0), renderDeltaTime, scene->relativeTime);
     scene->RenderEntities(renderer);
 
     scene->SendEvent(RenderImguiEvent());
@@ -161,7 +162,7 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
         Camera uiCamera;
         uiCamera.SetScreenSize(scene->GetCamera()->ScreenSize());
         uiCamera.SetZoom(screenSize.y / 768.0f);
-        renderer->BeginRender(&uiCamera, uiCamera.TopLeft(), renderDeltaTime, scene->relativeTime);
+        renderer->BeginRender(scene, &uiCamera, uiCamera.TopLeft(), renderDeltaTime, scene->relativeTime);
         input->GetMouse()->SetMouseScale(Vector2::Unit() * uiCamera.Zoom());
 
         if (console->IsOpen())

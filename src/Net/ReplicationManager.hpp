@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include "Memory/CircularQueue.hpp"
@@ -23,6 +24,29 @@ struct WorldState
 {
     std::vector<int> entities;
     unsigned int snapshotId;
+};
+
+DEFINE_EVENT(PlayerConnectedEvent)
+{
+    PlayerConnectedEvent(int id_, std::optional<Vector2> = std::nullopt)
+        : id(id_)
+    {
+
+    }
+
+    int id;
+    std::optional<Vector2> position;
+};
+
+DEFINE_EVENT(JoinedServerEvent)
+{
+    JoinedServerEvent(int selfId_)
+        : selfId(selfId_)
+    {
+
+    }
+
+    int selfId;
 };
 
 struct WorldDiff

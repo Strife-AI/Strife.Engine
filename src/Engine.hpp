@@ -4,7 +4,6 @@
 
 
 #include "Memory/BlockAllocator.hpp"
-#include "Net/NetworkManager.hpp"
 #include "Net/ServerGame.hpp"
 #include "Tools/ConsoleCmd.hpp"
 #include "Tools/ConsoleVar.hpp"
@@ -47,7 +46,6 @@ public:
     PlotManager* GetPlotManager() { return _plotManager; }
     MetricsManager* GetMetricsManager() { return _metricsManager; }
     Renderer* GetRenderer() { return _renderer; }
-    SceneManager* GetSceneManager() { return _sceneManager; }
     BlockAllocator* GetDefaultBlockAllocator() { return _defaultBlockAllocator; }
     SoundManager* GetSoundManager() { return _soundManager; }
     ServerGame* GetServerGame() { return _serverGame.get(); }
@@ -70,8 +68,6 @@ public:
     void ResumeGame();
 
     bool isInitialized = false;
-
-    ConsoleVar<int> targetFps = ConsoleVar<int>("targetFps", 60);
 
     void SetLoadResources(const std::function<void()>& loadResources)
     {
@@ -101,7 +97,6 @@ private:
     PlotManager* _plotManager = nullptr;
     MetricsManager* _metricsManager = nullptr;
     Renderer* _renderer = nullptr;
-    SceneManager* _sceneManager = nullptr;
     BlockAllocator* _defaultBlockAllocator;
     SoundManager* _soundManager;
 

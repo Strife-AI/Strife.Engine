@@ -81,17 +81,6 @@ Engine* Engine::Initialize(const EngineConfig& config)
     Log("Initializing sound\n");
     engine->_soundManager = new SoundManager;
 
-    engine->_sceneManager = new SceneManager(engine, false);
-
-    if(isServer.Value())
-    {
-        engine->targetFps.SetValue(30);
-    }
-    else
-    {
-        engine->targetFps.SetValue(60);
-    }
-
     UiCanvas::Initialize(engine->_soundManager);
 
     WindowSizeChangedEvent(engine->_sdlManager->WindowSize().x, engine->_sdlManager->WindowSize().y).Send();

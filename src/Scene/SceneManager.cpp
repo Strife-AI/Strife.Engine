@@ -24,21 +24,6 @@ void MapCmd(ConsoleCommandBinder& binder)
 }
 ConsoleCmd mapCmd("map", MapCmd);
 
-void SegmentCmd(ConsoleCommandBinder& binder)
-{
-    std::string segmentName;
-
-    binder
-        .Bind(segmentName, "segmentName")
-        .Help("Appends a segment to the end of the level");
-
-    auto sceneManager = Engine::GetInstance()->GetSceneManager();
-    auto scene = sceneManager->GetNewScene() != nullptr ? sceneManager->GetNewScene() : sceneManager->GetScene();
-
-    scene->LoadMapSegment(StringId(segmentName.c_str()));
-}
-ConsoleCmd segmentCmd("segment", SegmentCmd);
-
 SceneManager::SceneManager(Engine* engine, bool isServer)
     : _engine(engine),
     _scene(new Scene(engine, ""_sid, isServer)),
