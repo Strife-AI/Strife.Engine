@@ -88,8 +88,6 @@ void PlayerEntity::Render(Renderer* renderer)
 
 void PlayerEntity::ServerFixedUpdate(float deltaTime)
 {
-    position.SetValue(Center());
-
     auto client = net;
 
     attackCoolDown -= deltaTime;
@@ -206,9 +204,4 @@ void PlayerEntity::ServerUpdate(float deltaTime)
 void PlayerEntity::SetMoveDirection(Vector2 direction)
 {
     rigidBody->SetVelocity(direction);
-}
-
-void PlayerEntity::Update(float deltaTime)
-{
-    SetCenter(position.currentValue);
 }

@@ -2,27 +2,19 @@
 
 #include "Engine.hpp"
 #include "Components/NetComponent.hpp"
+#include "Math/Random.hpp"
 #include "Scene/Scene.hpp"
 #include "Scene/SceneManager.hpp"
 #include "slikenet/peerinterface.h"
 #include "System/Logger.hpp"
 #include "Tools/Console.hpp"
+#include "Net/ServerGame.hpp"
 
-/*
-- Add a server sequence number for snapshots x 
-- At the end of the frame, add the current value of every sync var to the list of snapshots x
-    * Record the snapshot sequence number x 
-- In the server response, include the patch info e.g. this is for 2 -> 5 x 
-- On the server, when writing vars, write the value diffed from the last one the client has
-- On the client, read the server snapshot number from the response packet and record it x
-    - Discard any duplicate/out of order updates x
-- 
-- In the update request, include the last snapshot that arrived
-- On the server, read the last snapshot that arrived
-- On the server, keep track of the entities at each snapshot so we can send which ones were created
-- Making entity positions syncvars
- */
-
+bool SimulatePacketLoss()
+{
+	return false;
+	//return Rand(0, 1) < 0.5;
+}
 
 NetworkManager::NetworkManager(bool isServer)
     : _isServer(isServer)
@@ -33,27 +25,11 @@ NetworkManager::NetworkManager(bool isServer)
 
     if (_isServer)
     {
-        Log("Running as server\n");
-        SLNet::SocketDescriptor sd(Port, nullptr);
-        auto result = _peerInterface->Startup(MaxPlayers, &sd, 1);
 
-		if(result != SLNet::RAKNET_STARTED)
-		{
-			FatalError("Failed to startup server");
-		}
-
-        _peerInterface->SetMaximumIncomingConnections(MaxPlayers);
     }
     else
     {
         Log("Running as client\n");
-		SLNet::SocketDescriptor sd;
-        auto result = _peerInterface->Startup(1, &sd, 1);
-
-		if (result != SLNet::RAKNET_STARTED)
-		{
-			FatalError("Failed to startup client");
-		}
     }
 }
 
@@ -66,20 +42,8 @@ NetworkManager::~NetworkManager()
 namespace SLNet
 {
 	const RakNetGUID UNASSIGNED_RAKNET_GUID((uint64_t)-1);
+	const SystemAddress UNASSIGNED_SYSTEM_ADDRESS;
 }
-
-void ConnectCommand(ConsoleCommandBinder& binder)
-{
-	std::string address;
-
-	binder
-		.Bind(address, "serverAddress")
-		.Help("Connects to a server");
-
-	Engine::GetInstance()->GetNetworkManger()->ConnectToServer(address.c_str());
-}
-
-ConsoleCmd connectCmd("connect", ConnectCommand);
 
 void NetworkManager::Update()
 {
@@ -97,9 +61,16 @@ void NetworkManager::Update()
 	for (packet = _peerInterface->Receive(); packet; _peerInterface->DeallocatePacket(packet), packet = _peerInterface->Receive())
 	{
 		SLNet::BitStream message(packet->data, packet->length, false);
-		message.IgnoreBytes(sizeof(SLNet::MessageID));		// Skip message header
+		uint8 messageId;
+
+		message.Read(messageId);
 
 		PacketType type = (PacketType)packet->data[0];
+
+		if((type == PacketType::UpdateRequest || type == PacketType::UpdateResponse) && SimulatePacketLoss())
+		{
+			continue;
+		}
 
 		if(_isServer)
 		{
@@ -144,13 +115,11 @@ bool NetworkManager::ProcessServerPacket(SLNet::BitStream& message, PacketType t
 		    ++_clientId;
 			_clientIdByGuid[SLNet::RakNetGUID::ToUint32(packet->guid)] = _clientId;
 
-		    response.Write(PacketType::NewConnectionResponse);
-		    response.Write(_clientId);
-			GetScene()->SendEvent(PlayerConnectedEvent(_clientId));
+		    
 		    return true;
 
 		case PacketType::UpdateRequest:
-			onUpdateRequest(message, response, _clientIdByGuid[SLNet::RakNetGUID::ToUint32(packet->guid)]);
+			//onUpdateRequest(message, response, _clientIdByGuid[SLNet::RakNetGUID::ToUint32(packet->guid)]);
 			return true;
 	}
 
@@ -161,14 +130,11 @@ void NetworkManager::ProcessClientPacket(SLNet::BitStream& message, PacketType t
 {
 	switch(type)
 	{
-	    case PacketType::NewConnectionResponse:
-			message.Read(_clientId);
-			Log("Assigned client id %d\n", _clientId);
-			GetScene()->SendEvent(JoinedServerEvent(_clientId));
+	    
 			break;
 
 		case PacketType::UpdateResponse:
-			onUpdateResponse(message);
+			//onUpdateResponse(message);
 			break;
 	}
 }

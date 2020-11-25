@@ -7,6 +7,8 @@
 
 #include "Scene/IEntityEvent.hpp"
 
+enum class PacketType : unsigned char;
+
 namespace SLNet
 {
     class RakPeerInterface;
@@ -35,21 +37,6 @@ DEFINE_EVENT(JoinedServerEvent)
     int selfId;
 };
 
-enum class PacketType : unsigned char
-{
-    NewConnection = (unsigned char)ID_NEW_INCOMING_CONNECTION,
-
-    NewConnectionResponse = (unsigned char)ID_USER_PACKET_ENUM + 1,
-    UpdateRequest,
-    UpdateResponse
-};
-
-struct Client
-{
-    SLNet::AddressOrGUID address;
-
-
-};
 
 class NetworkManager
 {
@@ -72,9 +59,6 @@ public:
     SLNet::RakPeerInterface* GetPeerInterface() const { return _peerInterface; }
 
     void SendPacketToServer(const std::function<void(SLNet::BitStream&)>& writeFunc);
-
-    std::function<void(SLNet::BitStream& message, SLNet::BitStream& response, int clientId)> onUpdateRequest;
-    std::function<void(SLNet::BitStream& message)> onUpdateResponse;
 
 private:
     bool ProcessServerPacket(SLNet::BitStream& message, PacketType type, SLNet::Packet* packet, SLNet::BitStream& response);

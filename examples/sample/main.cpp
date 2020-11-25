@@ -8,6 +8,8 @@
 #include "Scene/Scene.hpp"
 #include "Tools/Console.hpp"
 
+ConsoleVar<int> g_serverPort("port", 6666);
+
 struct BreakoutGame : IGame
 {
     void ConfigureGame(GameConfig& config) override
@@ -31,10 +33,15 @@ struct BreakoutGame : IGame
         if (scene->MapSegmentName() != "empty-map"_sid)
         {
             scene->AddService<InputService>();
-            scene->AddService<NetworkPhysics>(GetEngine()->GetNetworkManger()->IsServer());
+            scene->AddService<NetworkPhysics>(scene->isServer);
 
             scene->GetEngine()->GetConsole()->Execute("light 0");
         }
+    }
+
+    void OnGameStart() override
+    {
+        GetEngine()->StartLocalServer(g_serverPort.Value(), "isengard"_sid);
     }
 
     std::string initialConsoleCmd;

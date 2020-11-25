@@ -11,19 +11,16 @@
 void MapCmd(ConsoleCommandBinder& binder)
 {
     std::string mapName;
+    int port = 6666;
 
     binder
-        .Bind(mapName, "map-name")
-        .Help("Change scene to specified map.");
+        .Bind(mapName, "map-name");
 
-    auto sceneManager = Engine::GetInstance()->GetSceneManager();
-    if(!sceneManager->TrySwitchScene(StringId(mapName.c_str())))
-    {
-        Engine::GetInstance()->GetConsole()->Log("Failed to execute scene transition\n");
-        return;
-    }
+    binder.TryBind(port, "port", true);
 
-    Log("Map: %s\n", mapName.c_str());
+    binder.Help("Change scene to specified map.");
+
+    Engine::GetInstance()->StartLocalServer(port, StringId(mapName));
 }
 ConsoleCmd mapCmd("map", MapCmd);
 
@@ -42,9 +39,10 @@ void SegmentCmd(ConsoleCommandBinder& binder)
 }
 ConsoleCmd segmentCmd("segment", SegmentCmd);
 
-SceneManager::SceneManager(Engine* engine)
+SceneManager::SceneManager(Engine* engine, bool isServer)
     : _engine(engine),
-    _scene(new Scene(engine, ""_sid))
+    _scene(new Scene(engine, ""_sid, isServer)),
+    _isServer(isServer)
 {
     auto emptyMapSegment = new MapSegment;
     emptyMapSegment->name = "empty-map"_sid;
@@ -86,7 +84,7 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
 {
     delete _newScene;
 
-    _newScene = new Scene(_engine, mapSegment->name);
+    _newScene = new Scene(_engine, mapSegment->name, _isServer);
 
     auto screenSize = _engine->GetSdlManager()->WindowSize().AsVectorOfType<float>();
     _newScene->GetCamera()->SetScreenSize(screenSize);
