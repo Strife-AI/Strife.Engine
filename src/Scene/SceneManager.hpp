@@ -16,15 +16,15 @@ public:
     Scene* GetScene() const { return _scene; }
     Scene* GetNewScene() const { return _newScene; }
     bool TrySwitchScene(StringId name);
+    void DoSceneTransition();
 
 protected:
 
     Engine* _engine;
 
 private:
-    friend class BaseGameInstance;
+    friend struct BaseGameInstance;
 
-    void DoSceneTransition();
     void BuildNewScene(const MapSegment* map);
     void DestroyScene();
 

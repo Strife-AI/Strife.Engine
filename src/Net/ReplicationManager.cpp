@@ -604,6 +604,12 @@ void ReplicationManager::Client_AddPlayerCommand(const PlayerCommand& command)
     auto& client = _clientStateByClientId[localClientId];
 
     copy.id = ++client.nextCommandSequenceNumber;
+
+    if(client.commands.IsFull())
+    {
+        client.commands.Dequeue();
+    }
+
     client.commands.Enqueue(copy);
 }
 

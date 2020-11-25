@@ -116,6 +116,15 @@ Engine::~Engine()
             delete _plotManager;
             delete _sdlManager;
             delete _input;
+
+            _serverGame = nullptr;
+            _clientGame = nullptr;
+
+            auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+            if(peerInterface->IsActive())
+            {
+                peerInterface->Shutdown(500);
+            }
         }
         catch(const std::exception& e)
         {
@@ -198,7 +207,7 @@ void Engine::RunFrame()
 
     AccurateSleepFor(timeUntilUpdate);
     nextGameToRun->RunFrame();
-    nextGameToRun->nextUpdateTime = GetTimeSeconds() + 1.0f / nextGameToRun->targetTickRate;
+    nextGameToRun->nextUpdateTime = now + 1.0f / nextGameToRun->targetTickRate;
 }
 
 void Engine::PauseGame()
@@ -211,19 +220,44 @@ void Engine::ResumeGame()
     isPaused = false;
 }
 
+void ConnectCommand(ConsoleCommandBinder& binder)
+{
+    std::string address;
+    int port;
+
+    binder
+        .Bind(address, "serverAddress")
+        .Bind(port, "port")
+        .Help("Connects to a server");
+
+    Engine::GetInstance()->ConnectToServer(address.c_str(), port);
+}
+
+ConsoleCmd connectCmd("connect", ConnectCommand);
+
 void Engine::StartLocalServer(int port, StringId mapName)
 {
-    SLNet::SocketDescriptor sd;
+    SLNet::SocketDescriptor sd(port, nullptr);
     auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+
+    if(peerInterface->IsActive())
+    {
+        peerInterface->Shutdown(500);
+    }
+
     auto result = peerInterface->Startup(1, &sd, 1);
 
     if (result != SLNet::RAKNET_STARTED)
     {
-        FatalError("Failed to startup client");
+        FatalError("Failed to startup local server");
     }
 
-    _serverGame = std::make_unique<ServerGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.1", 1)));
-    _clientGame = std::make_unique<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
+    peerInterface->SetMaximumIncomingConnections(ServerGame::MaxClients);
+
+    Log("Listening on %d...\n", port);
+
+    _serverGame = std::make_unique<ServerGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
+    _clientGame = std::make_unique<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.3", 1)));
 
     _serverGame->networkInterface.SetLocalAddress(&_clientGame->networkInterface, _clientGame->localAddress);
     _clientGame->networkInterface.SetLocalAddress(&_serverGame->networkInterface, _serverGame->localAddress);
@@ -234,6 +268,36 @@ void Engine::StartLocalServer(int port, StringId mapName)
     unsigned char data[1] = { (unsigned char)PacketType::NewConnection };
 
     _clientGame->networkInterface.SendReliable(_serverGame->localAddress, data);
+}
+
+void Engine::ConnectToServer(const char* address, int port)
+{
+    SLNet::SocketDescriptor sd;
+    auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+
+    if (peerInterface->IsActive())
+    {
+        peerInterface->Shutdown(500);
+    }
+
+    auto result = peerInterface->Startup(1, &sd, 1);
+
+    Log("Trying to connect to %s:%d...\n", address, port);
+
+    if (result != SLNet::RAKNET_STARTED)
+    {
+        FatalError("Failed to startup client");
+    }
+
+    auto connectResult = peerInterface->Connect(address, port, nullptr, 0);
+
+    if (connectResult != SLNet::CONNECTION_ATTEMPT_STARTED)
+    {
+        Log("Failed to initiate server connection");
+    }
+
+    _serverGame = nullptr;
+    _clientGame = std::make_unique<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
 }
 
 static void ReloadResources(ConsoleCommandBinder& binder)

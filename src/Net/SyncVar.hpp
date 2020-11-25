@@ -79,7 +79,8 @@ inline void WriteSyncVarDelta<Vector2>(const Vector2& before, const Vector2& aft
 
         if (!forceFullUpdate
             && offsetX >= -11 && offsetX <= 10
-            && offsetY >= -11 && offsetY <= 10)
+            && offsetY >= -11 && offsetY <= 10
+            && false)
         {
             unsigned int encodedOffsetX = offsetX + 11;
             unsigned int encodedOffsetY = offsetY + 11;
