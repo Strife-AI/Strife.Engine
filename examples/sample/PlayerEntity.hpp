@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ML.hpp"
 #include "Components/NetComponent.hpp"
 #include "Scene/BaseEntity.hpp"
 
@@ -34,7 +35,7 @@ enum class PlayerState
     Attacking
 };
 
-DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable
+DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable, INeuralNetworkEntity<PlayerNetwork>
 {
     void OnAdded(const EntityDictionary& properties) override;
     void ReceiveEvent(const IEntityEvent& ev) override;
@@ -44,8 +45,10 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
     void Render(Renderer* renderer) override;
     void ServerFixedUpdate(float deltaTime) override;
     void ServerUpdate(float deltaTime) override;
-
     void SetMoveDirection(Vector2 direction);
+
+    void CollectData(InputType& outInput) override;
+    void ReceiveDecision(OutputType& output) override;
 
     RigidBodyComponent* rigidBody;
     NetComponent* net;
