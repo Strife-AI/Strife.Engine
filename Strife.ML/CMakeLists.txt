@@ -6,7 +6,7 @@ add_library(Strife.ML STATIC
 	Trainer.cpp
 	LearningRateSchedule.cpp
 	NeuralNetwork.cpp
-)
+ "NewStuff.hpp" "NewStuff.cpp")
 
 find_package(torch REQUIRED)
 target_link_libraries(Strife.ML PUBLIC torch Strife.Engine)
