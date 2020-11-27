@@ -2,11 +2,21 @@
 #include <memory>
 #include <unordered_set>
 #include <gsl/span>
-
-
-
 #include "ThreadPool.hpp"
 #include "torch/nn/module.h"
+
+struct ModelSerializer
+{
+    template<typename T>
+    ModelSerializer& Add(T& value) { return *this; }    // TODO
+};
+
+struct IModel
+{
+    virtual ~IModel() = default;
+
+    virtual void Serialize(ModelSerializer& serializer) = 0;
+};
 
 struct INeuralNetworkInternal : torch::nn::Module
 {
