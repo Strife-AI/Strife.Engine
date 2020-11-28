@@ -3,32 +3,31 @@
 
 struct INeuralNetworkEntity
 {
-    virtual void Update(float deltaTime) = 0;
+    virtual void UpdateNeuralNetwork(float deltaTime) = 0;
     virtual ~INeuralNetworkEntity() = default;
 };
 
 template<typename TNeuralNetwork>
-struct NeuralNetworkEntity : INeuralNetworkEntity
+struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeuralNetwork>>
 {
     using InputType = typename TNeuralNetwork::InputType;
     using OutputType = typename TNeuralNetwork::OutputType;
     using NetworkType = TNeuralNetwork;
 
-    NeuralNetworkEntity(int decisionSequenceLength_ = 1)
+    NeuralNetworkComponent(int decisionSequenceLength_ = 1)
         : decisionInputs(StrifeML::MlUtil::MakeSharedArray<InputType>(decisionSequenceLength_)),
         decisionSequenceLength(decisionSequenceLength_)
     {
 
     }
 
-    virtual ~NeuralNetworkEntity() = default;
+    virtual ~NeuralNetworkComponent() = default;
 
-    virtual void CollectData(InputType& outInput) = 0;
-    virtual void ReceiveDecision(OutputType& output) = 0;
+    std::function<void(InputType& input)> collectData;
 
-    virtual void Update(float deltaTime) override
+    void Update(float deltaTime) override
     {
-        
+        //networkContext->decider->MakeDecision(serializedDecisionInputs, decisionSequenceLength);
     }
 
     void SetNetwork(const char* name)
@@ -36,8 +35,12 @@ struct NeuralNetworkEntity : INeuralNetworkEntity
         // TODO
     }
 
+
+
     StrifeML::NetworkContext<NetworkType>* networkContext = nullptr;
     // std::shared_ptr<typename IDecider<NetworkType>::MakeDecisionWorkItem> decisionInProgress;
     std::shared_ptr<InputType[]> decisionInputs;
+    std::shared_ptr<StrifeML::SerializedModel[]> serializedDecisionInputs;
+
     int decisionSequenceLength = 1;
 };

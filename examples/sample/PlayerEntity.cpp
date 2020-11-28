@@ -18,6 +18,15 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
     scene->SendEvent(PlayerAddedToGame(this));
 
     scene->GetService<InputService>()->players.push_back(this);
+
+    if (scene->isServer)
+    {
+        auto nn = AddComponent<NeuralNetworkComponent<PlayerNetwork>>();
+        nn->collectData = [=](PlayerModelInput& input)
+        {
+            input.velocity = rigidBody->GetVelocity();
+        };
+    }
 }
 
 void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)
@@ -202,15 +211,5 @@ void PlayerEntity::ServerUpdate(float deltaTime)
 void PlayerEntity::SetMoveDirection(Vector2 direction)
 {
     rigidBody->SetVelocity(direction);
-}
-
-void PlayerEntity::CollectData(InputType& outInput)
-{
-    outInput.velocity = Center();
-}
-
-void PlayerEntity::ReceiveDecision(OutputType& output)
-{
-
 }
 
