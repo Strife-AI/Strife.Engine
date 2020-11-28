@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 
 add_library(Strife.ML STATIC
-	ExperienceManager.cpp
-	Decider.cpp
-	Trainer.cpp
-	LearningRateSchedule.cpp
-	NeuralNetwork.cpp
- "NewStuff.hpp" "NewStuff.cpp" "ThreadPool.hpp" "OtherMl.hpp")
+	
+	
+	
+	
+	
+ "NewStuff.hpp" "NewStuff.cpp" "ThreadPool.hpp" )
 
 find_package(torch REQUIRED)
 target_link_libraries(Strife.ML PUBLIC torch Strife.Engine)
