@@ -153,12 +153,14 @@ add_library(Strife.Engine STATIC
         "Physics/PathFinding.cpp"
         "Scene/EntityManager.cpp"
         
-     "Net/ServerGame.cpp")
+     "Net/ServerGame.cpp" "ML/ML.hpp")
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
 # Workaround because OALWrapper can't find SDL path
 find_path(SDL_INCLUDE_DIR SDL.h PATH_SUFFIXES SDL2)
+
+find_package(torch REQUIRED)
 
 target_include_directories(Strife.Engine
         PUBLIC
@@ -177,6 +179,7 @@ target_link_libraries(Strife.Engine PUBLIC
     unofficial::box2d::box2d
     OALWrapper
     SLikeNet
+    Strife.ML
     )
 
 target_compile_definitions(Strife.Engine PUBLIC IMGUI_IMPL_OPENGL_LOADER_GL3W)

@@ -23,9 +23,9 @@ endif()
 
 list(APPEND CMAKE_PREFIX_PATH "${TORCH_DIR}/share/cmake/Torch")
 
+add_subdirectory(Strife.ML)
 add_subdirectory(src)
 add_subdirectory(examples)
 add_subdirectory(OALWrapper)
-add_subdirectory(Strife.ML)
 add_subdirectory(ContentPipeline)
 add_subdirectory(tmxlite/tmxlite)

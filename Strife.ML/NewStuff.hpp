@@ -141,7 +141,7 @@ namespace StrifeML
 
         void MakeDecision()
         {
-            networkContext->decider->MakeDecision(decisionInputs, decisionSequenceLength);
+            //networkContext->decider->MakeDecision(decisionInputs, decisionSequenceLength);
         }
 
         void SetNetwork(const char* name)
@@ -150,7 +150,7 @@ namespace StrifeML
         }
 
         NetworkContext<NetworkType>* networkContext = nullptr;
-        std::shared_ptr<typename IDecider<NetworkType>::MakeDecisionWorkItem> decisionInProgress;
+       // std::shared_ptr<typename IDecider<NetworkType>::MakeDecisionWorkItem> decisionInProgress;
         std::shared_ptr<InputType[]> decisionInputs;
         int decisionSequenceLength = 1;
     };
