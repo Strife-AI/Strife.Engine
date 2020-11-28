@@ -1,4 +1,5 @@
 #include "EntityManager.hpp"
+#include "ML/ML.hpp"
 
 EntityManager::EntityManager()
     : freeEntityHeaders(entityHeaders.begin(), MaxEntities)
@@ -22,6 +23,8 @@ void EntityManager::RegisterEntity(Entity* entity)
     AddIfImplementsInterface(renderables, entity);
     AddIfImplementsInterface(hudRenderables, entity);
 
+    AddIfImplementsInterface(neuralNetworkEntities, entity);
+
     EntityHeader* header = freeEntityHeaders.Borrow();
 
     header->id = _nextEntityId++;
@@ -43,6 +46,8 @@ void EntityManager::UnregisterEntity(Entity* entity)
 
     RemoveIfImplementsInterface(renderables, entity);
     RemoveIfImplementsInterface(hudRenderables, entity);
+
+    RemoveIfImplementsInterface(neuralNetworkEntities, entity);
 
     EntityHeader* header = entity->header;
     header->id = InvalidEntityHeaderId;

@@ -18,8 +18,6 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
     scene->SendEvent(PlayerAddedToGame(this));
 
     scene->GetService<InputService>()->players.push_back(this);
-
-    MakeDecision();
 }
 
 void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)

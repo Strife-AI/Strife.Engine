@@ -2,6 +2,7 @@
 
 #include "ML.hpp"
 #include "Components/NetComponent.hpp"
+#include "ML/ML.hpp"
 #include "Scene/BaseEntity.hpp"
 
 struct PlayerEntity;
@@ -35,7 +36,7 @@ enum class PlayerState
     Attacking
 };
 
-DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable, StrifeML::INeuralNetworkEntity<PlayerNetwork>
+DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable, NeuralNetworkEntity<PlayerNetwork>
 {
     void OnAdded(const EntityDictionary& properties) override;
     void ReceiveEvent(const IEntityEvent& ev) override;
