@@ -7,8 +7,16 @@
 
 struct ModelSerializer
 {
+    ModelSerializer(bool isReading) { }
+
     template<typename T>
     ModelSerializer& Add(T& value) { return *this; }    // TODO
+};
+
+struct SerializedModel
+{
+    template<typename T>
+    T Deserialize() { return T(); }
 };
 
 struct IModel
@@ -18,30 +26,32 @@ struct IModel
     virtual void Serialize(ModelSerializer& serializer) = 0;
 };
 
-struct INeuralNetworkInternal : torch::nn::Module
+struct INeuralNetwork : torch::nn::Module
 {
-    virtual ~INeuralNetworkInternal() = default;
-};
+    virtual void MakeDecision(gsl::span<SerializedModel> models, SerializedModel& outModel) { }
 
-template<typename TInput>
-struct ModelInput
-{
-    ModelInput(const gsl::span<TInput>& inputs_)
-        : inputs(inputs_)
-    {
-        
-    }
-
-    const gsl::span<TInput> inputs;
+    virtual ~INeuralNetwork() = default;
 };
 
 template<typename TInput, typename TOutput>
-struct INeuralNetwork : INeuralNetworkInternal
+struct NeuralNetwork : INeuralNetwork
 {
     using InputType = TInput;
     using OutputType = TOutput;
 
-    virtual void MakeDecision(const ModelInput<InputType>& input, OutputType& outOutput) = 0;
+    void MakeDecision(gsl::span<SerializedModel> models, SerializedModel& outModel) override
+    {
+        auto input = std::make_unique<InputType[]>(models.size());
+        for(int i = 0; i < models.size(); ++i)
+        {
+            input[i] = models[i].Deserialize<TInput>();
+        }
+
+        OutputType output;
+        DoMakeDecision(gsl::span<InputType>(input.get(), models.size()), output);
+    }
+
+    virtual void DoMakeDecision(gsl::span<InputType> input, OutputType& outOutput) = 0;
 };
 
 struct IDeciderInternal
@@ -61,38 +71,9 @@ struct IDecider : IDeciderInternal
         static_assert(std::is_base_of_v<INeuralNetworkInternal, TNeuralNetwork>, "Neural network must inherit from INeuralNetwork<>");
     }
 
-    struct MakeDecisionWorkItem : ThreadPoolWorkItem<OutputType>
-    {
-        MakeDecisionWorkItem(const std::shared_ptr<TNeuralNetwork>& network_, const std::shared_ptr<InputType[]>& input, int inputSize_)
-            : network(network_),
-            inputData(input),
-            inputSize(inputSize_)
-        {
-            
-        }
-
-        void Execute() override
-        {
-            OutputType output;
-            ModelInput<InputType> input(gsl::span<InputType>(inputData.get(), inputSize));
-            network->MakeDecision(input, output);
-            _result = output;
-        }
-
-        std::shared_ptr<TNeuralNetwork> network;
-        std::shared_ptr<InputType[]> inputData;
-        int inputSize;
-    };
+    
 
     std::shared_ptr<TNeuralNetwork> network;
-
-    std::shared_ptr<MakeDecisionWorkItem> MakeDecision(const std::shared_ptr<InputType[]>& input, int inputSize)
-    {
-        auto threadPool = ThreadPool::GetInstance();
-        auto workItem = std::make_shared<MakeDecisionWorkItem>(network, input, inputSize);
-        threadPool->StartItem(workItem);
-        return workItem;
-    }
 };
 
 struct ITrainerInternal

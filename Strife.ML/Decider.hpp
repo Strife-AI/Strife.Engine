@@ -6,7 +6,7 @@
 #include "Memory/ConcurrentQueue.hpp"
 #include "AICommon.hpp"
 
-struct NeuralNetwork;
+struct OldNeuralNetwork;
 
 struct DeciderWorkItem
 {
@@ -68,7 +68,7 @@ struct DeciderClient
 	DeciderClient();
 
 	ModelBinding modelBinding;
-	std::shared_ptr<NeuralNetwork> network;
+	std::shared_ptr<OldNeuralNetwork> network;
 	ConcurrentQueue<DecisionResponse> responseChannel;
 	int reloadCount = 0;
 };

@@ -7,7 +7,7 @@
 DecompressedExperience* deciderExperience = nullptr;
 
 DeciderClient::DeciderClient()
-    : network(std::make_shared<NeuralNetwork>())
+    : network(std::make_shared<OldNeuralNetwork>())
 {
     network->eval();
 }

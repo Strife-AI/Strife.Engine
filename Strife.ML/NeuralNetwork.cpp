@@ -1,5 +1,6 @@
-#include "AICommon.hpp"
 #include "NeuralNetwork.hpp"
+
+#include "AICommon.hpp"
 #include "CharacterAction.hpp"
 #include "ObservedObject.hpp"
 
@@ -11,9 +12,9 @@
 #define DEBUG_TRAINER(...) ;
 #endif
 
-NeuralNetwork::NeuralNetwork()
+OldNeuralNetwork::OldNeuralNetwork()
 {
-	embedding = register_module("embedding", torch::nn::Embedding(static_cast<int>(ObservedObject::TotalObjects), 4));
+    //torch::nn::functional::detail::embedding = register_module("embedding", torch::nn::Embedding(static_cast<int>(ObservedObject::TotalObjects), 4));
 	conv1 = register_module("conv1", torch::nn::Conv2d(4, 8, 5));
 	//batchNorm1 = register_module("batchNorm1", torch::nn::BatchNorm2d(8));
 	conv2 = register_module("conv2", torch::nn::Conv2d(8, 16, 3));
@@ -28,7 +29,7 @@ NeuralNetwork::NeuralNetwork()
 	dense = register_module("dense", torch::nn::Linear(64, static_cast<int>(CharacterAction::TotalActions)));
 }
 
-torch::Tensor NeuralNetwork::forward(const torch::Tensor& spatialInput, const torch::Tensor& featureInput)
+torch::Tensor OldNeuralNetwork::forward(const torch::Tensor& spatialInput, const torch::Tensor& featureInput)
 {
     //assert(spatialInput.size(0) == featureInput.size(0)); // Sequence
     //assert(spatialInput.size(1) == featureInput.size(1)); // Batch

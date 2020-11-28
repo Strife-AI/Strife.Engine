@@ -2,9 +2,9 @@
 
 #include <torch/torch.h>
 
-struct NeuralNetwork : torch::nn::Module
+struct OldNeuralNetwork : torch::nn::Module
 {
-	NeuralNetwork();
+	OldNeuralNetwork();
 
     torch::Tensor forward(const torch::Tensor& spatialInput, const torch::Tensor& featureInput);
 

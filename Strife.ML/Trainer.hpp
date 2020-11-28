@@ -11,7 +11,7 @@
 #include "AICommon.hpp"
 
 struct DataBatch;
-struct NeuralNetwork;
+struct OldNeuralNetwork;
 struct Metric;
 
 struct TrainerWorkItem
@@ -112,12 +112,12 @@ struct TrainerClient
 		confusionMatrix.Clear();
 	}
 
-	void SetNetwork(std::shared_ptr<NeuralNetwork> network);
+	void SetNetwork(std::shared_ptr<OldNeuralNetwork> network);
 
 	ModelBinding modelBinding;
 	SampleManager sampleManagersBySegmentId[MaxMapSegments];
 
-	std::shared_ptr<NeuralNetwork> pendingNetwork;
+	std::shared_ptr<OldNeuralNetwork> pendingNetwork;
 	Model lastNetwork;
 	std::unique_ptr<c10::Device> devicePtr;
 	

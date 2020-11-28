@@ -13,7 +13,7 @@ struct PlayerDecision
     
 };
 
-struct PlayerNetwork : INeuralNetwork<PlayerModelInput, PlayerDecision>
+struct PlayerNetwork : NeuralNetwork<PlayerModelInput, PlayerDecision>
 {
     
 };

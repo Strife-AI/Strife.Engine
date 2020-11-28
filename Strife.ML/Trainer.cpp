@@ -153,7 +153,7 @@ void Trainer::TrainBatch(TrainerClient& client, const DataBatch& batch)
 }
 
 TrainerClient::TrainerClient()
-    : pendingNetwork(std::make_shared<NeuralNetwork>())
+    : pendingNetwork(std::make_shared<OldNeuralNetwork>())
 {
     const auto usingCuda = torch::cuda::is_available() && g_useCuda.Value();
     printf("%s\n", usingCuda ? "Training on CUDA GPU." : "Training on CPU.");
@@ -163,7 +163,7 @@ TrainerClient::TrainerClient()
     SetNetwork(pendingNetwork);
 }
 
-void TrainerClient::SetNetwork(std::shared_ptr<NeuralNetwork> network)
+void TrainerClient::SetNetwork(std::shared_ptr<OldNeuralNetwork> network)
 {
     pendingNetwork = network;
 	pendingNetwork->optimizer = std::make_shared<torch::optim::Adam>(pendingNetwork->parameters(), 1e-3); // todo brendan this shouldnt be locked at 1e-3
@@ -353,7 +353,7 @@ void Trainer::BuildModelFromSegmentFiles(int clientId, const std::vector<std::st
         Log("Using transfer-learning: %s\n", useTransferLearning ? "true" : "false");
         if (useTransferLearning)
         {
-            auto model = std::make_shared<NeuralNetwork>();
+            auto model = std::make_shared<OldNeuralNetwork>();
             auto& weights = ResourceManager::GetResource<RawFile>(StringId(g_weightsResourceName.Value()))->data;
 
             std::string str(reinterpret_cast<char*>(weights.data()), reinterpret_cast<char*>(weights.data() + weights.size()));

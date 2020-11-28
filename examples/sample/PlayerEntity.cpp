@@ -18,10 +18,6 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
     scene->SendEvent(PlayerAddedToGame(this));
 
     scene->GetService<InputService>()->players.push_back(this);
-
-    SetNetwork("blue");
-
-    MakeDecision();
 }
 
 void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)
@@ -208,12 +204,3 @@ void PlayerEntity::SetMoveDirection(Vector2 direction)
     rigidBody->SetVelocity(direction);
 }
 
-void PlayerEntity::CollectData(InputType& outInput)
-{
-
-}
-
-void PlayerEntity::ReceiveDecision(OutputType& output)
-{
-
-}
