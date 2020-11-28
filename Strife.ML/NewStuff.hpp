@@ -5,188 +5,193 @@
 #include "ThreadPool.hpp"
 #include "torch/nn/module.h"
 
-struct ModelSerializer
+namespace StrifeML
 {
-    ModelSerializer(bool isReading) { }
 
-    template<typename T>
-    ModelSerializer& Add(T& value) { return *this; }    // TODO
-};
-
-struct SerializedModel
-{
-    template<typename T>
-    T Deserialize() { return T(); }
-};
-
-struct IModel
-{
-    virtual ~IModel() = default;
-
-    virtual void Serialize(ModelSerializer& serializer) = 0;
-};
-
-struct INeuralNetwork : torch::nn::Module
-{
-    virtual void MakeDecision(gsl::span<SerializedModel> models, SerializedModel& outModel) { }
-
-    virtual ~INeuralNetwork() = default;
-};
-
-template<typename TInput, typename TOutput>
-struct NeuralNetwork : INeuralNetwork
-{
-    using InputType = TInput;
-    using OutputType = TOutput;
-
-    void MakeDecision(gsl::span<SerializedModel> models, SerializedModel& outModel) override
+    struct ModelSerializer
     {
-        auto input = std::make_unique<InputType[]>(models.size());
-        for(int i = 0; i < models.size(); ++i)
+        ModelSerializer(bool isReading) { }
+
+        template<typename T>
+        ModelSerializer& Add(T& value) { return *this; }    // TODO
+    };
+
+    struct SerializedModel
+    {
+        template<typename T>
+        T Deserialize() { return T(); }
+    };
+
+    struct IModel
+    {
+        virtual ~IModel() = default;
+
+        virtual void Serialize(ModelSerializer& serializer) = 0;
+    };
+
+    struct INeuralNetwork : torch::nn::Module
+    {
+        virtual void MakeDecision(gsl::span<SerializedModel> models, SerializedModel& outModel) { }
+
+        virtual ~INeuralNetwork() = default;
+    };
+
+    template<typename TInput, typename TOutput>
+    struct NeuralNetwork : INeuralNetwork
+    {
+        using InputType = TInput;
+        using OutputType = TOutput;
+
+        void MakeDecision(gsl::span<SerializedModel> models, SerializedModel& outModel) override
         {
-            input[i] = models[i].Deserialize<TInput>();
+            auto input = std::make_unique<InputType[]>(models.size());
+            for (int i = 0; i < models.size(); ++i)
+            {
+                input[i] = models[i].Deserialize<TInput>();
+            }
+
+            OutputType output;
+            DoMakeDecision(gsl::span<InputType>(input.get(), models.size()), output);
         }
 
-        OutputType output;
-        DoMakeDecision(gsl::span<InputType>(input.get(), models.size()), output);
-    }
+        virtual void DoMakeDecision(gsl::span<InputType> input, OutputType& outOutput) = 0;
+    };
 
-    virtual void DoMakeDecision(gsl::span<InputType> input, OutputType& outOutput) = 0;
-};
-
-struct IDeciderInternal
-{
-    virtual ~IDeciderInternal() = default;
-};
-
-template<typename TNeuralNetwork>
-struct IDecider : IDeciderInternal
-{
-    using InputType = typename TNeuralNetwork::InputType;
-    using OutputType = typename TNeuralNetwork::OutputType;
-    using NetworkType = TNeuralNetwork;
-
-    IDecider()
+    struct IDeciderInternal
     {
-        static_assert(std::is_base_of_v<INeuralNetworkInternal, TNeuralNetwork>, "Neural network must inherit from INeuralNetwork<>");
-    }
+        virtual ~IDeciderInternal() = default;
+    };
 
-    
-
-    std::shared_ptr<TNeuralNetwork> network;
-};
-
-struct ITrainerInternal
-{
-    virtual ~ITrainerInternal() = default;
-};
-
-template<typename TNeuralNetwork>
-struct ITrainer : ITrainerInternal
-{
-    using InputType = typename TNeuralNetwork::InputType;
-    using OutputType = typename TNeuralNetwork::OutputType;
-    using NetworkType = TNeuralNetwork;
-
-    ITrainer()
+    template<typename TNeuralNetwork>
+    struct IDecider : IDeciderInternal
     {
-        static_assert(std::is_base_of_v<INeuralNetworkInternal, TNeuralNetwork>, "Neural network must inherit from INeuralNetwork<>");
-    }
-};
+        using InputType = typename TNeuralNetwork::InputType;
+        using OutputType = typename TNeuralNetwork::OutputType;
+        using NetworkType = TNeuralNetwork;
 
-template<typename TNeuralNetwork>
-struct NetworkContext : ITrainerInternal
-{
-    IDecider<TNeuralNetwork>* decider;
-    ITrainer<TNeuralNetwork>* trainer;
-
-    virtual ~NetworkContext() = default;
-};
-
-namespace MlUtil
-{
-    template<typename T>
-    std::shared_ptr<T[]> MakeSharedArray(int count)
-    {
-        // This *should* go away with C++ 17 since it should provide a version of std::make_shared<> for arrays, but that doesn't seem
-        // to be the case in MSVC
-        return std::shared_ptr<T[]>(new T [count], [](T* ptr)
+        IDecider()
         {
-            delete[] ptr;
-        });
-    }
-}
+            static_assert(std::is_base_of_v<INeuralNetworkInternal, TNeuralNetwork>, "Neural network must inherit from INeuralNetwork<>");
+        }
 
-template<typename TNeuralNetwork>
-struct INeuralNetworkEntity
-{
-    using InputType = typename TNeuralNetwork::InputType;
-    using OutputType = typename TNeuralNetwork::OutputType;
-    using NetworkType = TNeuralNetwork;
 
-    INeuralNetworkEntity(int decisionSequenceLength_ = 1)
-        : decisionInputs(MlUtil::MakeSharedArray<InputType>(decisionSequenceLength_)),
-        decisionSequenceLength(decisionSequenceLength_)
+
+        std::shared_ptr<TNeuralNetwork> network;
+    };
+
+    struct ITrainerInternal
     {
-        
-    }
+        virtual ~ITrainerInternal() = default;
+    };
 
-    virtual ~INeuralNetworkEntity() = default;
-
-    virtual void CollectData(InputType& outInput) = 0;
-    virtual void ReceiveDecision(OutputType& output) = 0;
-
-    void MakeDecision()
+    template<typename TNeuralNetwork>
+    struct ITrainer : ITrainerInternal
     {
-        networkContext->decider->MakeDecision(decisionInputs, decisionSequenceLength);
-    }
+        using InputType = typename TNeuralNetwork::InputType;
+        using OutputType = typename TNeuralNetwork::OutputType;
+        using NetworkType = TNeuralNetwork;
 
-    void SetNetwork(const char* name)
+        ITrainer()
+        {
+            static_assert(std::is_base_of_v<INeuralNetworkInternal, TNeuralNetwork>, "Neural network must inherit from INeuralNetwork<>");
+        }
+    };
+
+    template<typename TNeuralNetwork>
+    struct NetworkContext : ITrainerInternal
     {
-        // TODO
-    }
+        IDecider<TNeuralNetwork>* decider;
+        ITrainer<TNeuralNetwork>* trainer;
 
-    NetworkContext<NetworkType>* networkContext = nullptr;
-    std::shared_ptr<typename IDecider<NetworkType>::MakeDecisionWorkItem> decisionInProgress;
-    std::shared_ptr<InputType[]> decisionInputs;
-    int decisionSequenceLength = 1;
-};
+        virtual ~NetworkContext() = default;
+    };
 
-struct NeuralNetworkManager
-{
-    template<typename TDecider>
-    TDecider* CreateDecider()
+    namespace MlUtil
     {
-        static_assert(std::is_base_of_v<IDeciderInternal, TDecider>, "Decider must inherit from IDecider<TInput, TOutput>");
-        auto decider = std::make_unique<TDecider>();
-        auto deciderPtr = decider.get();
-        _deciders.emplace(std::move(decider));
-        return deciderPtr;
-    }
-
-    template<typename TTrainer>
-    TTrainer* CreateTrainer()
-    {
-        static_assert(std::is_base_of_v<ITrainerInternal, TTrainer>, "Trainer must inherit from ITrainer<TInput, TOutput>");
-        auto decider = std::make_unique<TTrainer>();
-        auto deciderPtr = decider.get();
-        _trainers.emplace(std::move(decider));
-        return deciderPtr;
-    }
-
-    template<typename TDecider, typename TTrainer>
-    void CreateNetwork(const char* name, TDecider* decider, TTrainer* trainer)
-    {
-        static_assert(std::is_same_v<typename TDecider::NetworkType, typename TTrainer::NetworkType>, "Trainer and decider must accept the same type of neural network");
+        template<typename T>
+        std::shared_ptr<T[]> MakeSharedArray(int count)
+        {
+            // This *should* go away with C++ 17 since it should provide a version of std::make_shared<> for arrays, but that doesn't seem
+            // to be the case in MSVC
+            return std::shared_ptr<T[]>(new T[count], [](T* ptr)
+            {
+                delete[] ptr;
+            });
+        }
     }
 
     template<typename TNeuralNetwork>
-    NetworkContext<TNeuralNetwork>* GetNetwork(const char* name)
+    struct INeuralNetworkEntity
     {
-        return nullptr;
-    }
+        using InputType = typename TNeuralNetwork::InputType;
+        using OutputType = typename TNeuralNetwork::OutputType;
+        using NetworkType = TNeuralNetwork;
 
-private:
-    std::unordered_set<std::unique_ptr<IDeciderInternal>> _deciders;
-    std::unordered_set<std::unique_ptr<ITrainerInternal>> _trainers;
-};
+        INeuralNetworkEntity(int decisionSequenceLength_ = 1)
+            : decisionInputs(MlUtil::MakeSharedArray<InputType>(decisionSequenceLength_)),
+            decisionSequenceLength(decisionSequenceLength_)
+        {
+
+        }
+
+        virtual ~INeuralNetworkEntity() = default;
+
+        virtual void CollectData(InputType& outInput) = 0;
+        virtual void ReceiveDecision(OutputType& output) = 0;
+
+        void MakeDecision()
+        {
+            networkContext->decider->MakeDecision(decisionInputs, decisionSequenceLength);
+        }
+
+        void SetNetwork(const char* name)
+        {
+            // TODO
+        }
+
+        NetworkContext<NetworkType>* networkContext = nullptr;
+        std::shared_ptr<typename IDecider<NetworkType>::MakeDecisionWorkItem> decisionInProgress;
+        std::shared_ptr<InputType[]> decisionInputs;
+        int decisionSequenceLength = 1;
+    };
+
+    struct NeuralNetworkManager
+    {
+        template<typename TDecider>
+        TDecider* CreateDecider()
+        {
+            static_assert(std::is_base_of_v<IDeciderInternal, TDecider>, "Decider must inherit from IDecider<TInput, TOutput>");
+            auto decider = std::make_unique<TDecider>();
+            auto deciderPtr = decider.get();
+            _deciders.emplace(std::move(decider));
+            return deciderPtr;
+        }
+
+        template<typename TTrainer>
+        TTrainer* CreateTrainer()
+        {
+            static_assert(std::is_base_of_v<ITrainerInternal, TTrainer>, "Trainer must inherit from ITrainer<TInput, TOutput>");
+            auto decider = std::make_unique<TTrainer>();
+            auto deciderPtr = decider.get();
+            _trainers.emplace(std::move(decider));
+            return deciderPtr;
+        }
+
+        template<typename TDecider, typename TTrainer>
+        void CreateNetwork(const char* name, TDecider* decider, TTrainer* trainer)
+        {
+            static_assert(std::is_same_v<typename TDecider::NetworkType, typename TTrainer::NetworkType>, "Trainer and decider must accept the same type of neural network");
+        }
+
+        template<typename TNeuralNetwork>
+        NetworkContext<TNeuralNetwork>* GetNetwork(const char* name)
+        {
+            return nullptr;
+        }
+
+    private:
+        std::unordered_set<std::unique_ptr<IDeciderInternal>> _deciders;
+        std::unordered_set<std::unique_ptr<ITrainerInternal>> _trainers;
+    };
+
+}
