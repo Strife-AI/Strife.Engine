@@ -27,7 +27,7 @@ struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision>
     }
 };
 
-struct PlayerDecider : StrifeML::IDecider<PlayerNetwork>
+struct PlayerDecider : StrifeML::Decider<PlayerNetwork>
 {
     
 };

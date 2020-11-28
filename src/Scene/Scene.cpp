@@ -3,6 +3,7 @@
 #include "Physics/Physics.hpp"
 #include "Renderer.hpp"
 #include "SdlManager.hpp"
+#include "ML/ML.hpp"
 #include "Physics/PathFinding.hpp"
 #include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
@@ -353,6 +354,15 @@ void Scene::NotifyUpdate(float deltaTime)
     for (auto updatable : _entityManager.updatables)
     {
         updatable->Update(deltaTime);
+    }
+
+    // TODO: more efficient way of updating components
+    for (auto entity : _entityManager.entities)
+    {
+        for (IEntityComponent* component = entity->_componentList; component != nullptr; component = component->next)
+        {
+            component->Update(deltaTime);
+        }
     }
 }
 
