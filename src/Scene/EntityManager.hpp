@@ -5,6 +5,8 @@
 #include "Entity.hpp"
 #include "Memory/FreeList.hpp"
 
+struct INeuralNetworkEntity;
+
 constexpr int MaxEntities = 8192;
 
 template<typename TInterface>
@@ -36,6 +38,7 @@ struct EntityManager
     EntityList<IServerFixedUpdatable*> serverFixedUpdatables;
     EntityList<IRenderable*> renderables;
     EntityList<IHudRenderable*> hudRenderables;
+    EntityList<INeuralNetworkEntity*> neuralNetworkEntities;
 
     std::vector<Entity*> toBeDestroyed;
 
