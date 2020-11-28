@@ -1,13 +1,21 @@
 #include "NewStuff.hpp"
-#include "Scene/BaseEntity.hpp"
 
-//struct MakeDecisionWorkItem : ThreadPoolWorkItem<SerializedModel>
-//{
-//
-//
-//    std::shared_ptr<INeuralNetwork> network;
-//};
-//
+using namespace StrifeML;
+
+struct MakeDecisionWorkItem : ThreadPoolWorkItem<SerializedModel>
+{
+    void Execute() override
+    {
+        SerializedModel result;
+        network->MakeDecision(gsl::span<SerializedModel>(input.get(), inputLength), result);
+        _result = std::move(result);
+    }
+
+    std::shared_ptr<INeuralNetwork> network;
+    std::shared_ptr<SerializedModel[]> input;
+    int inputLength;
+};
+
 //struct NewDecider
 //{
 //    std::shared_ptr<MakeDecisionWorkItem> MakeDecision(const std::shared_ptr<InputType[]>& input, int inputSize)
