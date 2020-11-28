@@ -13,17 +13,17 @@ struct PlayerDecision
     
 };
 
-struct PlayerNetwork : NeuralNetwork<PlayerModelInput, PlayerDecision>
+struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision>
 {
     
 };
 
-struct PlayerDecider : IDecider<PlayerNetwork>
+struct PlayerDecider : StrifeML::IDecider<PlayerNetwork>
 {
     
 };
 
-struct PlayerTrainer : ITrainer<PlayerNetwork>
+struct PlayerTrainer : StrifeML::ITrainer<PlayerNetwork>
 {
     
 };
