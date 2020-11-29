@@ -8,6 +8,10 @@
 #include "Tools/ConsoleCmd.hpp"
 #include "Tools/ConsoleVar.hpp"
 
+namespace StrifeML {
+    struct NeuralNetworkManager;
+}
+
 class Scene;
 class IGame;
 class SdlManager;
@@ -50,6 +54,7 @@ public:
     SoundManager* GetSoundManager() { return _soundManager; }
     ServerGame* GetServerGame() { return _serverGame.get(); }
     ClientGame* GetClientGame() { return _clientGame.get(); }
+    StrifeML::NeuralNetworkManager* GetNeuralNetworkManager() { return _neuralNetworkManager.get();  }
 
     bool ActiveGame() { return _activeGame; }
     void QuitGame() { _activeGame = false; }
@@ -99,6 +104,7 @@ private:
     Renderer* _renderer = nullptr;
     BlockAllocator* _defaultBlockAllocator;
     SoundManager* _soundManager;
+    std::unique_ptr<StrifeML::NeuralNetworkManager> _neuralNetworkManager;
 
     std::unique_ptr<ServerGame> _serverGame;
     std::unique_ptr<ClientGame> _clientGame;
