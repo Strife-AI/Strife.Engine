@@ -26,6 +26,8 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
         {
             input.velocity = rigidBody->GetVelocity();
         };
+
+        nn->SetNetwork("nn");
     }
 }
 

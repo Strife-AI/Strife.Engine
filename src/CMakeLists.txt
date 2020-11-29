@@ -37,8 +37,8 @@ add_library(Strife.Engine STATIC
         System/TileMapSerialization.cpp
         Memory/Fsm.hpp
         Memory/EnumDictionary.hpp
-        Memory/SpinLock.cpp
-        Memory/SpinLock.hpp
+        
+        
         Tools/ConsoleVar.cpp
         Tools/ConsoleVar.hpp
         Tools/ConsoleCmd.cpp
@@ -165,6 +165,7 @@ find_package(torch REQUIRED)
 target_include_directories(Strife.Engine
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/../
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../OALWrapper/include>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../imgui>
         PRIVATE

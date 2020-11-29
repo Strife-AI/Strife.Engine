@@ -42,6 +42,14 @@ struct BreakoutGame : IGame
     void OnGameStart() override
     {
         GetEngine()->StartLocalServer(g_serverPort.Value(), "isengard"_sid);
+
+        auto engine = GetEngine();
+        auto neuralNetworkManager = engine->GetNeuralNetworkManager();
+
+        auto playerDecider = neuralNetworkManager->CreateDecider<PlayerDecider>();
+        auto playerTrainer = neuralNetworkManager->CreateTrainer<PlayerTrainer>();
+
+        neuralNetworkManager->CreateNetwork("nn", playerDecider, playerTrainer);
     }
 
     std::string initialConsoleCmd;

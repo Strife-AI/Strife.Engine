@@ -11,7 +11,7 @@
 #include <thread>
 
 #include "SDL.h"
-#include "Memory/ConcurrentQueue.hpp"
+#include "Container/ConcurrentQueue.hpp"
 #include "Tools/Console.hpp"
 
 // TODO: make this thread safe

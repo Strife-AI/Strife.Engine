@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine.hpp"
 #include "../../Strife.ML/NewStuff.hpp"
 
 struct INeuralNetworkEntity
@@ -16,6 +17,7 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
 
     NeuralNetworkComponent(int decisionSequenceLength_ = 1)
         : decisionInputs(StrifeML::MlUtil::MakeSharedArray<InputType>(decisionSequenceLength_)),
+        serializedDecisionInputs(StrifeML::MlUtil::MakeSharedArray<StrifeML::SerializedModel>(decisionSequenceLength_)),
         decisionSequenceLength(decisionSequenceLength_)
     {
 
@@ -27,14 +29,14 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
 
     void Update(float deltaTime) override
     {
-        //networkContext->decider->MakeDecision(serializedDecisionInputs, decisionSequenceLength);
+        networkContext->decider->MakeDecision(serializedDecisionInputs, decisionSequenceLength);
     }
 
     void SetNetwork(const char* name)
     {
-        // TODO
+        auto nnManager = Engine::GetInstance()->GetNeuralNetworkManager();
+        networkContext = nnManager->GetNetwork<TNeuralNetwork>(name);
     }
-
 
 
     StrifeML::NetworkContext<NetworkType>* networkContext = nullptr;

@@ -23,6 +23,7 @@ endif()
 
 list(APPEND CMAKE_PREFIX_PATH "${TORCH_DIR}/share/cmake/Torch")
 
+add_subdirectory(Strife.Common)
 add_subdirectory(Strife.ML)
 add_subdirectory(src)
 add_subdirectory(examples)

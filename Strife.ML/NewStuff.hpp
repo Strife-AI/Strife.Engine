@@ -2,7 +2,7 @@
 #include <memory>
 #include <unordered_set>
 #include <gsl/span>
-#include "ThreadPool.hpp"
+#include "Thread/ThreadPool.hpp"
 #include "torch/nn/module.h"
 
 namespace StrifeML
@@ -178,7 +178,7 @@ namespace StrifeML
         template<typename TDecider>
         TDecider* CreateDecider()
         {
-            static_assert(std::is_base_of_v<IDeciderInternal, TDecider>, "Decider must inherit from IDecider<TInput, TOutput>");
+            static_assert(std::is_base_of_v<IDecider, TDecider>, "Decider must inherit from IDecider<TInput, TOutput>");
             auto decider = std::make_unique<TDecider>();
             auto deciderPtr = decider.get();
             _deciders.emplace(std::move(decider));
@@ -206,7 +206,7 @@ namespace StrifeML
                 throw StrifeException("Network already exists: " + std::string(name));
             }
 
-            _networksByName[name] = std::make_shared < NetworkContext<typename TDecider::NetworkType>(decider, trainer);
+            _networksByName[name] = std::make_shared<NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
         }
 
         // TODO remove network
@@ -214,8 +214,8 @@ namespace StrifeML
         template<typename TNeuralNetwork>
         NetworkContext<TNeuralNetwork>* GetNetwork(const char* name)
         {
-            // TODO error handling if missing
-            return _networksByName[name];
+            // TODO error handling if missing or wrong type
+            return dynamic_cast<NetworkContext<TNeuralNetwork>*>(_networksByName[name].get());
         }
 
     private:
