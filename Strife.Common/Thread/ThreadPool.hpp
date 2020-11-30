@@ -30,18 +30,18 @@ private:
 template<typename TResult>
 struct ThreadPoolWorkItem : IThreadPoolWorkItem
 {
-    bool TryGetResult(const TResult& outResult);
+    bool TryGetResult(TResult& outResult);
 
 protected:
-    std::optional<TResult> _result;
+    TResult _result;
 };
 
 template <typename TResult>
-bool ThreadPoolWorkItem<TResult>::TryGetResult(const TResult& outResult)
+bool ThreadPoolWorkItem<TResult>::TryGetResult(TResult& outResult)
 {
-    if (IsComplete() && _result.has_value())
+    if (IsComplete())
     {
-        outResult = _result.value();
+        outResult = _result;
         return true;
     }
     else
