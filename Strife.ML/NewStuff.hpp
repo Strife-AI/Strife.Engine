@@ -7,32 +7,76 @@
 
 namespace StrifeML
 {
+    struct ISerializable;
+    struct ObjectSerializer;
 
-    struct ModelSerializer
+    template<typename T>
+    void Serialize(T& value, ObjectSerializer& serializer);
+
+    struct ObjectSerializer
     {
-        ModelSerializer(bool isReading) { }
+        ObjectSerializer(std::vector<unsigned char>& bytes_, bool isReading_)
+            : bytes(bytes_),
+            isReading(isReading_)
+        {
+            
+        }
 
-        template<typename T>
-        ModelSerializer& Add(T& value) { return *this; }    // TODO
+        // Create a template specialization of Serialize<> to serialize custom types
+        template<typename T, std::enable_if_t<!std::is_arithmetic_v<T>>* = nullptr>
+        ObjectSerializer& Add(T& value)
+        {
+            Serialize(value, *this);
+            return *this;
+        }
+
+        // Arithmetic types are default serialized to bytes; everything else needs to define a custom serialization method
+        template<typename T, std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr>
+        ObjectSerializer& Add(T& value)
+        {
+            AddBytes(reinterpret_cast<unsigned char*>(&value), sizeof(T));
+            return *this;
+        }
+
+        void AddBytes(unsigned char* data, int size);
+
+        std::vector<unsigned char>& bytes;
+        bool isReading;
+        int readOffset = 0;
+        bool hadError = false;
     };
 
-    struct SerializedModel
+    template<typename T>
+    void Serialize(T& value, ObjectSerializer& serializer);
+
+    struct SerializedObject
     {
         template<typename T>
-        T Deserialize() { return T(); }
+        void Deserialize(T& outResult);
+
+        std::vector<unsigned char> bytes;
     };
 
-    struct IModel
+    template <typename T>
+    void SerializedObject::Deserialize(T& outResult)
     {
-        virtual ~IModel() = default;
+        static_assert(std::is_base_of_v<ISerializable, T>, "Deserialized type must implement ISerializable");
+        ObjectSerializer serializer(bytes, true);
+        outResult.Serialize(serializer);
 
-        virtual void Serialize(ModelSerializer& serializer) = 0;
+        // TODO assert all bytes are used?
+        // TODO check if hadError flag was set
+    }
+
+    struct ISerializable
+    {
+        virtual ~ISerializable() = default;
+
+        virtual void Serialize(ObjectSerializer& serializer) = 0;
     };
 
     struct INeuralNetwork : torch::nn::Module
     {
-        virtual void MakeDecision(gsl::span<SerializedModel> models, SerializedModel& outModel) { }
-
         virtual ~INeuralNetwork() = default;
     };
 
@@ -42,19 +86,7 @@ namespace StrifeML
         using InputType = TInput;
         using OutputType = TOutput;
 
-        void MakeDecision(gsl::span<SerializedModel> models, SerializedModel& outModel) override
-        {
-            auto input = std::make_unique<InputType[]>(models.size());
-            for (int i = 0; i < models.size(); ++i)
-            {
-                input[i] = models[i].Deserialize<TInput>();
-            }
-
-            OutputType output;
-            DoMakeDecision(gsl::span<InputType>(input.get(), models.size()), output);
-        }
-
-        virtual void DoMakeDecision(gsl::span<InputType> input, OutputType& outOutput) = 0;
+        virtual void MakeDecision(gsl::span<const TInput> input, TOutput& output) = 0;
     };
 
     struct IDecider
@@ -62,21 +94,28 @@ namespace StrifeML
         virtual ~IDecider() = default;
     };
 
-    struct MakeDecisionWorkItem : ThreadPoolWorkItem<SerializedModel>
+    template<typename TNetwork>
+    struct MakeDecisionWorkItem : ThreadPoolWorkItem<typename TNetwork::OutputType>
     {
-        MakeDecisionWorkItem(std::shared_ptr<INeuralNetwork> network_, std::shared_ptr<SerializedModel[]> input_, int inputLength_);
+        using InputType = typename TNetwork::InputType;
 
-        void Execute() override;
+        MakeDecisionWorkItem(std::shared_ptr<TNetwork> network_, std::shared_ptr<InputType[]> input_, int inputLength_)
+            : network(network_),
+            input(input_),
+            inputLength(inputLength_)
+        {
+            
+        }
 
-        std::shared_ptr<INeuralNetwork> network;
-        std::shared_ptr<SerializedModel[]> input;
+        void Execute() override
+        {
+            network->MakeDecision(gsl::span<InputType>(input.get(), inputLength), _result);
+        }
+
+        std::shared_ptr<TNetwork> network;
+        std::shared_ptr<InputType[]> input;
         int inputLength;
     };
-
-    std::shared_ptr<MakeDecisionWorkItem> ScheduleDecision(
-        std::shared_ptr<INeuralNetwork> network,
-        std::shared_ptr<SerializedModel[]> input,
-        int inputLength);
 
     template<typename TNeuralNetwork>
     struct Decider : IDecider
@@ -90,12 +129,15 @@ namespace StrifeML
             static_assert(std::is_base_of_v<INeuralNetwork, TNeuralNetwork>, "Neural network must inherit from INeuralNetwork<>");
         }
 
-        auto MakeDecision(std::shared_ptr<SerializedModel[]> input, int inputLength)
+        auto MakeDecision(std::shared_ptr<InputType[]> input, int inputLength)
         {
-            return ScheduleDecision(network, input, inputLength);
+            auto workItem = std::make_shared<MakeDecisionWorkItem<TNeuralNetwork>>(network, input, inputLength);
+            auto threadPool = ThreadPool::GetInstance();
+            threadPool->StartItem(workItem);
+            return workItem;
         }
 
-        std::shared_ptr<TNeuralNetwork> network;
+        std::shared_ptr<TNeuralNetwork> network = std::make_shared<TNeuralNetwork>();
     };
 
     struct ITrainerInternal
@@ -209,7 +251,7 @@ namespace StrifeML
             _networksByName[name] = std::make_shared<NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
         }
 
-        // TODO remove network
+        // TODO remove network method
 
         template<typename TNeuralNetwork>
         NetworkContext<TNeuralNetwork>* GetNetwork(const char* name)

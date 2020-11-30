@@ -2,29 +2,33 @@
 
 namespace StrifeML
 {
-    std::shared_ptr<MakeDecisionWorkItem> ScheduleDecision(
-        std::shared_ptr<INeuralNetwork> network,
-        std::shared_ptr<SerializedModel[]> input,
-        int inputLength)
+    void ObjectSerializer::AddBytes(unsigned char* data, int size)
     {
-        auto workItem = std::make_shared<MakeDecisionWorkItem>(network, input, inputLength);
-        auto threadPool = ThreadPool::GetInstance();
-        threadPool->StartItem(workItem);
-        return workItem;
-    }
+        if (hadError)
+        {
+            return;
+        }
 
-    MakeDecisionWorkItem::MakeDecisionWorkItem(std::shared_ptr<INeuralNetwork> network_,
-                                               std::shared_ptr<SerializedModel[]> input_, int inputLength_)
-        : network(network_),
-          input(input_),
-          inputLength(inputLength_)
-    {
-    }
+        if (isReading)
+        {
+            int i;
+            for (i = 0; i < size && readOffset < bytes.size(); ++i)
+            {
+                data[i] = bytes[readOffset++];
+            }
 
-    void MakeDecisionWorkItem::Execute()
-    {
-        SerializedModel result;
-        network->MakeDecision(gsl::span<SerializedModel>(input.get(), inputLength), result);
-        _result = std::move(result);
+            if (i != size)
+            {
+                // Ran out of bytes
+                hadError = true;
+            }
+        }
+        else
+        {
+            for (int i = 0; i < size; ++i)
+            {
+                bytes.push_back(data[i]);
+            }
+        }
     }
 }

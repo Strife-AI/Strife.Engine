@@ -27,6 +27,11 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
             input.velocity = rigidBody->GetVelocity();
         };
 
+        nn->receiveDecision = [=](PlayerDecision& decision)
+        {
+            Log("Received decision\n");
+        };
+
         nn->SetNetwork("nn");
     }
 }

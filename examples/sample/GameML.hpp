@@ -3,9 +3,9 @@
 #include "../../Strife.ML/NewStuff.hpp"
 #include "Math/Vector2.hpp"
 
-struct PlayerModelInput : StrifeML::IModel
+struct PlayerModelInput : StrifeML::ISerializable
 {
-    void Serialize(StrifeML::ModelSerializer& serializer) override
+    void Serialize(StrifeML::ObjectSerializer& serializer) override
     {
         serializer
             .Add(velocity);
@@ -21,7 +21,7 @@ struct PlayerDecision
 
 struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision>
 {
-    void DoMakeDecision(gsl::span<InputType> input, OutputType& outOutput) override
+    void MakeDecision(gsl::span<const InputType> input, OutputType& outOutput) override
     {
 
     }
