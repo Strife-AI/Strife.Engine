@@ -99,3 +99,44 @@ void NeuralNetworkComponent<TNeuralNetwork>::MakeDecision()
     // Start making decision
     decisionInProgress = networkContext->decider->MakeDecision(inputs, decisionSequenceLength);
 }
+
+struct SensorDefinitionBuilder
+{
+    struct Object
+    {
+        Object& SetColor(Color color_)
+        {
+            color = color_;
+            return *this;
+        }
+
+        Object& SetPriority(float priority_)
+        {
+            priority = priority_;
+            return *this;
+        }
+
+        Object& SetId(unsigned int id_)
+        {
+            id = id_;
+            return *this;
+        }
+
+        Color color;
+        float priority;
+        unsigned int id;
+    };
+
+    template<typename TEntity>
+    Object& Add()
+    {
+        static_assert(std::is_base_of_v<Entity, TEntity>, "TEntity must be an entity defined with DEFINE_ENTITY()");
+        Object& object = objectByType[TEntity::Type.key];
+        object.priority = nextPriority;
+        object.color = Color::White();
+        return object;
+    }
+
+    std::unordered_map<unsigned int, Object> objectByType;
+    float nextPriority = 1;
+};

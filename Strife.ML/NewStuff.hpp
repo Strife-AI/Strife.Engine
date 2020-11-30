@@ -10,6 +10,54 @@ namespace StrifeML
     struct ISerializable;
     struct ObjectSerializer;
 
+    static constexpr int NearestPowerOf2(const int value, const int powerOf2)
+    {
+        return (value + powerOf2 - 1) & ~(powerOf2 - 1);
+    }
+
+    struct SensorDefinition
+    {
+        struct WatchedEntity
+        {
+            unsigned int type;
+            unsigned char r, g, b;
+            float priority;
+        };
+
+        struct WatchedEntityList
+        {
+            std::unordered_map<unsigned int, WatchedEntity> watchedEntityByType;
+        };
+
+        std::shared_ptr<WatchedEntityList> watchedEntities;
+    };
+
+    template<typename TEnum, int Rows, int Cols>
+    struct GridSensor
+    {
+        GridSensor(gsl::span<unsigned long long> rectangles)
+        {
+            if(rectangles.size() <= MaxCompressedRectangles)
+            {
+                _isCompressed = true;
+                _totalRectangles = rectangles.size();
+                memcpy(compressedRectangles, rectangles.data(), rectangles.size_bytes());
+            }
+        }
+
+    private:
+        bool _isCompressed;
+        int _totalRectangles;
+
+        static constexpr int MaxCompressedRectangles = NearestPowerOf2(sizeof(TEnum) * Rows * Cols, 8) / 8;
+
+        union
+        {
+            int data[Rows][Cols];
+            unsigned long long compressedRectangles[MaxCompressedRectangles];
+        } ;
+    };
+
     template<typename T>
     void Serialize(T& value, ObjectSerializer& serializer);
 

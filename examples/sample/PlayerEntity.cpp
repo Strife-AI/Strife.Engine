@@ -33,6 +33,9 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
         };
 
         nn->SetNetwork("nn");
+
+        SensorDefinitionBuilder builder;
+        builder.Add<PlayerEntity>().SetColor(Color::Red()).SetPriority(1).SetId(0);
     }
 }
 
