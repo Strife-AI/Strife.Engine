@@ -5,9 +5,11 @@
 #include "Physics/ColliderHandle.hpp"
 #include "Scene/Scene.hpp"
 
+int bitsPerField = 12;
+
 static void ClampInRange(int& value)
 {
-    value = Clamp(value, 0, 4095);
+    value = Clamp(value, 0, 1 << bitsPerField - 1);
 }
 
 static uint64_t PackCompressedRectangle(int x1, int y1, int x2, int y2, int type)
@@ -18,13 +20,17 @@ static uint64_t PackCompressedRectangle(int x1, int y1, int x2, int y2, int type
     ClampInRange(y2);
     ClampInRange(type);
 
-    int bitsPerElement = 12;
-
-    return (uint64_t)x1 << 0 * bitsPerElement
-        | (uint64_t)y1 << 1 * bitsPerElement
-        | (uint64_t)x2 << 2 * bitsPerElement
-        | (uint64_t)y2 << 3 * bitsPerElement
+    return (uint64_t)x1 << 0 * bitsPerField
+        | (uint64_t)y1 << 1 * bitsPerField
+        | (uint64_t)x2 << 2 * bitsPerField
+        | (uint64_t)y2 << 3 * bitsPerField
         | (uint64_t)type;
+}
+
+static int GetCompressedRectangleField(uint64_t value, int id)
+{
+    uint64_t mask = (1UL << bitsPerField) - 1;
+    return value >> id * bitsPerField & mask;
 }
 
 static Vector2 PixelToCellCoordinate(Vector2 topLeft, Vector2 cellSize, Vector2 pixelCoordinate)
@@ -38,7 +44,7 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
     Vector2 cellSize,
     int rows,
     int cols,
-    std::shared_ptr<SensorObjectDefinition>& objectDefinition)
+    SensorObjectDefinition* objectDefinition)
 {
     Vector2 gridSizePixels = cellSize * Vector2(cols, rows);
     Rectangle gridPixelBounds(center - gridSizePixels / 2, gridSizePixels);
@@ -68,13 +74,41 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
             ++bottomRight.y;
         }
 
-        auto object = objectDefinition->objectByType.find(collider.OwningEntity()->type.key);
-        int type = object != objectDefinition->objectByType.end()
-            ? object->second.id
-            : 0;
+        int type = objectDefinition->GetEntitySensorObject(collider.OwningEntity()->type.key).id;
 
         outputStorage[i] = PackCompressedRectangle(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y, type);
     }
 
     return gsl::span<uint64_t>(outputStorage, outputSize);
+}
+
+void DecompressGridSensorOutput(gsl::span<uint64_t> compressedRectangles, Grid<int>& outGrid, SensorObjectDefinition* objectDefinition)
+{
+    outGrid.FillWithZero();
+
+    for(auto compressedRectangle : compressedRectangles)
+    {
+        int x1 = Clamp(GetCompressedRectangleField(compressedRectangle, 0), 0, outGrid.Cols());
+        int y1 = Clamp(GetCompressedRectangleField(compressedRectangle, 1), 0, outGrid.Rows());
+        int x2 = Clamp(GetCompressedRectangleField(compressedRectangle, 2), 0, outGrid.Cols());
+        int y2 = Clamp(GetCompressedRectangleField(compressedRectangle, 3), 0, outGrid.Rows());
+        int type = Clamp(GetCompressedRectangleField(compressedRectangle, 4), 0, objectDefinition->maxId);
+
+        if(objectDefinition->objectById.find(type) == objectDefinition->objectById.end())
+        {
+            // Missing type, replace with empty
+            type = 0;
+        }
+
+        for(int y = y1; y < y2; ++y)
+        {
+            for(int x = x1; x < x2; ++x)
+            {
+                if(objectDefinition->objectById[type].priority > objectDefinition->objectById[outGrid[y][x]].priority)
+                {
+                    outGrid[y][x] = type;
+                }
+            }
+        }
+    }
 }
