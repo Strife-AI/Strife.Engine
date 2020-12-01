@@ -1,6 +1,9 @@
 #pragma once
 #include "Engine.hpp"
 #include "../../Strife.ML/NewStuff.hpp"
+#include "Math/Vector2.hpp"
+#include "Scene/EntityComponent.hpp"
+#include "Scene/Entity.hpp"
 
 template<>
 inline void StrifeML::Serialize<Vector2>(Vector2& value, StrifeML::ObjectSerializer& serializer)
@@ -196,4 +199,68 @@ private:
     std::unordered_set<std::unique_ptr<StrifeML::ITrainerInternal>> _trainers;
     std::unordered_map<std::string, std::shared_ptr<StrifeML::INetworkContext>> _networksByName;
     std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition = std::make_shared<SensorObjectDefinition>();
+};
+
+gsl::span<uint64_t> ReadGridSensorRectangles(
+    Scene* scene,
+    Vector2 center,
+    Vector2 cellSize,
+    int rows,
+    int cols,
+    std::shared_ptr<SensorObjectDefinition>& objectDefinition);
+
+template<int Rows, int Cols>
+struct GridSensorOutput
+{
+    GridSensorOutput()
+        : _isCompressed(true),
+        _totalRectangles(0)
+    {
+
+    }
+
+    void SetRectangles(gsl::span<uint64_t> rectangles)
+    {
+        if (rectangles.size() <= MaxCompressedRectangles)
+        {
+            _isCompressed = true;
+            _totalRectangles = rectangles.size();
+            memcpy(compressedRectangles, rectangles.data(), rectangles.size_bytes());
+        }
+    }
+
+private:
+    bool _isCompressed;
+    int _totalRectangles;
+
+    static constexpr int MaxCompressedRectangles = NearestPowerOf2(sizeof(int) * Rows * Cols, sizeof(uint64_t)) / sizeof(uint64_t);
+
+    union
+    {
+        int data[Rows][Cols];
+        uint64_t compressedRectangles[MaxCompressedRectangles];
+    };
+};
+
+template<int Rows, int Cols>
+struct GridSensorComponent : IEntityComponent
+{
+    using SensorOutput = GridSensorOutput<Rows, Cols>;
+
+    void Read(SensorOutput& output)
+    {
+        auto sensorGridRectangles = ReadGridSensorRectangles(
+            GetScene(),
+            owner->Center() + offsetFromEntityCenter,
+            cellSize,
+            Rows,
+            Cols,
+            sensorObjectDefinition);
+
+        output.SetRectangles(sensorGridRectangles);
+    }
+
+    Vector2 offsetFromEntityCenter;
+    Vector2 cellSize;
+    std::shared_ptr<SensorObjectDefinition> sensorObjectDefinition;
 };
