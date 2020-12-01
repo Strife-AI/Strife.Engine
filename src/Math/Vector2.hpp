@@ -76,6 +76,11 @@ struct Vector2Template
         return Vector2Template<int>(static_cast<T>(floor(x)), static_cast<int>(floor(y)));
     }
 
+    Vector2Template Round() const
+    {
+        return Vector2(round(x), round(y));
+    }
+
     Vector2Template Min(const Vector2Template& rhs) const
     {
         return Vector2Template(::Min(x, rhs.x), ::Min(y, rhs.y));

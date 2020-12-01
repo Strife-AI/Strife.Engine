@@ -1,5 +1,7 @@
 #include "ML.hpp"
 
+
+#include "Renderer.hpp"
 #include "Math/BitMath.hpp"
 #include "Math/Rectangle.hpp"
 #include "Physics/ColliderHandle.hpp"
@@ -24,7 +26,7 @@ static uint64_t PackCompressedRectangle(int x1, int y1, int x2, int y2, int type
         | (uint64_t)y1 << 1 * bitsPerField
         | (uint64_t)x2 << 2 * bitsPerField
         | (uint64_t)y2 << 3 * bitsPerField
-        | (uint64_t)type;
+        | (uint64_t)type << 4 * bitsPerField;
 }
 
 static int GetCompressedRectangleField(uint64_t value, int id)
@@ -35,7 +37,7 @@ static int GetCompressedRectangleField(uint64_t value, int id)
 
 static Vector2 PixelToCellCoordinate(Vector2 topLeft, Vector2 cellSize, Vector2 pixelCoordinate)
 {
-    return (pixelCoordinate - topLeft) / cellSize;
+    return ((pixelCoordinate - topLeft) / cellSize).Floor().AsVectorOfType<float>();
 }
 
 gsl::span<uint64_t> ReadGridSensorRectangles(
@@ -44,10 +46,13 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
     Vector2 cellSize,
     int rows,
     int cols,
-    SensorObjectDefinition* objectDefinition)
+    SensorObjectDefinition* objectDefinition,
+    Entity* self)
 {
     Vector2 gridSizePixels = cellSize * Vector2(cols, rows);
-    Rectangle gridPixelBounds(center - gridSizePixels / 2, gridSizePixels);
+    Vector2 topLeft =  ((center - gridSizePixels / 2) / cellSize).Round() * cellSize;
+
+    Rectangle gridPixelBounds(topLeft, gridSizePixels);
 
     const int maxRectangles = 8192;
     static ColliderHandle colliderPool[maxRectangles];
@@ -55,10 +60,16 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
 
     auto overlappingColliders = scene->FindOverlappingColliders(gridPixelBounds, colliderPool);
 
-    int outputSize = Min((int)overlappingColliders.size(), maxRectangles);
-    for(int i = 0; i < outputSize; ++i)
+    int outputSize = 0;
+    for(int i = 0; i < Min((int)overlappingColliders.size(), maxRectangles); ++i)
     {
         auto& collider = overlappingColliders[i];
+
+        if(collider.OwningEntity() == self)
+        {
+            continue;
+        }
+
         auto colliderBounds = collider.Bounds();
 
         auto topLeft = PixelToCellCoordinate(gridPixelBounds.TopLeft(), cellSize, colliderBounds.TopLeft()).Max({ 0, 0 });
@@ -76,7 +87,7 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
 
         int type = objectDefinition->GetEntitySensorObject(collider.OwningEntity()->type.key).id;
 
-        outputStorage[i] = PackCompressedRectangle(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y, type);
+        outputStorage[outputSize++] = PackCompressedRectangle(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y, type);
     }
 
     return gsl::span<uint64_t>(outputStorage, outputSize);
@@ -110,5 +121,42 @@ void DecompressGridSensorOutput(gsl::span<uint64_t> compressedRectangles, Grid<i
                 }
             }
         }
+    }
+}
+
+void RenderGridSensorOutput(Grid<int>& grid, Vector2 center, Vector2 cellSize, SensorObjectDefinition* objectDefinition, Renderer* renderer, float depth)
+{
+    Vector2 gridSize = cellSize * Vector2(grid.Cols(), grid.Rows());
+    Vector2 gridTopLeft = ((center - gridSize / 2) / cellSize).Round() * cellSize;
+    Vector2 gridBottomRight = gridTopLeft + gridSize;
+
+    for(int i = 0; i < grid.Rows(); ++i)
+    {
+        for(int j = 0; j < grid.Cols(); ++j)
+        {
+            Vector2 cellTopLeft = gridTopLeft + Vector2(j, i) * cellSize;
+
+            auto it = objectDefinition->objectById.find(grid[i][j]);
+            auto& object = it != objectDefinition->objectById.end()
+                ? it->second
+                : objectDefinition->objectById[0];
+
+            if (object.id != 0)
+            {
+                renderer->RenderRectangle(Rectangle(cellTopLeft, cellSize), object.color, depth, 0);
+            }
+        }
+    }
+
+    for(int i = 0; i < grid.Rows() + 1; ++i)
+    {
+        float y = gridTopLeft.y + i * cellSize.y;
+        renderer->RenderLine(Vector2(gridTopLeft.x, y), Vector2(gridBottomRight.x, y), Color::Gray(), depth);
+    }
+
+    for(int i = 0; i < grid.Cols() + 1; ++i)
+    {
+        float x = gridTopLeft.x + i * cellSize.x;
+        renderer->RenderLine(Vector2(x, gridTopLeft.y), Vector2(x, gridBottomRight.y), Color::Gray(), 0);
     }
 }

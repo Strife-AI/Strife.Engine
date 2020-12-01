@@ -240,7 +240,8 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
     Vector2 cellSize,
     int rows,
     int cols,
-    SensorObjectDefinition* objectDefinition);
+    SensorObjectDefinition* objectDefinition,
+    Entity* self);
 
 void DecompressGridSensorOutput(gsl::span<uint64_t> compressedRectangles, Grid<int>& outGrid, SensorObjectDefinition* objectDefinition);
 
@@ -276,7 +277,7 @@ struct GridSensorOutput
     {
         if(_isCompressed)
         {
-            DecompressGridSensorOutput(compressedRectangles, outGrid, _sensorObjectDefinition.get());
+            DecompressGridSensorOutput(gsl::span<uint64_t>(compressedRectangles, _totalRectangles), outGrid, _sensorObjectDefinition.get());
         }
         else
         {
@@ -312,6 +313,8 @@ private:
     };
 };
 
+void RenderGridSensorOutput(Grid<int>& grid, Vector2 center, Vector2 cellSize, SensorObjectDefinition* objectDefinition, Renderer* renderer, float depth);
+
 template<int Rows, int Cols>
 struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
 {
@@ -320,6 +323,11 @@ struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
     GridSensorComponent(Vector2 cellSize = Vector2(32, 32))
     {
         this->cellSize = cellSize;
+    }
+
+    Vector2 GridCenter() const
+    {
+        return owner->Center() + offsetFromEntityCenter;
     }
 
     void OnAdded() override
@@ -331,16 +339,30 @@ struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
     {
         auto sensorGridRectangles = ReadGridSensorRectangles(
             GetScene(),
-            owner->Center() + offsetFromEntityCenter,
+            GridCenter(),
             cellSize,
             Rows,
             Cols,
-            sensorObjectDefinition.get());
+            sensorObjectDefinition.get(),
+            owner);
 
         output.SetRectangles(sensorGridRectangles, sensorObjectDefinition);
     }
 
+    void Render(Renderer* renderer) override
+    {
+        if (render)
+        {
+            FixedSizeGrid<int, Rows, Cols> decompressed;
+            SensorOutput output;
+            Read(output);
+            output.Decompress(decompressed);
+            RenderGridSensorOutput(decompressed, GridCenter(), cellSize, sensorObjectDefinition.get(), renderer, -1);
+        }
+    }
+         
     Vector2 offsetFromEntityCenter;
     Vector2 cellSize;
     std::shared_ptr<SensorObjectDefinition> sensorObjectDefinition;
+    bool render = false;
 };
