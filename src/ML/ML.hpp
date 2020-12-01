@@ -100,25 +100,19 @@ void NeuralNetworkComponent<TNeuralNetwork>::MakeDecision()
     decisionInProgress = networkContext->decider->MakeDecision(inputs, decisionSequenceLength);
 }
 
-struct SensorDefinitionBuilder
+struct SensorObjectDefinition
 {
-    struct Object
+    struct SensorObject
     {
-        Object& SetColor(Color color_)
+        SensorObject& SetColor(Color color_)
         {
             color = color_;
             return *this;
         }
 
-        Object& SetPriority(float priority_)
+        SensorObject& SetPriority(float priority_)
         {
             priority = priority_;
-            return *this;
-        }
-
-        Object& SetId(unsigned int id_)
-        {
-            id = id_;
             return *this;
         }
 
@@ -128,15 +122,78 @@ struct SensorDefinitionBuilder
     };
 
     template<typename TEntity>
-    Object& Add()
+    SensorObject& Add(int id)
     {
         static_assert(std::is_base_of_v<Entity, TEntity>, "TEntity must be an entity defined with DEFINE_ENTITY()");
-        Object& object = objectByType[TEntity::Type.key];
+        SensorObject& object = objectByType[TEntity::Type.key];
         object.priority = nextPriority;
         object.color = Color::White();
+        object.id = id;
         return object;
     }
 
-    std::unordered_map<unsigned int, Object> objectByType;
+    std::unordered_map<unsigned int, SensorObject> objectByType;
     float nextPriority = 1;
+};
+
+struct NeuralNetworkManager
+{
+    template<typename TDecider>
+    TDecider* CreateDecider()
+    {
+        static_assert(std::is_base_of_v<StrifeML::IDecider, TDecider>, "Decider must inherit from IDecider<TInput, TOutput>");
+        auto decider = std::make_unique<TDecider>();
+        auto deciderPtr = decider.get();
+        _deciders.emplace(std::move(decider));
+        return deciderPtr;
+    }
+
+    template<typename TTrainer>
+    TTrainer* CreateTrainer()
+    {
+        static_assert(std::is_base_of_v<StrifeML::ITrainerInternal, TTrainer>, "Trainer must inherit from ITrainer<TInput, TOutput>");
+        auto decider = std::make_unique<TTrainer>();
+        auto deciderPtr = decider.get();
+        _trainers.emplace(std::move(decider));
+        return deciderPtr;
+    }
+
+    template<typename TDecider, typename TTrainer>
+    void CreateNetwork(const char* name, TDecider* decider, TTrainer* trainer)
+    {
+        static_assert(std::is_same_v<typename TDecider::NetworkType, typename TTrainer::NetworkType>, "Trainer and decider must accept the same type of neural network");
+
+        auto context = _networksByName.find(name);
+        if (context != _networksByName.end())
+        {
+            throw StrifeML::StrifeException("Network already exists: " + std::string(name));
+        }
+
+        _networksByName[name] = std::make_shared<StrifeML::NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
+    }
+
+    // TODO remove network method
+
+    template<typename TNeuralNetwork>
+    StrifeML::NetworkContext<TNeuralNetwork>* GetNetwork(const char* name)
+    {
+        // TODO error handling if missing or wrong type
+        return dynamic_cast<StrifeML::NetworkContext<TNeuralNetwork>*>(_networksByName[name].get());
+    }
+
+    void SetSensorObjectDefinition(const SensorObjectDefinition& definition)
+    {
+        _sensorObjectDefinition = std::make_shared<SensorObjectDefinition>(definition);
+    }
+
+    std::shared_ptr<SensorObjectDefinition> GetSensorObjectDefinition() const
+    {
+        return _sensorObjectDefinition;
+    }
+
+private:
+    std::unordered_set<std::unique_ptr<StrifeML::IDecider>> _deciders;
+    std::unordered_set<std::unique_ptr<StrifeML::ITrainerInternal>> _trainers;
+    std::unordered_map<std::string, std::shared_ptr<StrifeML::INetworkContext>> _networksByName;
+    std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition = std::make_shared<SensorObjectDefinition>();
 };
