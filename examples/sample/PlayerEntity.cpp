@@ -4,6 +4,7 @@
 #include "Net/ReplicationManager.hpp"
 #include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
+#include "Scene/TilemapEntity.hpp"
 
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
@@ -19,15 +20,21 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
 
     scene->GetService<InputService>()->players.push_back(this);
 
-    if (scene->isServer)
+    if (!scene->isServer)
     {
         SensorObjectDefinition builder;
         builder.Add<PlayerEntity>(1).SetColor(Color::Red()).SetPriority(1);
+        builder.Add<TilemapEntity>(2).SetColor(Color::Gray()).SetPriority(0);
 
         GetEngine()->GetNeuralNetworkManager()->SetSensorObjectDefinition(builder);
 
         auto nn = AddComponent<NeuralNetworkComponent<PlayerNetwork>>();
-        auto gridSensor = AddComponent<GridSensorComponent<40, 40>>();
+        auto gridSensor = AddComponent<GridSensorComponent<40, 40>>("grid", Vector2(16, 16));
+
+        static bool x = true;
+
+        gridSensor->render = x;
+        x = false;
 
         nn->collectData = [=](PlayerModelInput& input)
         {
