@@ -21,10 +21,18 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
 
     if (scene->isServer)
     {
+        SensorObjectDefinition builder;
+        builder.Add<PlayerEntity>(1).SetColor(Color::Red()).SetPriority(1);
+
+        GetEngine()->GetNeuralNetworkManager()->SetSensorObjectDefinition(builder);
+
         auto nn = AddComponent<NeuralNetworkComponent<PlayerNetwork>>();
+        auto gridSensor = AddComponent<GridSensorComponent<40, 40>>();
+
         nn->collectData = [=](PlayerModelInput& input)
         {
             input.velocity = rigidBody->GetVelocity();
+            gridSensor->Read(input.grid);
         };
 
         nn->receiveDecision = [=](PlayerDecision& decision)
@@ -33,11 +41,6 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
         };
 
         nn->SetNetwork("nn");
-
-        SensorObjectDefinition builder;
-        builder.Add<PlayerEntity>(1).SetColor(Color::Red()).SetPriority(1);
-
-        GetEngine()->GetNeuralNetworkManager()->SetSensorObjectDefinition(builder);
     }
 }
 

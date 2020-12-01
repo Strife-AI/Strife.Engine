@@ -2,8 +2,10 @@
 #include "Engine.hpp"
 #include "../../Strife.ML/NewStuff.hpp"
 #include "Math/Vector2.hpp"
+#include "Memory/Grid.hpp"
 #include "Scene/EntityComponent.hpp"
 #include "Scene/Entity.hpp"
+#include "Scene/Scene.hpp"
 
 template<>
 inline void StrifeML::Serialize<Vector2>(Vector2& value, StrifeML::ObjectSerializer& serializer)
@@ -105,6 +107,14 @@ void NeuralNetworkComponent<TNeuralNetwork>::MakeDecision()
 
 struct SensorObjectDefinition
 {
+    SensorObjectDefinition()
+    {
+        entityIdToObjectId[0] = 0;
+        objectById[0] = SensorObject();
+        objectById[0].id = 0;
+        objectById[0].priority = -1000000;
+    }
+
     struct SensorObject
     {
         SensorObject& SetColor(Color color_)
@@ -121,21 +131,44 @@ struct SensorObjectDefinition
 
         Color color;
         float priority;
-        unsigned int id;
+        int id;
     };
 
     template<typename TEntity>
     SensorObject& Add(int id)
     {
+        // TODO check for duplicate keys
         static_assert(std::is_base_of_v<Entity, TEntity>, "TEntity must be an entity defined with DEFINE_ENTITY()");
-        SensorObject& object = objectByType[TEntity::Type.key];
+        SensorObject& object = objectById[id];
         object.priority = nextPriority;
         object.color = Color::White();
         object.id = id;
+        maxId = Max(maxId, id);
+
+        entityIdToObjectId[TEntity::Type.key] = id;
+
         return object;
     }
 
-    std::unordered_map<unsigned int, SensorObject> objectByType;
+    
+    SensorObject& GetEntitySensorObject(StringId key)
+    {
+        auto it = entityIdToObjectId.find(key.key);
+        if(it == entityIdToObjectId.end())
+        {
+            return objectById[0];
+        }
+        else
+        {
+            return objectById[it->second];
+        }
+    }
+
+    int maxId = 0;
+
+    std::unordered_map<unsigned int, int> entityIdToObjectId;
+    std::unordered_map<int, SensorObject> objectById;
+
     float nextPriority = 1;
 };
 
@@ -207,7 +240,9 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
     Vector2 cellSize,
     int rows,
     int cols,
-    std::shared_ptr<SensorObjectDefinition>& objectDefinition);
+    SensorObjectDefinition* objectDefinition);
+
+void DecompressGridSensorOutput(gsl::span<uint64_t> compressedRectangles, Grid<int>& outGrid, SensorObjectDefinition* objectDefinition);
 
 template<int Rows, int Cols>
 struct GridSensorOutput
@@ -219,19 +254,54 @@ struct GridSensorOutput
 
     }
 
-    void SetRectangles(gsl::span<uint64_t> rectangles)
+    void SetRectangles(gsl::span<uint64_t> rectangles, std::shared_ptr<SensorObjectDefinition> sensorObjectDefinition)
     {
+        _sensorObjectDefinition = sensorObjectDefinition;
+
         if (rectangles.size() <= MaxCompressedRectangles)
         {
             _isCompressed = true;
             _totalRectangles = rectangles.size();
             memcpy(compressedRectangles, rectangles.data(), rectangles.size_bytes());
         }
+        else
+        {
+            _isCompressed = false;
+            Grid<int> grid(Rows, Cols, &data[0][0]);
+            DecompressGridSensorOutput(rectangles, grid, sensorObjectDefinition.get());
+        }
+    }
+
+    void Decompress(Grid<int>& outGrid)
+    {
+        if(_isCompressed)
+        {
+            DecompressGridSensorOutput(compressedRectangles, outGrid, _sensorObjectDefinition.get());
+        }
+        else
+        {
+            if(outGrid.Rows() == Rows && outGrid.Cols() == Cols)
+            {
+                memcpy(outGrid.Data(), data, sizeof(data));
+            }
+            else
+            {
+                outGrid.FillWithZero();
+                for(int i = 0; i < Min(Rows, outGrid.Rows()); ++i)
+                {
+                    for(int j = 0; j < Min(Cols, outGrid.Cols()); ++j)
+                    {
+                        outGrid[i][j] = data[i][j];
+                    }
+                }
+            }
+        }
     }
 
 private:
     bool _isCompressed;
     int _totalRectangles;
+    std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition;
 
     static constexpr int MaxCompressedRectangles = NearestPowerOf2(sizeof(int) * Rows * Cols, sizeof(uint64_t)) / sizeof(uint64_t);
 
@@ -243,9 +313,19 @@ private:
 };
 
 template<int Rows, int Cols>
-struct GridSensorComponent : IEntityComponent
+struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
 {
     using SensorOutput = GridSensorOutput<Rows, Cols>;
+
+    GridSensorComponent(Vector2 cellSize = Vector2(32, 32))
+    {
+        this->cellSize = cellSize;
+    }
+
+    void OnAdded() override
+    {
+        sensorObjectDefinition = GetScene()->GetEngine()->GetNeuralNetworkManager()->GetSensorObjectDefinition();
+    }
 
     void Read(SensorOutput& output)
     {
@@ -255,9 +335,9 @@ struct GridSensorComponent : IEntityComponent
             cellSize,
             Rows,
             Cols,
-            sensorObjectDefinition);
+            sensorObjectDefinition.get());
 
-        output.SetRectangles(sensorGridRectangles);
+        output.SetRectangles(sensorGridRectangles, sensorObjectDefinition);
     }
 
     Vector2 offsetFromEntityCenter;

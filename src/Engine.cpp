@@ -113,6 +113,7 @@ Engine::~Engine()
 
             _serverGame = nullptr;
             _clientGame = nullptr;
+            _neuralNetworkManager = nullptr;
 
             auto peerInterface = SLNet::RakPeerInterface::GetInstance();
             if(peerInterface->IsActive())

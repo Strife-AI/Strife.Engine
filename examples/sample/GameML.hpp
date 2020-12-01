@@ -2,6 +2,7 @@
 
 #include "../../Strife.ML/NewStuff.hpp"
 #include "Math/Vector2.hpp"
+#include "ML/ML.hpp"
 
 struct PlayerModelInput : StrifeML::ISerializable
 {
@@ -12,6 +13,7 @@ struct PlayerModelInput : StrifeML::ISerializable
     }
 
     Vector2 velocity;
+    GridSensorOutput<40, 40> grid;
 };
 
 struct PlayerDecision
