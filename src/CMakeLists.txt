@@ -153,7 +153,7 @@ add_library(Strife.Engine STATIC
         "Physics/PathFinding.cpp"
         "Scene/EntityManager.cpp"
         
-     "Net/ServerGame.cpp" "ML/ML.hpp")
+     "Net/ServerGame.cpp" "ML/ML.hpp" "ML/ML.cpp")
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
