@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../Strife.ML/NewStuff.hpp"
+#include "Math/Random.hpp"
 #include "Math/Vector2.hpp"
 #include "ML/ML.hpp"
 
@@ -9,7 +10,8 @@ struct PlayerModelInput : StrifeML::ISerializable
     void Serialize(StrifeML::ObjectSerializer& serializer) override
     {
         serializer
-            .Add(velocity);
+            .Add(velocity)
+            .Add(grid);
     }
 
     Vector2 velocity;
@@ -18,14 +20,14 @@ struct PlayerModelInput : StrifeML::ISerializable
 
 struct PlayerDecision
 {
-    
+    Vector2 velocity;
 };
 
 struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision>
 {
-    void MakeDecision(gsl::span<const InputType> input, OutputType& outOutput) override
+    void MakeDecision(gsl::span<const InputType> input, OutputType& output) override
     {
-
+        //output.velocity = Rand({ -1, 1 }, { -1, 1 }).Normalize() * 200;
     }
 };
 
