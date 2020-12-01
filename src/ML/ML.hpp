@@ -30,6 +30,12 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
 
     virtual ~NeuralNetworkComponent() = default;
 
+    void OnAdded() override
+    {
+        // Disabled by default on the client
+        isEnabled = GetScene()->isServer;
+    }
+
     void Update(float deltaTime) override;
 
     void SetNetwork(const char* name)
@@ -50,11 +56,17 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     int decisionSequenceLength;
     float decisionsPerSecond;
     float makeDecisionsTimer = 0;
+    bool isEnabled = false;
 };
 
 template <typename TNeuralNetwork>
 void NeuralNetworkComponent<TNeuralNetwork>::Update(float deltaTime)
 {
+    if(!isEnabled)
+    {
+        return;
+    }
+
     makeDecisionsTimer -= deltaTime;
 
     if (makeDecisionsTimer <= 0)
@@ -366,3 +378,12 @@ struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
     std::shared_ptr<SensorObjectDefinition> sensorObjectDefinition;
     bool render = false;
 };
+
+namespace StrifeML
+{
+    template<int Rows, int Cols>
+    void Serialize(GridSensorOutput<Rows, Cols>& value, ObjectSerializer& serializer)
+    {
+        // TODO
+    }
+}

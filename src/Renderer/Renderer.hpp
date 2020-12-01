@@ -48,6 +48,19 @@ struct DebugLine
     Color color;
 };
 
+struct DebugRectangle
+{
+    DebugRectangle(const Rectangle& rect_, Color color_)
+        : rect(rect_),
+        color(color_)
+    {
+        
+    }
+
+    Rectangle rect;
+    Color color;
+};
+
 class Renderer
 {
 public:
@@ -89,6 +102,7 @@ public:
     }
 
     static void DrawDebugRectangleOutline(const Rectangle& rect, Color color);
+    static void DrawDebugRectangle(const Rectangle& rect, Color color);
 
 private:
     void InitializeLineRenderer();
@@ -114,4 +128,5 @@ private:
     std::unique_ptr<FrameBuffer> _deferredLightingColorBuffer;
 
     static std::vector<DebugLine> _debugLines;
+    static std::vector<DebugRectangle> _debugRectangles;
 };

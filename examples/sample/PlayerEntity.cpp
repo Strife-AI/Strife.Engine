@@ -20,35 +20,29 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
 
     scene->GetService<InputService>()->players.push_back(this);
 
-    if (!scene->isServer)
+    SensorObjectDefinition builder;
+    builder.Add<PlayerEntity>(1).SetColor(Color::Red()).SetPriority(1);
+    builder.Add<TilemapEntity>(2).SetColor(Color::Gray()).SetPriority(0);
+
+    GetEngine()->GetNeuralNetworkManager()->SetSensorObjectDefinition(builder);
+
+    auto nn = AddComponent<NeuralNetworkComponent<PlayerNetwork>>();
+    auto gridSensor = AddComponent<GridSensorComponent<40, 40>>("grid", Vector2(16, 16));
+
+    gridSensor->render = true;
+
+    nn->collectData = [=](PlayerModelInput& input)
     {
-        SensorObjectDefinition builder;
-        builder.Add<PlayerEntity>(1).SetColor(Color::Red()).SetPriority(1);
-        builder.Add<TilemapEntity>(2).SetColor(Color::Gray()).SetPriority(0);
+        input.velocity = rigidBody->GetVelocity();
+        gridSensor->Read(input.grid);
+    };
 
-        GetEngine()->GetNeuralNetworkManager()->SetSensorObjectDefinition(builder);
+    nn->receiveDecision = [=](PlayerDecision& decision)
+    {
+        //rigidBody->SetVelocity(decision.velocity);
+    };
 
-        auto nn = AddComponent<NeuralNetworkComponent<PlayerNetwork>>();
-        auto gridSensor = AddComponent<GridSensorComponent<40, 40>>("grid", Vector2(16, 16));
-
-        static bool x = true;
-
-        gridSensor->render = x;
-        x = false;
-
-        nn->collectData = [=](PlayerModelInput& input)
-        {
-            input.velocity = rigidBody->GetVelocity();
-            gridSensor->Read(input.grid);
-        };
-
-        nn->receiveDecision = [=](PlayerDecision& decision)
-        {
-            Log("Received decision\n");
-        };
-
-        nn->SetNetwork("nn");
-    }
+    nn->SetNetwork("nn");
 }
 
 void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)
