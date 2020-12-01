@@ -15,23 +15,6 @@ namespace StrifeML
         return (value + powerOf2 - 1) & ~(powerOf2 - 1);
     }
 
-    struct SensorDefinition
-    {
-        struct WatchedEntity
-        {
-            unsigned int type;
-            unsigned char r, g, b;
-            float priority;
-        };
-
-        struct WatchedEntityList
-        {
-            std::unordered_map<unsigned int, WatchedEntity> watchedEntityByType;
-        };
-
-        std::shared_ptr<WatchedEntityList> watchedEntities;
-    };
-
     template<typename TEnum, int Rows, int Cols>
     struct GridSensor
     {
@@ -262,56 +245,4 @@ namespace StrifeML
             });
         }
     }
-
-    struct NeuralNetworkManager
-    {
-        template<typename TDecider>
-        TDecider* CreateDecider()
-        {
-            static_assert(std::is_base_of_v<IDecider, TDecider>, "Decider must inherit from IDecider<TInput, TOutput>");
-            auto decider = std::make_unique<TDecider>();
-            auto deciderPtr = decider.get();
-            _deciders.emplace(std::move(decider));
-            return deciderPtr;
-        }
-
-        template<typename TTrainer>
-        TTrainer* CreateTrainer()
-        {
-            static_assert(std::is_base_of_v<ITrainerInternal, TTrainer>, "Trainer must inherit from ITrainer<TInput, TOutput>");
-            auto decider = std::make_unique<TTrainer>();
-            auto deciderPtr = decider.get();
-            _trainers.emplace(std::move(decider));
-            return deciderPtr;
-        }
-
-        template<typename TDecider, typename TTrainer>
-        void CreateNetwork(const char* name, TDecider* decider, TTrainer* trainer)
-        {
-            static_assert(std::is_same_v<typename TDecider::NetworkType, typename TTrainer::NetworkType>, "Trainer and decider must accept the same type of neural network");
-
-            auto context = _networksByName.find(name);
-            if (context != _networksByName.end())
-            {
-                throw StrifeException("Network already exists: " + std::string(name));
-            }
-
-            _networksByName[name] = std::make_shared<NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
-        }
-
-        // TODO remove network method
-
-        template<typename TNeuralNetwork>
-        NetworkContext<TNeuralNetwork>* GetNetwork(const char* name)
-        {
-            // TODO error handling if missing or wrong type
-            return dynamic_cast<NetworkContext<TNeuralNetwork>*>(_networksByName[name].get());
-        }
-
-    private:
-        std::unordered_set<std::unique_ptr<IDecider>> _deciders;
-        std::unordered_set<std::unique_ptr<ITrainerInternal>> _trainers;
-        std::unordered_map<std::string, std::shared_ptr<INetworkContext>> _networksByName;
-    };
-
 }

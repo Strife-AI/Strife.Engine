@@ -11,6 +11,7 @@
 #include <thread>
 
 #include "../Strife.ML/NewStuff.hpp"
+#include "ML/ML.hpp"
 #include "Scene/IGame.hpp"
 #include "System/Input.hpp"
 #include "Renderer/SdlManager.hpp"
@@ -83,7 +84,7 @@ Engine* Engine::Initialize(const EngineConfig& config)
     Log("Initializing sound\n");
     engine->_soundManager = new SoundManager;
 
-    engine->_neuralNetworkManager = std::make_unique<StrifeML::NeuralNetworkManager>();
+    engine->_neuralNetworkManager = std::make_unique<NeuralNetworkManager>();
 
     UiCanvas::Initialize(engine->_soundManager);
 
