@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstring>
-#include "Math/Vector2.hpp"
 
 template <typename T>
 class Grid
@@ -37,11 +36,6 @@ public:
     T* operator[](int row)
     {
         return &_data[CalculateIndex(0, row)];
-    }
-
-    T& operator[](const Vector2& position)
-    {
-        return _data[CalculateIndex(position.x, position.y)];
     }
 
     void FillWithZero()
