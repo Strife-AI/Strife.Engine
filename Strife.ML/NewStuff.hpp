@@ -3,7 +3,7 @@
 #include <unordered_set>
 #include <gsl/span>
 
-#include "../src/Memory/Grid.hpp"
+#include "Container/Grid.hpp"
 #include "Thread/ThreadPool.hpp"
 #include "torch/nn/module.h"
 
@@ -290,7 +290,7 @@ namespace StrifeML
             int batchSize = outBatch.Rows();
             for(int i = 0; i < batchSize; ++i)
             {
-                if (!TrySelectSequenceSamples(gsl::span<InputType>(&outBatch[i], outBatch.Cols())))
+                if (!TrySelectSequenceSamples(gsl::span<SampleType>(outBatch[i], outBatch.Cols())))
                 {
                     return false;
                 }
@@ -301,7 +301,7 @@ namespace StrifeML
 
         virtual void ReceiveSample(const InputType& input, const OutputType& output) { }
 
-        virtual bool TrySelectSequenceSamples(gsl::span<InputType> outSequence) { return false; }
+        virtual bool TrySelectSequenceSamples(gsl::span<SampleType> outSequence) { return false; }
 
         SpinLock sampleLock;
         SampleRepository<SampleType> sampleRepository;

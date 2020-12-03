@@ -29,6 +29,11 @@ struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision>
     {
         //output.velocity = Rand({ -1, 1 }, { -1, 1 }).Normalize() * 200;
     }
+
+    void TrainBatch(Grid<const StrifeML::Sample<PlayerModelInput, PlayerDecision>> input, StrifeML::TrainingBatchResult& outResult) override
+    {
+        
+    }
 };
 
 struct PlayerDecider : StrifeML::Decider<PlayerNetwork>
