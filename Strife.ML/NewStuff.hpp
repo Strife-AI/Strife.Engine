@@ -2,6 +2,8 @@
 #include <memory>
 #include <unordered_set>
 #include <gsl/span>
+
+#include "../src/Memory/Grid.hpp"
 #include "Thread/ThreadPool.hpp"
 #include "torch/nn/module.h"
 
@@ -80,13 +82,27 @@ namespace StrifeML
         virtual ~INeuralNetwork() = default;
     };
 
+    struct TrainingBatchResult
+    {
+        float loss = 0;
+    };
+
+    template<typename TInput, typename TOutput>
+    struct Sample
+    {
+        TInput input;
+        TOutput output;
+    };
+
     template<typename TInput, typename TOutput>
     struct NeuralNetwork : INeuralNetwork
     {
         using InputType = TInput;
         using OutputType = TOutput;
+        using SampleType = Sample<InputType, OutputType>;
 
         virtual void MakeDecision(gsl::span<const TInput> input, TOutput& output) = 0;
+        virtual void TrainBatch(Grid<const SampleType> input, TrainingBatchResult& outResult) = 0;
     };
 
     struct IDecider
@@ -140,9 +156,94 @@ namespace StrifeML
         std::shared_ptr<TNeuralNetwork> network = std::make_shared<TNeuralNetwork>();
     };
 
+    template<typename TSample, typename TSelector>
+    class GroupedSampleView
+    {
+    public:
+
+    private:
+        std::function<TSelector(const TSample& sample)> _selector;
+    };
+
+    template<typename TSample>
+    class SampleSequence
+    {
+    public:
+        bool TryGetSampleBySequenceId(int sequenceId, TSample& outSample)
+        {
+            if (sequenceId < 0 || sequenceId >= _serializedSamples.size())
+            {
+                return false;
+            }
+
+            auto& serializedSample = _serializedSamples[sequenceId];
+            ObjectSerializer serializer(serializedSample.bytes, true);
+            outSample.input.Serialize(serializer);
+            outSample.output.Serialize(serializer);
+
+            return !serializer.hadError;
+        }
+
+        template<typename TSelector>
+        void CreateGroupedView(const std::function<TSelector(const TSample& sample)> selector)
+        {
+
+        }
+
+    private:
+        std::vector<SerializedObject> _serializedSamples;
+    };
+
+    template<typename TSample>
+    class SampleRepository
+    {
+    public:
+        using Sequence = SampleSequence<TSample>;
+
+        Sequence* CreateSequence(const char* name)
+        {
+            // TODO check for duplicate
+            _sequencesByName[name] = std::make_unique<Sequence>();
+            return _sequencesByName[name].get();
+        }
+
+    private:
+        std::unordered_map<std::string, std::unique_ptr<Sequence>> _sequencesByName;
+
+    };
+
     struct ITrainerInternal
     {
         virtual ~ITrainerInternal() = default;
+    };
+
+    template<typename TNeuralNetwork>
+    struct RunTrainingBatchWorkItem : ThreadPoolWorkItem<TrainingBatchResult>
+    {
+        using InputType = typename TNeuralNetwork::InputType;
+        using OutputType = typename TNeuralNetwork::OutputType;
+        using NetworkType = TNeuralNetwork;
+        using SampleType = Sample<InputType, OutputType>;
+
+        RunTrainingBatchWorkItem(std::shared_ptr<TNeuralNetwork> network_, std::shared_ptr<SampleType[]> samples_, int batchSize_, int sequenceLength_)
+            : network(network_),
+            samples(samples_),
+            batchSize(batchSize_),
+            sequenceLength(sequenceLength_)
+        {
+            
+        }
+
+        void Execute() override
+        {
+            Grid<SampleType> input(samples.get(), batchSize, sequenceLength);
+            network->TrainBatch(input, _result);
+        }
+
+        std::shared_ptr<TNeuralNetwork> network;
+        std::shared_ptr<SampleType[]> samples;
+        int batchSize;
+        int sequenceLength;
     };
 
     template<typename TNeuralNetwork>
@@ -151,11 +252,59 @@ namespace StrifeML
         using InputType = typename TNeuralNetwork::InputType;
         using OutputType = typename TNeuralNetwork::OutputType;
         using NetworkType = TNeuralNetwork;
+        using SampleType = Sample<InputType, OutputType>;
 
         ITrainer()
         {
             static_assert(std::is_base_of_v<INeuralNetwork, TNeuralNetwork>, "Neural network must inherit from INeuralNetwork<>");
         }
+
+        void AddSample(const InputType& input, const OutputType& output)
+        {
+            sampleLock.Lock();
+            ReceiveSample(input, output);
+            sampleLock.Unlock();
+        }
+
+        std::shared_ptr<RunTrainingBatchWorkItem<TNeuralNetwork>> RunBatch(std::shared_ptr<SampleType[]> sampleStorage, int batchSize, int sequenceLength)
+        {
+            sampleLock.Lock();
+            bool successful = TryCreateBatch(Grid<SampleType>(batchSize, sequenceLength, sampleStorage.get()));
+            sampleLock.Unlock();
+
+            if(successful)
+            {
+                auto threadPool = ThreadPool::GetInstance();
+                auto workItem = std::make_shared<RunTrainingBatchWorkItem<TNeuralNetwork>>(sampleStorage, batchSize, sequenceLength);
+                threadPool->StartItem(workItem);
+                return workItem;
+            }
+            else
+            {
+                return nullptr;
+            }
+        }
+
+        virtual bool TryCreateBatch(Grid<SampleType> outBatch)
+        {
+            int batchSize = outBatch.Rows();
+            for(int i = 0; i < batchSize; ++i)
+            {
+                if (!TrySelectSequenceSamples(gsl::span<InputType>(&outBatch[i], outBatch.Cols())))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        virtual void ReceiveSample(const InputType& input, const OutputType& output) { }
+
+        virtual bool TrySelectSequenceSamples(gsl::span<InputType> outSequence) { return false; }
+
+        SpinLock sampleLock;
+        SampleRepository<SampleType> sampleRepository;
     };
 
     struct INetworkContext
