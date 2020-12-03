@@ -18,9 +18,26 @@ struct PlayerModelInput : StrifeML::ISerializable
     GridSensorOutput<40, 40> grid;
 };
 
-struct PlayerDecision
+enum class PlayerAction
 {
+    Nothing,
+    Up,
+    Down,
+    Left,
+    Right
+};
+
+struct PlayerDecision : StrifeML::ISerializable
+{
+    void Serialize(StrifeML::ObjectSerializer& serializer) override
+    {
+        serializer
+            .Add(velocity)
+            .Add(action);
+    }
+
     Vector2 velocity;
+    PlayerAction action;
 };
 
 struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision>
@@ -43,5 +60,24 @@ struct PlayerDecider : StrifeML::Decider<PlayerNetwork>
 
 struct PlayerTrainer : StrifeML::ITrainer<PlayerNetwork>
 {
-    
+    PlayerTrainer()
+    {
+        samples = sampleRepository.CreateSampleSet("player-samples");
+        samplesByActionType = samples
+            ->CreateGroupedView<PlayerAction>()
+            ->GroupBy([=](const SampleType& sample) { return sample.output.action; });
+    }
+
+    void ReceiveSample(const SampleType& sample) override
+    {
+        samples->AddSample(sample);
+    }
+
+    bool TrySelectSequenceSamples(gsl::span<SampleType> outSequence) override
+    {
+        return samplesByActionType->TryPickRandomSequence(outSequence);
+    }
+
+    StrifeML::SampleSet<SampleType>* samples;
+    StrifeML::GroupedSampleView<SampleType, PlayerAction>* samplesByActionType;
 };
