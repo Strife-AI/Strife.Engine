@@ -10,10 +10,10 @@ find_package(slikenet CONFIG REQUIRED)
 add_library(Strife.Engine STATIC
         Engine.cpp
         Math/Rectangle.cpp
-        Math/Vector2.cpp
+        
         Math/Polygon.cpp
         Memory/Crc32.cpp
-        Memory/Grid.cpp
+        
         Memory/ResourceManager.cpp
         Physics/Physics.cpp
         Physics/ColliderHandle.cpp
@@ -74,8 +74,8 @@ add_library(Strife.Engine STATIC
         Renderer/LightAnimations.cpp
         Renderer/Camera.cpp
         Renderer/Camera.hpp
-        Math/Vector3.hpp
-        Math/Vector4.hpp
+        
+        
         Renderer/GL/LineRenderer.cpp
         Renderer/GL/LineRenderer.hpp
         Renderer/RenderVertex.hpp
@@ -119,7 +119,7 @@ add_library(Strife.Engine STATIC
         UI/UiDictionary.hpp
         UI/UiBuilder.cpp
         Memory/Dictionary.hpp
-        Math/BitMath.cpp
+        
         Sound/SoundEffect.cpp
         Memory/ResourcePool.hpp
         Renderer/ParticleSystem.hpp

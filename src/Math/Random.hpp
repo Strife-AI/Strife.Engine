@@ -1,5 +1,5 @@
 #pragma once
-#include "Vector2.hpp"
+#include "Math/Vector2.hpp"
 
 float Rand(float min, float max);
 int Randi(int min, int max);

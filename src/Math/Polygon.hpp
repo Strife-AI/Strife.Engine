@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "Vector2.hpp"
+#include "Math/Vector2.hpp"
 #include "gsl/span"
 
 template<typename T>
