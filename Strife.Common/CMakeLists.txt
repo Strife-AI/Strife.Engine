@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 add_library(Strife.Common STATIC
 	Thread/SpinLock.cpp
 	Thread/ThreadPool.cpp
- "Math/BitMath.cpp" "Math/BitMath.hpp" "Math/Vector2.cpp" "Math/Vector2.hpp" "Math/Vector3.hpp" "Math/Vector4.hpp" "Container/Grid.hpp")
+ "Math/BitMath.cpp" "Math/BitMath.hpp" "Math/Vector2.cpp" "Math/Vector2.hpp" "Math/Vector3.hpp" "Math/Vector4.hpp" "Container/Grid.hpp" "Thread/TaskScheduler.hpp" "Thread/TaskScheduler.cpp")
 	
 find_package(Microsoft.GSL CONFIG REQUIRED)
 

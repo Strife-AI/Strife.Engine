@@ -5,6 +5,7 @@
 #include <gsl/span>
 
 #include "Container/Grid.hpp"
+#include "Thread/TaskScheduler.hpp"
 #include "Thread/ThreadPool.hpp"
 #include "torch/nn/module.h"
 
@@ -491,6 +492,8 @@ namespace StrifeML
         SpinLock sampleLock;
         RandomNumberGenerator rng;
         SampleRepository<SampleType> sampleRepository;
+        std::shared_ptr<SampleType[]> trainingInput;
+        std::shared_ptr<ScheduledTask> trainTask;
     };
 
     struct INetworkContext

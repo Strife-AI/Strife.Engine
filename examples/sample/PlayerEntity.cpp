@@ -31,7 +31,7 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
 
     gridSensor->render = true;
 
-    nn->collectData = [=](PlayerModelInput& input)
+    nn->collectInput = [=](PlayerModelInput& input)
     {
         input.velocity = rigidBody->GetVelocity();
         gridSensor->Read(input.grid);

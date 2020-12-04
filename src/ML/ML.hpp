@@ -19,11 +19,15 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     using InputType = typename TNeuralNetwork::InputType;
     using OutputType = typename TNeuralNetwork::OutputType;
     using NetworkType = TNeuralNetwork;
+    using SampleType = StrifeML::Sample<InputType, OutputType>;
 
-    NeuralNetworkComponent(int decisionSequenceLength_ = 1, float decisionsPerSecond_ = 1)
-        : inputs(StrifeML::MlUtil::MakeSharedArray<InputType>(decisionSequenceLength_)),
-        decisionSequenceLength(decisionSequenceLength_),
-        decisionsPerSecond(decisionsPerSecond_)
+    NeuralNetworkComponent(int sequenceLength_ = 1, int batchSize_ = 32, float decisionsPerSecond_ = 1, float trainsPerSecond_ = 1)
+        : decisionInput(StrifeML::MlUtil::MakeSharedArray<InputType>(sequenceLength_)),
+        decisionsPerSecond(decisionsPerSecond_),
+        trainingInput(StrifeML::MlUtil::MakeSharedArray<SampleType>(sequenceLength_ * batchSize_)),
+        trainsPerSecond(trainsPerSecond_),
+        sequenceLength(sequenceLength_),
+        batchSize(batchSize_)
     {
 
     }
@@ -45,17 +49,25 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     }
 
     void MakeDecision();
+    void DoTraining();
 
     StrifeML::NetworkContext<NetworkType>* networkContext = nullptr;
     std::shared_ptr<StrifeML::MakeDecisionWorkItem<TNeuralNetwork>> decisionInProgress;
-    std::shared_ptr<InputType[]> inputs;
+    std::shared_ptr<InputType[]> decisionInput;
+    float makeDecisionsTimer = 0;
+    float decisionsPerSecond;
 
-    std::function<void(InputType& input)> collectData;
+    std::shared_ptr<StrifeML::RunTrainingBatchWorkItem<TNeuralNetwork>> trainingInProgress;
+
+    std::function<void(InputType& input)> collectInput;
     std::function<void(OutputType& decision)> receiveDecision;
 
-    int decisionSequenceLength;
-    float decisionsPerSecond;
-    float makeDecisionsTimer = 0;
+    float doTrainingTimer = 0;
+    float trainsPerSecond;
+
+    int sequenceLength;
+    int batchSize;
+    
     bool isEnabled = false;
 };
 
@@ -97,7 +109,7 @@ void NeuralNetworkComponent<TNeuralNetwork>::MakeDecision()
         return;
     }
 
-    if (collectData == nullptr
+    if (collectInput == nullptr
         || networkContext == nullptr
         || networkContext->decider == nullptr)
     {
@@ -105,16 +117,30 @@ void NeuralNetworkComponent<TNeuralNetwork>::MakeDecision()
     }
 
     // Expire oldest input
-    for (int i = 0; i < decisionSequenceLength - 1; ++i)
+    for (int i = 0; i < sequenceLength - 1; ++i)
     {
-        inputs[i] = std::move(inputs[i + 1]);
+        decisionInput[i] = std::move(decisionInput[i + 1]);
     }
 
     // Collect new input
-    collectData(inputs[decisionSequenceLength - 1]);
+    collectInput(decisionInput[sequenceLength - 1]);
 
     // Start making decision
-    decisionInProgress = networkContext->decider->MakeDecision(inputs, decisionSequenceLength);
+    decisionInProgress = networkContext->decider->MakeDecision(decisionInput, sequenceLength);
+}
+
+template <typename TNeuralNetwork>
+void NeuralNetworkComponent<TNeuralNetwork>::DoTraining()
+{
+    if(trainingInProgress != nullptr && !trainingInProgress->IsComplete())
+    {
+        return;
+    }
+
+    if(collectInput == nullptr)
+    {
+        
+    }
 }
 
 struct SensorObjectDefinition
