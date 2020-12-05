@@ -6,6 +6,7 @@
 #include "Net/NetworkPhysics.hpp"
 #include "Scene/IGame.hpp"
 #include "Scene/Scene.hpp"
+#include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
 
 ConsoleVar<int> g_serverPort("port", 6666);
@@ -46,10 +47,22 @@ struct BreakoutGame : IGame
         auto engine = GetEngine();
         auto neuralNetworkManager = engine->GetNeuralNetworkManager();
 
-        auto playerDecider = neuralNetworkManager->CreateDecider<PlayerDecider>();
-        auto playerTrainer = neuralNetworkManager->CreateTrainer<PlayerTrainer>();
+        // Create networks
+        {
+            auto playerDecider = neuralNetworkManager->CreateDecider<PlayerDecider>();
+            auto playerTrainer = neuralNetworkManager->CreateTrainer<PlayerTrainer>();
 
-        neuralNetworkManager->CreateNetwork("nn", playerDecider, playerTrainer);
+            neuralNetworkManager->CreateNetwork("nn", playerDecider, playerTrainer);
+        }
+
+        // Add types of objects the sensors can pick up
+        {
+            SensorObjectDefinition sensorDefinition;
+            sensorDefinition.Add<PlayerEntity>(1).SetColor(Color::Red()).SetPriority(1);
+            sensorDefinition.Add<TilemapEntity>(2).SetColor(Color::Gray()).SetPriority(0);
+
+            GetEngine()->GetNeuralNetworkManager()->SetSensorObjectDefinition(sensorDefinition);
+        }
     }
 
     std::string initialConsoleCmd;

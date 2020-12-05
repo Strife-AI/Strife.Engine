@@ -20,29 +20,39 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
 
     scene->GetService<InputService>()->players.push_back(this);
 
-    SensorObjectDefinition builder;
-    builder.Add<PlayerEntity>(1).SetColor(Color::Red()).SetPriority(1);
-    builder.Add<TilemapEntity>(2).SetColor(Color::Gray()).SetPriority(0);
-
-    GetEngine()->GetNeuralNetworkManager()->SetSensorObjectDefinition(builder);
-
-    auto nn = AddComponent<NeuralNetworkComponent<PlayerNetwork>>();
-    auto gridSensor = AddComponent<GridSensorComponent<40, 40>>("grid", Vector2(16, 16));
-
-    gridSensor->render = true;
-
-    nn->collectInput = [=](PlayerModelInput& input)
+    // Setup network and sensors
     {
-        input.velocity = rigidBody->GetVelocity();
-        gridSensor->Read(input.grid);
-    };
+        auto nn = AddComponent<NeuralNetworkComponent<PlayerNetwork>>();
+        auto gridSensor = AddComponent<GridSensorComponent<40, 40>>("grid", Vector2(16, 16));
 
-    nn->receiveDecision = [=](PlayerDecision& decision)
-    {
-        //rigidBody->SetVelocity(decision.velocity);
-    };
+        gridSensor->render = true;
 
-    nn->SetNetwork("nn");
+        // Called when:
+        //  * Collecting input to make a decision
+        //  * Adding a training sample
+        nn->collectInput = [=](PlayerModelInput& input)
+        {
+            input.velocity = rigidBody->GetVelocity();
+            gridSensor->Read(input.grid);
+        };
+
+        // Called when the decider makes a decision
+        nn->receiveDecision = [=](PlayerDecision& decision)
+        {
+
+        };
+
+        // Collects what decision the player made
+        nn->collectDecision = [=](PlayerDecision& outDecision)
+        {
+
+        };
+
+        nn->SetNetwork("nn");
+
+        // Network only runs on server
+        if (scene->isServer) nn->mode = NeuralNetworkMode::Deciding;
+    }
 }
 
 void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)
