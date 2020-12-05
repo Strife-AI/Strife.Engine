@@ -7,7 +7,6 @@
 
 void TilemapEntity::OnAdded(const EntityDictionary& properties)
 {
-    observedObjectType = 1;
     flags |= CastsShadows;
 }
 
