@@ -12,6 +12,20 @@
 
 namespace StrifeML
 {
+    namespace MlUtil
+    {
+        template<typename T>
+        std::shared_ptr<T[]> MakeSharedArray(int count)
+        {
+            // This *should* go away with C++ 17 since it should provide a version of std::make_shared<> for arrays, but that doesn't seem
+            // to be the case in MSVC
+            return std::shared_ptr<T[]>(new T[count], [](T* ptr)
+            {
+                delete[] ptr;
+            });
+        }
+    }
+
     struct StrifeException : std::exception
     {
         StrifeException(const std::string& message_)
@@ -119,12 +133,13 @@ namespace StrifeML
         TOutput output;
     };
 
-    template<typename TInput, typename TOutput>
+    template<typename TInput, typename TOutput, int SeqLength>
     struct NeuralNetwork : INeuralNetwork
     {
         using InputType = TInput;
         using OutputType = TOutput;
         using SampleType = Sample<InputType, OutputType>;
+        static constexpr int SequenceLength = SeqLength;
 
         virtual void MakeDecision(gsl::span<const TInput> input, TOutput& output) = 0;
         virtual void TrainBatch(Grid<const SampleType> input, TrainingBatchResult& outResult) = 0;
@@ -481,35 +496,49 @@ namespace StrifeML
         using NetworkType = TNeuralNetwork;
         using SampleType = Sample<InputType, OutputType>;
 
-        ITrainer()
-            : sampleRepository(rng)
+        ITrainer(int batchSize_, float trainsPerSecond_)
+            : sampleRepository(rng),
+            trainingInput(MlUtil::MakeSharedArray<SampleType>(batchSize_ * TNeuralNetwork::SequenceLength)),
+            batchSize(batchSize_),
+            sequenceLength(TNeuralNetwork::SequenceLength),
+            trainsPerSecond(trainsPerSecond_)
         {
             static_assert(std::is_base_of_v<INeuralNetwork, TNeuralNetwork>, "Neural network must inherit from INeuralNetwork<>");
         }
 
-        void AddSample(const InputType& input, const OutputType& output)
+        void AddSample(SampleType& sample)
         {
             sampleLock.Lock();
-            ReceiveSample(input, output);
+            ReceiveSample(sample);
             sampleLock.Unlock();
+
+            ++totalSamples;
+            if(!isTraining && totalSamples >= minSamplesBeforeStartingTraining)
+            {
+                isTraining = true;
+                RunBatch();
+            }
         }
 
-        std::shared_ptr<RunTrainingBatchWorkItem<TNeuralNetwork>> RunBatch()
+        void RunBatch()
         {
             sampleLock.Lock();
             bool successful = TryCreateBatch(Grid<SampleType>(batchSize, sequenceLength, trainingInput.get()));
             sampleLock.Unlock();
 
-            if(successful)
+            if (successful)
             {
-                auto threadPool = ThreadPool::GetInstance();
-                auto workItem = std::make_shared<RunTrainingBatchWorkItem<TNeuralNetwork>>(trainingInput, batchSize, sequenceLength);
-                threadPool->StartItem(workItem);
-                return workItem;
-            }
-            else
-            {
-                return nullptr;
+                auto taskScheduler = TaskScheduler::GetInstance();
+
+                float runTime = trainTask != nullptr
+                    ? trainTask->startTime + 1.0f / trainsPerSecond
+                    : 0;
+
+                // TODO: can save the memory allocation by reusing the task
+                trainTask = std::make_shared<ScheduledTask>();
+                trainTask->workItem = std::make_shared<RunTrainingBatchWorkItem<TNeuralNetwork>>(network, trainingInput, batchSize, sequenceLength);
+                trainTask->runTime = runTime;
+                taskScheduler->Start(trainTask);
             }
         }
 
@@ -530,6 +559,11 @@ namespace StrifeML
         void NotifyTrainingComplete(std::stringstream& serializedNetwork)
         {
             networkContext->SetNewNetwork(serializedNetwork);
+
+            if(isTraining)
+            {
+                RunBatch();
+            }
         }
 
         virtual void ReceiveSample(const SampleType& sample) { }
@@ -542,9 +576,13 @@ namespace StrifeML
         std::shared_ptr<SampleType[]> trainingInput;
         int batchSize;
         int sequenceLength;
+        float trainsPerSecond;
         std::shared_ptr<ScheduledTask> trainTask;
         std::shared_ptr<NetworkContext<TNeuralNetwork>> networkContext;
-        bool isRunning = false;
+        std::shared_ptr<TNeuralNetwork> network = std::make_shared<TNeuralNetwork>();
+        bool isTraining = false;
+        int minSamplesBeforeStartingTraining = 32;
+        int totalSamples = 0;
     };
 
     template<typename TNeuralNetwork>
@@ -554,20 +592,6 @@ namespace StrifeML
         //network->TrainBatch(input, _result);
         std::stringstream stream;
         torch::save(network, stream);
-        trainer->NotifyTrainingComplete();
-    }
-
-    namespace MlUtil
-    {
-        template<typename T>
-        std::shared_ptr<T[]> MakeSharedArray(int count)
-        {
-            // This *should* go away with C++ 17 since it should provide a version of std::make_shared<> for arrays, but that doesn't seem
-            // to be the case in MSVC
-            return std::shared_ptr<T[]>(new T[count], [](T* ptr)
-            {
-                delete[] ptr;
-            });
-        }
+        trainer->NotifyTrainingComplete(stream);
     }
 }

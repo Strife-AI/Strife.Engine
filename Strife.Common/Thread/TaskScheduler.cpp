@@ -1,5 +1,7 @@
 #include "TaskScheduler.hpp"
 
+std::unique_ptr<TaskScheduler> TaskScheduler::_instance;
+
 static void SleepSeconds(float microseconds)
 {
     std::this_thread::sleep_for(std::chrono::microseconds((int)(microseconds / 1000000)));
@@ -14,26 +16,59 @@ static float GetTimeSeconds()
     return static_cast<float>(deltaTimeMicroseconds.count()) / 1000000;
 }
 
+TaskScheduler::TaskScheduler()
+    : _workThread(&TaskScheduler::Run, this)
+{
+
+}
+
+TaskScheduler::~TaskScheduler()
+{
+    _isDone = true;
+    if(_workThread.joinable())
+    {
+        _workThread.join();
+    }
+}
+
 void TaskScheduler::Run()
 {
-    ThreadPool* threadPool = ThreadPool::GetInstance();
-
-    _taskListLock.Lock();
+    while (!_isDone)
     {
-        for (auto& task : _tasks)
-        {
-            if (GetTimeSeconds() >= task->runTime)
-            {
-                threadPool->StartItem(task->workItem);
-                _completeTasks.push_back(task);
-            }
-        }
+        ThreadPool* threadPool = ThreadPool::GetInstance();
 
-        for (auto& completeTask : _completeTasks)
+        // TODO: some sort of sleeping if no tasks are ready?
+
+        _taskListLock.Lock();
         {
-            _tasks.erase(completeTask);
+            for (auto& task : _tasks)
+            {
+                float now = GetTimeSeconds();
+                if (now >= task->runTime)
+                {
+                    task->startTime = now;
+                    threadPool->StartItem(task->workItem);
+                    _completeTasks.push_back(task);
+                }
+            }
+
+            for (auto& completeTask : _completeTasks)
+            {
+                _tasks.erase(completeTask);
+            }
+            _completeTasks.clear();
         }
-        _completeTasks.clear();
+        _taskListLock.Unlock();
     }
-    _taskListLock.Unlock();
+}
+
+TaskScheduler* TaskScheduler::GetInstance()
+{
+    // TODO: does this need to be thread safe?
+    if(_instance == nullptr)
+    {
+        _instance = std::make_unique<TaskScheduler>();
+    }
+
+    return _instance.get();
 }

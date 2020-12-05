@@ -40,11 +40,11 @@ struct PlayerDecision : StrifeML::ISerializable
     PlayerAction action;
 };
 
-struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision>
+struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision, 1>
 {
     void MakeDecision(gsl::span<const InputType> input, OutputType& output) override
     {
-        //output.velocity = Rand({ -1, 1 }, { -1, 1 }).Normalize() * 200;
+
     }
 
     void TrainBatch(Grid<const StrifeML::Sample<PlayerModelInput, PlayerDecision>> input, StrifeML::TrainingBatchResult& outResult) override
@@ -61,6 +61,7 @@ struct PlayerDecider : StrifeML::Decider<PlayerNetwork>
 struct PlayerTrainer : StrifeML::ITrainer<PlayerNetwork>
 {
     PlayerTrainer()
+        : ITrainer<PlayerNetwork>(32, 1)
     {
         samples = sampleRepository.CreateSampleSet("player-samples");
         samplesByActionType = samples
