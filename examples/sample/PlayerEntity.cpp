@@ -23,8 +23,12 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
     // Setup network and sensors
     {
         auto nn = AddComponent<NeuralNetworkComponent<PlayerNetwork>>();
-        auto gridSensor = AddComponent<GridSensorComponent<40, 40>>("grid", Vector2(16, 16));
+        nn->SetNetwork("nn");
 
+        // Network only runs on server
+        if (scene->isServer) nn->mode = NeuralNetworkMode::Deciding;
+
+        auto gridSensor = AddComponent<GridSensorComponent<40, 40>>("grid", Vector2(16, 16));
         gridSensor->render = true;
 
         // Called when:
@@ -47,11 +51,6 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
         {
 
         };
-
-        nn->SetNetwork("nn");
-
-        // Network only runs on server
-        if (scene->isServer) nn->mode = NeuralNetworkMode::Deciding;
     }
 }
 

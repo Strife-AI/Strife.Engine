@@ -61,7 +61,7 @@ struct Game : IGame
             sensorDefinition.Add<PlayerEntity>(1).SetColor(Color::Red()).SetPriority(1);
             sensorDefinition.Add<TilemapEntity>(2).SetColor(Color::Gray()).SetPriority(0);
 
-            GetEngine()->GetNeuralNetworkManager()->SetSensorObjectDefinition(sensorDefinition);
+            neuralNetworkManager->SetSensorObjectDefinition(sensorDefinition);
         }
     }
 

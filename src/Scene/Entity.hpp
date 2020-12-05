@@ -281,7 +281,6 @@ struct Entity
     EntityHeader* header;
     bool isDestroyed = false;
     Scene* scene;
-    int observedObjectType = 0;
 
     unsigned int flags = 0;
     Entity* parent = nullptr;
