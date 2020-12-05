@@ -8,6 +8,7 @@
 #include "Thread/TaskScheduler.hpp"
 #include "Thread/ThreadPool.hpp"
 #include "torch/nn/module.h"
+#include "torch/serialize.h"
 
 namespace StrifeML
 {
@@ -403,6 +404,9 @@ namespace StrifeML
     };
 
     template<typename TNeuralNetwork>
+    struct ITrainer;
+
+    template<typename TNeuralNetwork>
     struct RunTrainingBatchWorkItem : ThreadPoolWorkItem<TrainingBatchResult>
     {
         using InputType = typename TNeuralNetwork::InputType;
@@ -419,20 +423,58 @@ namespace StrifeML
             
         }
 
-        void Execute() override
-        {
-            Grid<SampleType> input(samples.get(), batchSize, sequenceLength);
-            network->TrainBatch(input, _result);
-        }
+        void Execute() override;
 
         std::shared_ptr<TNeuralNetwork> network;
         std::shared_ptr<SampleType[]> samples;
+        std::shared_ptr<ITrainer<TNeuralNetwork>> trainer;
         int batchSize;
         int sequenceLength;
     };
 
+    struct INetworkContext
+    {
+        virtual ~INetworkContext() = default;
+    };
+
     template<typename TNeuralNetwork>
-    struct ITrainer : ITrainerInternal
+    struct NetworkContext : INetworkContext
+    {
+        NetworkContext(Decider<TNeuralNetwork>* decider_, ITrainer<TNeuralNetwork>* trainer_)
+            : decider(decider_),
+            trainer(trainer_)
+        {
+
+        }
+
+        void SetNewNetwork(std::stringstream& stream)
+        {
+            newNetworkLock.Lock();
+            newNetwork = std::move(stream);
+            newNetworkLock.Lock();
+        }
+
+        bool TryGetNewNetwork(std::stringstream& outNewNetwork)
+        {
+            newNetworkLock.Lock();
+            bool hasNewNetwork = newNetwork.has_value();
+            outNewNetwork = std::move(*newNetwork);
+            newNetwork = std::nullopt;
+            newNetworkLock.Unlock();
+            return hasNewNetwork;
+        }
+
+        Decider<TNeuralNetwork>* decider;
+        ITrainer<TNeuralNetwork>* trainer;
+
+        std::optional<std::stringstream> newNetwork;
+        SpinLock newNetworkLock;
+
+        virtual ~NetworkContext() = default;
+    };
+
+    template<typename TNeuralNetwork>
+    struct ITrainer : ITrainerInternal, std::enable_shared_from_this<ITrainer<TNeuralNetwork>>
     {
         using InputType = typename TNeuralNetwork::InputType;
         using OutputType = typename TNeuralNetwork::OutputType;
@@ -452,16 +494,16 @@ namespace StrifeML
             sampleLock.Unlock();
         }
 
-        std::shared_ptr<RunTrainingBatchWorkItem<TNeuralNetwork>> RunBatch(std::shared_ptr<SampleType[]> sampleStorage, int batchSize, int sequenceLength)
+        std::shared_ptr<RunTrainingBatchWorkItem<TNeuralNetwork>> RunBatch()
         {
             sampleLock.Lock();
-            bool successful = TryCreateBatch(Grid<SampleType>(batchSize, sequenceLength, sampleStorage.get()));
+            bool successful = TryCreateBatch(Grid<SampleType>(batchSize, sequenceLength, trainingInput.get()));
             sampleLock.Unlock();
 
             if(successful)
             {
                 auto threadPool = ThreadPool::GetInstance();
-                auto workItem = std::make_shared<RunTrainingBatchWorkItem<TNeuralNetwork>>(sampleStorage, batchSize, sequenceLength);
+                auto workItem = std::make_shared<RunTrainingBatchWorkItem<TNeuralNetwork>>(trainingInput, batchSize, sequenceLength);
                 threadPool->StartItem(workItem);
                 return workItem;
             }
@@ -485,6 +527,11 @@ namespace StrifeML
             return true;
         }
 
+        void NotifyTrainingComplete(std::stringstream& serializedNetwork)
+        {
+            networkContext->SetNewNetwork(serializedNetwork);
+        }
+
         virtual void ReceiveSample(const SampleType& sample) { }
 
         virtual bool TrySelectSequenceSamples(gsl::span<SampleType> outSequence) { return false; }
@@ -493,29 +540,22 @@ namespace StrifeML
         RandomNumberGenerator rng;
         SampleRepository<SampleType> sampleRepository;
         std::shared_ptr<SampleType[]> trainingInput;
+        int batchSize;
+        int sequenceLength;
         std::shared_ptr<ScheduledTask> trainTask;
-    };
-
-    struct INetworkContext
-    {
-        virtual ~INetworkContext() = default;
+        std::shared_ptr<NetworkContext<TNeuralNetwork>> networkContext;
+        bool isRunning = false;
     };
 
     template<typename TNeuralNetwork>
-    struct NetworkContext : INetworkContext
+    void RunTrainingBatchWorkItem<TNeuralNetwork>::Execute()
     {
-        NetworkContext(Decider<TNeuralNetwork>* decider_, ITrainer<TNeuralNetwork>* trainer_)
-            : decider(decider_),
-            trainer(trainer_)
-        {
-            
-        }
-
-        Decider<TNeuralNetwork>* decider;
-        ITrainer<TNeuralNetwork>* trainer;
-
-        virtual ~NetworkContext() = default;
-    };
+        Grid<SampleType> input(batchSize, sequenceLength, samples.get());
+        //network->TrainBatch(input, _result);
+        std::stringstream stream;
+        torch::save(network, stream);
+        trainer->NotifyTrainingComplete();
+    }
 
     namespace MlUtil
     {
