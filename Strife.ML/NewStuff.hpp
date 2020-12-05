@@ -413,13 +413,13 @@ namespace StrifeML
         RandomNumberGenerator& _rng;
     };
 
-    struct ITrainerInternal
+    struct ITrainer
     {
-        virtual ~ITrainerInternal() = default;
+        virtual ~ITrainer() = default;
     };
 
     template<typename TNeuralNetwork>
-    struct ITrainer;
+    struct Trainer;
 
     template<typename TNeuralNetwork>
     struct RunTrainingBatchWorkItem : ThreadPoolWorkItem<TrainingBatchResult>
@@ -442,7 +442,7 @@ namespace StrifeML
 
         std::shared_ptr<TNeuralNetwork> network;
         std::shared_ptr<SampleType[]> samples;
-        std::shared_ptr<ITrainer<TNeuralNetwork>> trainer;
+        std::shared_ptr<Trainer<TNeuralNetwork>> trainer;
         int batchSize;
         int sequenceLength;
     };
@@ -455,7 +455,7 @@ namespace StrifeML
     template<typename TNeuralNetwork>
     struct NetworkContext : INetworkContext
     {
-        NetworkContext(Decider<TNeuralNetwork>* decider_, ITrainer<TNeuralNetwork>* trainer_)
+        NetworkContext(Decider<TNeuralNetwork>* decider_, Trainer<TNeuralNetwork>* trainer_)
             : decider(decider_),
             trainer(trainer_)
         {
@@ -480,7 +480,7 @@ namespace StrifeML
         }
 
         Decider<TNeuralNetwork>* decider;
-        ITrainer<TNeuralNetwork>* trainer;
+        Trainer<TNeuralNetwork>* trainer;
 
         std::optional<std::stringstream> newNetwork;
         SpinLock newNetworkLock;
@@ -489,14 +489,14 @@ namespace StrifeML
     };
 
     template<typename TNeuralNetwork>
-    struct ITrainer : ITrainerInternal, std::enable_shared_from_this<ITrainer<TNeuralNetwork>>
+    struct Trainer : ITrainer, std::enable_shared_from_this<Trainer<TNeuralNetwork>>
     {
         using InputType = typename TNeuralNetwork::InputType;
         using OutputType = typename TNeuralNetwork::OutputType;
         using NetworkType = TNeuralNetwork;
         using SampleType = Sample<InputType, OutputType>;
 
-        ITrainer(int batchSize_, float trainsPerSecond_)
+        Trainer(int batchSize_, float trainsPerSecond_)
             : sampleRepository(rng),
             trainingInput(MlUtil::MakeSharedArray<SampleType>(batchSize_ * TNeuralNetwork::SequenceLength)),
             batchSize(batchSize_),

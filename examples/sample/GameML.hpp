@@ -57,10 +57,10 @@ struct PlayerDecider : StrifeML::Decider<PlayerNetwork>
     
 };
 
-struct PlayerTrainer : StrifeML::ITrainer<PlayerNetwork>
+struct PlayerTrainer : StrifeML::Trainer<PlayerNetwork>
 {
     PlayerTrainer()
-        : ITrainer<PlayerNetwork>(32, 1)
+        : Trainer<PlayerNetwork>(32, 1)
     {
         samples = sampleRepository.CreateSampleSet("player-samples");
         samplesByActionType = samples
