@@ -13,6 +13,12 @@ inline void StrifeML::Serialize<Vector2>(Vector2& value, StrifeML::ObjectSeriali
     serializer.Add(value.x).Add(value.y);
 }
 
+enum class NeuralNetworkMode
+{
+    Deciding,
+    CollectingSamples
+};
+
 template<typename TNeuralNetwork>
 struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeuralNetwork>>
 {
@@ -21,12 +27,10 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     using NetworkType = TNeuralNetwork;
     using SampleType = StrifeML::Sample<InputType, OutputType>;
 
-    NeuralNetworkComponent(int sequenceLength_ = 1, int batchSize_ = 32, float decisionsPerSecond_ = 1, float trainsPerSecond_ = 1)
-        : decisionInput(StrifeML::MlUtil::MakeSharedArray<InputType>(sequenceLength_)),
+    NeuralNetworkComponent(float decisionsPerSecond_ = 1)
+        : decisionInput(StrifeML::MlUtil::MakeSharedArray<InputType>(TNeuralNetwork::SequenceLength)),
         decisionsPerSecond(decisionsPerSecond_),
-        trainsPerSecond(trainsPerSecond_),
-        sequenceLength(sequenceLength_),
-        batchSize(batchSize_)
+        batchSize(TNeuralNetwork::SequenceLength)
     {
 
     }
@@ -45,12 +49,9 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     {
         auto nnManager = Engine::GetInstance()->GetNeuralNetworkManager();
         networkContext = nnManager->GetNetwork<TNeuralNetwork>(name);
-
-        networkContext->trainer->RunBatch();
     }
 
     void MakeDecision();
-    void DoTraining();
 
     StrifeML::NetworkContext<NetworkType>* networkContext = nullptr;
     std::shared_ptr<StrifeML::MakeDecisionWorkItem<TNeuralNetwork>> decisionInProgress;
@@ -61,13 +62,14 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     std::shared_ptr<StrifeML::RunTrainingBatchWorkItem<TNeuralNetwork>> trainingInProgress;
 
     std::function<void(InputType& input)> collectInput;
+    std::function<void(OutputType& decision)> collectDecision;
+
     std::function<void(OutputType& decision)> receiveDecision;
 
-    float doTrainingTimer = 0;
-    float trainsPerSecond;
-
-    int sequenceLength;
     int batchSize;
+
+    bool isCollectingSamples = false;
+    bool isMakingDecisions = false;
     
     bool isEnabled = false;
 };
@@ -80,23 +82,34 @@ void NeuralNetworkComponent<TNeuralNetwork>::Update(float deltaTime)
         return;
     }
 
-    makeDecisionsTimer -= deltaTime;
-
-    if (makeDecisionsTimer <= 0)
+    if (isMakingDecisions)
     {
-        makeDecisionsTimer = 0;
-        MakeDecision();
-    }
+        makeDecisionsTimer -= deltaTime;
 
-    OutputType output;
-    if(decisionInProgress != nullptr && decisionInProgress->TryGetResult(output))
-    {
-        if(receiveDecision != nullptr)
+        if (makeDecisionsTimer <= 0)
         {
-            receiveDecision(output);
+            makeDecisionsTimer = 0;
+            MakeDecision();
         }
 
-        decisionInProgress = nullptr;
+        OutputType output;
+        if (decisionInProgress != nullptr && decisionInProgress->TryGetResult(output))
+        {
+            if (receiveDecision != nullptr)
+            {
+                receiveDecision(output);
+            }
+
+            decisionInProgress = nullptr;
+        }
+    }
+
+    if (isCollectingSamples)
+    {
+        SampleType sample;
+        collectInput(sample.input);
+        collectDecision(sample.output);
+        networkContext->trainer->AddSample(sample);
     }
 }
 
@@ -118,30 +131,16 @@ void NeuralNetworkComponent<TNeuralNetwork>::MakeDecision()
     }
 
     // Expire oldest input
-    for (int i = 0; i < sequenceLength - 1; ++i)
+    for (int i = 0; i < TNeuralNetwork::SequenceLength - 1; ++i)
     {
         decisionInput[i] = std::move(decisionInput[i + 1]);
     }
 
     // Collect new input
-    collectInput(decisionInput[sequenceLength - 1]);
+    collectInput(decisionInput[TNeuralNetwork::SequenceLength - 1]);
 
     // Start making decision
-    decisionInProgress = networkContext->decider->MakeDecision(decisionInput, sequenceLength);
-}
-
-template <typename TNeuralNetwork>
-void NeuralNetworkComponent<TNeuralNetwork>::DoTraining()
-{
-    if(trainingInProgress != nullptr && !trainingInProgress->IsComplete())
-    {
-        return;
-    }
-
-    if(collectInput == nullptr)
-    {
-        
-    }
+    decisionInProgress = networkContext->decider->MakeDecision(decisionInput, TNeuralNetwork::SequenceLength);
 }
 
 struct SensorObjectDefinition
