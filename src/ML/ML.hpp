@@ -233,7 +233,9 @@ struct NeuralNetworkManager
             throw StrifeML::StrifeException("Network already exists: " + std::string(name));
         }
 
-        _networksByName[name] = std::make_shared<StrifeML::NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
+        auto newContext = std::make_shared<StrifeML::NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
+        _networksByName[name] = newContext;
+        newContext->trainer->networkContext = newContext;
     }
 
     // TODO remove network method

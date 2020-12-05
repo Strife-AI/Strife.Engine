@@ -197,7 +197,15 @@ void InputService::HandleInput()
                 if(player->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition()))
                     && player->net->ownerClientId == scene->replicationManager->localClientId)
                 {
+                    PlayerEntity* oldPlayer;
+                    if(activePlayer.TryGetValue(oldPlayer))
+                    {
+                        oldPlayer->GetComponent<PlayerEntity::NeuralNetwork>()->mode = NeuralNetworkMode::Deciding;
+                    }
+
                     activePlayer = player;
+                    player->GetComponent<PlayerEntity::NeuralNetwork>()->mode = NeuralNetworkMode::CollectingSamples;
+
                     break;
                 }
             }
