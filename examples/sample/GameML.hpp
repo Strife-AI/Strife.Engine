@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../../Strife.ML/NewStuff.hpp"
-#include "Math/Random.hpp"
 #include "Math/Vector2.hpp"
 #include "ML/ML.hpp"
 
@@ -47,7 +46,7 @@ struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision,
 
     }
 
-    void TrainBatch(Grid<const StrifeML::Sample<PlayerModelInput, PlayerDecision>> input, StrifeML::TrainingBatchResult& outResult) override
+    void TrainBatch(Grid<const SampleType> input, StrifeML::TrainingBatchResult& outResult) override
     {
         
     }

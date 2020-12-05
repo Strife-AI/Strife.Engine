@@ -15,6 +15,7 @@ inline void StrifeML::Serialize<Vector2>(Vector2& value, StrifeML::ObjectSeriali
 
 enum class NeuralNetworkMode
 {
+    Disabled,
     Deciding,
     CollectingSamples
 };
@@ -36,12 +37,6 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     }
 
     virtual ~NeuralNetworkComponent() = default;
-
-    void OnAdded() override
-    {
-        // Disabled by default on the client
-        isEnabled = GetScene()->isServer;
-    }
 
     void Update(float deltaTime) override;
 
@@ -68,21 +63,17 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
 
     int batchSize;
 
-    bool isCollectingSamples = false;
-    bool isMakingDecisions = false;
-    
-    bool isEnabled = false;
+    NeuralNetworkMode mode = NeuralNetworkMode::Disabled;
 };
 
 template <typename TNeuralNetwork>
 void NeuralNetworkComponent<TNeuralNetwork>::Update(float deltaTime)
 {
-    if(!isEnabled)
+    if (mode == NeuralNetworkMode::Disabled)
     {
         return;
     }
-
-    if (isMakingDecisions)
+    else if (mode == NeuralNetworkMode::Deciding)
     {
         makeDecisionsTimer -= deltaTime;
 
@@ -103,8 +94,7 @@ void NeuralNetworkComponent<TNeuralNetwork>::Update(float deltaTime)
             decisionInProgress = nullptr;
         }
     }
-
-    if (isCollectingSamples)
+    else if (mode == NeuralNetworkMode::CollectingSamples)
     {
         SampleType sample;
         collectInput(sample.input);
