@@ -429,9 +429,15 @@ namespace StrifeML
         using NetworkType = TNeuralNetwork;
         using SampleType = Sample<InputType, OutputType>;
 
-        RunTrainingBatchWorkItem(std::shared_ptr<TNeuralNetwork> network_, std::shared_ptr<SampleType[]> samples_, int batchSize_, int sequenceLength_)
+        RunTrainingBatchWorkItem(
+            std::shared_ptr<TNeuralNetwork> network_,
+            std::shared_ptr<Trainer<TNeuralNetwork>> trainer_,
+            std::shared_ptr<SampleType[]> samples_,
+            int batchSize_,
+            int sequenceLength_)
             : network(network_),
             samples(samples_),
+            trainer(trainer_),
             batchSize(batchSize_),
             sequenceLength(sequenceLength_)
         {
@@ -466,7 +472,7 @@ namespace StrifeML
         {
             newNetworkLock.Lock();
             newNetwork = std::move(stream);
-            newNetworkLock.Lock();
+            newNetworkLock.Unlock();
         }
 
         bool TryGetNewNetwork(std::stringstream& outNewNetwork)
@@ -536,7 +542,7 @@ namespace StrifeML
 
                 // TODO: can save the memory allocation by reusing the task
                 trainTask = std::make_shared<ScheduledTask>();
-                trainTask->workItem = std::make_shared<RunTrainingBatchWorkItem<TNeuralNetwork>>(network, trainingInput, batchSize, sequenceLength);
+                trainTask->workItem = std::make_shared<RunTrainingBatchWorkItem<TNeuralNetwork>>(network, shared_from_this(), trainingInput, batchSize, sequenceLength);
                 trainTask->runTime = runTime;
                 taskScheduler->Start(trainTask);
             }
@@ -588,8 +594,8 @@ namespace StrifeML
     template<typename TNeuralNetwork>
     void RunTrainingBatchWorkItem<TNeuralNetwork>::Execute()
     {
-        Grid<SampleType> input(batchSize, sequenceLength, samples.get());
-        //network->TrainBatch(input, _result);
+        Grid<const SampleType> input(batchSize, sequenceLength, samples.get());
+        network->TrainBatch(input, _result);
         std::stringstream stream;
         torch::save(network, stream);
         trainer->NotifyTrainingComplete(stream);

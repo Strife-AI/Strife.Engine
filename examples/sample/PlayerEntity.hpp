@@ -38,6 +38,8 @@ enum class PlayerState
 
 DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable
 {
+    using NeuralNetwork = NeuralNetworkComponent<PlayerNetwork>;
+
     void OnAdded(const EntityDictionary& properties) override;
     void ReceiveEvent(const IEntityEvent& ev) override;
     void ReceiveServerEvent(const IEntityEvent& ev) override;

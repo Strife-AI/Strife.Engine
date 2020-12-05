@@ -48,7 +48,7 @@ struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision,
 
     void TrainBatch(Grid<const SampleType> input, StrifeML::TrainingBatchResult& outResult) override
     {
-        
+        Log("Train batch\n");
     }
 };
 
