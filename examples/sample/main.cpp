@@ -11,7 +11,7 @@
 
 ConsoleVar<int> g_serverPort("port", 6666);
 
-struct BreakoutGame : IGame
+struct Game : IGame
 {
     void ConfigureGame(GameConfig& config) override
     {
@@ -70,7 +70,7 @@ struct BreakoutGame : IGame
 
 int main(int argc, char* argv[])
 {
-    BreakoutGame game;
+    Game game;
 
     if (argc >= 2)
     {

@@ -215,7 +215,7 @@ struct NeuralNetworkManager
     template<typename TTrainer>
     TTrainer* CreateTrainer()
     {
-        static_assert(std::is_base_of_v<StrifeML::ITrainerInternal, TTrainer>, "Trainer must inherit from ITrainer<TInput, TOutput>");
+        static_assert(std::is_base_of_v<StrifeML::ITrainer, TTrainer>, "Trainer must inherit from ITrainer<TInput, TOutput>");
         auto trainer = std::make_shared<TTrainer>();
         auto trainerPtr = trainer.get();
         _trainers.emplace(std::move(trainer));
@@ -257,7 +257,7 @@ struct NeuralNetworkManager
 
 private:
     std::unordered_set<std::unique_ptr<StrifeML::IDecider>> _deciders;
-    std::unordered_set<std::shared_ptr<StrifeML::ITrainerInternal>> _trainers;
+    std::unordered_set<std::shared_ptr<StrifeML::ITrainer>> _trainers;
     std::unordered_map<std::string, std::shared_ptr<StrifeML::INetworkContext>> _networksByName;
     std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition = std::make_shared<SensorObjectDefinition>();
 };
