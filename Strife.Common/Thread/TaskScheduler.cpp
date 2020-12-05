@@ -16,45 +16,24 @@ static float GetTimeSeconds()
 
 void TaskScheduler::Run()
 {
+    ThreadPool* threadPool = ThreadPool::GetInstance();
+
     _taskListLock.Lock();
-    for (auto& task : _tasks)
     {
-        task->ApplyNewSettings();
-
-        if(task->_lastWorkItem != nullptr && !task->_lastWorkItem->IsComplete())
+        for (auto& task : _tasks)
         {
-            continue;
-        }
-
-        bool runBasedOnSchedule = true;
-        if (task->_currentSettings.runsPerSecond.has_value())
-        {
-            float currentTime = GetTimeSeconds();
-            runBasedOnSchedule = currentTime >= task->_nextRunTime;
-
-            if(runBasedOnSchedule)
+            if (GetTimeSeconds() >= task->runTime)
             {
-                task->_nextRunTime = currentTime + 1.0f / task->_currentSettings.runsPerSecond.value();
+                threadPool->StartItem(task->workItem);
+                _completeTasks.push_back(task);
             }
         }
 
-        bool hasAnyRunsLeft = true;
-        if(task->_currentSettings.runCount.has_value())
+        for (auto& completeTask : _completeTasks)
         {
-            if(task->_currentSettings.runCount > 0)
-            {
-                task->_currentSettings.runCount = task->_currentSettings.runCount.value() - 1;
-            }
-            else
-            {
-                hasAnyRunsLeft = false;
-            }
+            _tasks.erase(completeTask);
         }
-
-        if(runBasedOnSchedule && hasAnyRunsLeft)
-        {
-            
-        }
+        _completeTasks.clear();
     }
     _taskListLock.Unlock();
 }

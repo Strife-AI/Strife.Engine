@@ -24,7 +24,6 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     NeuralNetworkComponent(int sequenceLength_ = 1, int batchSize_ = 32, float decisionsPerSecond_ = 1, float trainsPerSecond_ = 1)
         : decisionInput(StrifeML::MlUtil::MakeSharedArray<InputType>(sequenceLength_)),
         decisionsPerSecond(decisionsPerSecond_),
-        trainingInput(StrifeML::MlUtil::MakeSharedArray<SampleType>(sequenceLength_ * batchSize_)),
         trainsPerSecond(trainsPerSecond_),
         sequenceLength(sequenceLength_),
         batchSize(batchSize_)
@@ -46,6 +45,8 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     {
         auto nnManager = Engine::GetInstance()->GetNeuralNetworkManager();
         networkContext = nnManager->GetNetwork<TNeuralNetwork>(name);
+
+        networkContext->trainer->RunBatch();
     }
 
     void MakeDecision();
@@ -226,10 +227,10 @@ struct NeuralNetworkManager
     TTrainer* CreateTrainer()
     {
         static_assert(std::is_base_of_v<StrifeML::ITrainerInternal, TTrainer>, "Trainer must inherit from ITrainer<TInput, TOutput>");
-        auto decider = std::make_unique<TTrainer>();
-        auto deciderPtr = decider.get();
-        _trainers.emplace(std::move(decider));
-        return deciderPtr;
+        auto trainer = std::make_shared<TTrainer>();
+        auto trainerPtr = trainer.get();
+        _trainers.emplace(std::move(trainer));
+        return trainerPtr;
     }
 
     template<typename TDecider, typename TTrainer>
@@ -267,7 +268,7 @@ struct NeuralNetworkManager
 
 private:
     std::unordered_set<std::unique_ptr<StrifeML::IDecider>> _deciders;
-    std::unordered_set<std::unique_ptr<StrifeML::ITrainerInternal>> _trainers;
+    std::unordered_set<std::shared_ptr<StrifeML::ITrainerInternal>> _trainers;
     std::unordered_map<std::string, std::shared_ptr<StrifeML::INetworkContext>> _networksByName;
     std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition = std::make_shared<SensorObjectDefinition>();
 };
