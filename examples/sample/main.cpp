@@ -9,7 +9,7 @@
 #include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
 
-ConsoleVar<int> g_serverPort("port", 6666);
+ConsoleVar<int> g_serverPort("port", 60001);
 
 struct Game : IGame
 {

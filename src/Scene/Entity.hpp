@@ -127,9 +127,9 @@ public:
 
     }
 
-    constexpr EntityDictionary(const std::initializer_list<EntityProperty>& properties)
+    constexpr EntityDictionary(gsl::span<EntityProperty> properties)
         : _totalProperties(properties.size()),
-        _properties(&properties.begin()[0])
+        _properties(properties.data())
     {
 
     }
