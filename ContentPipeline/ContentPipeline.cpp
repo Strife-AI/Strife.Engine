@@ -782,11 +782,14 @@ int main(int argc, char* argv[])
 
     CheckForMissingKeys("Resource Pack", "project", content, contentKeys);
 
-    const std::string pathToAssets = buildAssetPath(contentFilePath, content[contentKeys[0]].get<std::string>());
-    const std::string outputFile = outputDirectory + '\\' + content[contentKeys[1]].get<std::string>() + ".x2rp";
+    const std::string pathToAssets = buildAssetPath(contentFilePath, '/' + content[contentKeys[0]].get<std::string>()) + '/';
+    const std::string outputFile = outputDirectory + '/' + content[contentKeys[1]].get<std::string>() + ".x2rp";
 
 #ifdef __linux__
     chdir(pathToAssets.c_str());
+
+    system("pwd");
+    printf("\n");
 #elif defined(_WIN64) || defined(_Win32)
     SetCurrentDirectory(pathToAssets.c_str());
 #endif
