@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <box2d/b2_body.h>
 #include <map>
 #include <string>
 
@@ -13,14 +12,15 @@
 #include "EntityComponent.hpp"
 #include "Math/Vector2.hpp"
 #include "Memory/Dictionary.hpp"
-#include "Memory/DLinkNode.hpp"
 #include "Memory/FixedLengthString.hpp"
 #include "Physics/Physics.hpp"
 #include "Memory/StringId.hpp"
+#include "Net/SyncVar.hpp"
 
 #include "Renderer/Color.hpp"
 #include "Sound/SoundManager.hpp"
 
+struct NetSerializer;
 class b2Body;
 struct IEntityEvent;
 struct MoveResult;
@@ -34,6 +34,9 @@ struct IRenderable { virtual void Render(Renderer* renderer) = 0; };
 struct IHudRenderable { virtual void RenderHud(Renderer* renderer) = 0; };
 struct IUpdatable { virtual void Update(float deltaTime) = 0; };
 struct IFixedUpdatable { virtual void FixedUpdate(float deltaTime) = 0; };
+
+struct IServerFixedUpdatable { virtual void ServerFixedUpdate(float deltaTime) = 0; };
+struct IServerUpdatable { virtual void ServerUpdate(float deltaTime) = 0; };
 
 struct EntityHeader
 {
@@ -50,8 +53,7 @@ enum EntityFlags
 {
     EnableBuoyancy = 1,
     WasTeleported = 2,
-    CastsShadows = 4,
-    PreventUnloading = 8
+    CastsShadows = 4
 };
 
 struct EntityProperty
@@ -189,16 +191,12 @@ private:
 };
 
 struct Entity;
-
-struct SegmentLink : DLinkNode<SegmentLink>
-{
-    Entity* GetEntity();
-};
+struct ISyncVar;
 
 /// <summary>
 /// The base class of all entities. Do not inherit from this directly. Instead, use the macro <see cref="DEFINE_ENTITY"/>
 /// </summary>
-struct Entity : SegmentLink
+struct Entity
 {
     static const int InvalidEntityId = -1;
 
@@ -219,8 +217,8 @@ struct Entity : SegmentLink
     void SetCenter(const Vector2& newPosition);
     void SetRotation(float angle);
 
-    Vector2 TopLeft() const { return _position - _dimensions / 2; }
-    Vector2 Center() const { return _position; }
+    Vector2 TopLeft() const { return _position.Value() - _dimensions / 2; }
+    Vector2 Center() const { return _position.Value(); }
     Vector2 Dimensions() const { return _dimensions; }
     Rectangle Bounds() const { return Rectangle(TopLeft(), Dimensions()); }
     float Rotation() const { return _rotation; }
@@ -242,7 +240,7 @@ struct Entity : SegmentLink
     /// Sends an event directly to an entity.
     /// </summary>
     /// <param name="ev"></param>
-    void SendEvent(const IEntityEvent& ev) { OnEvent(ev); }
+    void SendEvent(const IEntityEvent& ev);
 
     void Serialize(EntityDictionaryBuilder& builder);
 
@@ -272,6 +270,8 @@ struct Entity : SegmentLink
 
     SoundChannel* GetChannel(int id);
 
+    void UpdateSyncVars();
+
     template<typename TComponent, typename ...Args> TComponent* AddComponent(const char* name = "<default>", Args&& ...args);
     template<typename TComponent> TComponent* GetComponent();
     void RemoveComponent(IEntityComponent* component);
@@ -282,13 +282,13 @@ struct Entity : SegmentLink
     EntityHeader* header;
     bool isDestroyed = false;
     Scene* scene;
-    int observedObjectType = 0;
 
     unsigned int flags = 0;
-    int segmentId;
     Entity* parent = nullptr;
     Entity* nextSibling = nullptr;
     Entity* children = nullptr;
+
+    ISyncVar* syncVarHead = nullptr;
 
 protected:
     void NotifyMovement();
@@ -297,11 +297,18 @@ private:
     friend class Scene;
     friend void MoveEntityRecursive(RigidBodyComponent* rigidBody, Vector2 offset);
 
-    virtual void OnEvent(const IEntityEvent& ev) { }
+    virtual void ReceiveEvent(const IEntityEvent& ev) { }
+    virtual void ReceiveServerEvent(const IEntityEvent& ev) { }
+    void DoTeleport();
+
     virtual void DoSerialize(EntityDictionaryBuilder& writer) { }
+
     virtual std::pair<int, void*> GetMemoryBlock() = 0;
 
-    Vector2 _position;
+    virtual void OnSyncVarsUpdated() { }
+
+    SyncVar<Vector2> _position{ { 0, 0}, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent, SyncVarDeltaMode::SmallIntegerOffset };
+
     Vector2 _dimensions;
     float _rotation;
     int _lastQueryId = -1;

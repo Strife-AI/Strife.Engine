@@ -4,8 +4,11 @@
 
 
 #include "Memory/BlockAllocator.hpp"
+#include "Net/ServerGame.hpp"
 #include "Tools/ConsoleCmd.hpp"
 #include "Tools/ConsoleVar.hpp"
+
+struct NeuralNetworkManager;
 
 class Scene;
 class IGame;
@@ -28,6 +31,7 @@ struct EngineConfig
 
     int blockAllocatorSizeBytes = 32 * 1024 * 1024;
     std::optional<std::string> consoleVarsFile = "vars.cfg";
+    std::string initialConsoleCmd;
 };
 
 class Engine
@@ -44,9 +48,11 @@ public:
     PlotManager* GetPlotManager() { return _plotManager; }
     MetricsManager* GetMetricsManager() { return _metricsManager; }
     Renderer* GetRenderer() { return _renderer; }
-    SceneManager* GetSceneManager() { return _sceneManager; }
     BlockAllocator* GetDefaultBlockAllocator() { return _defaultBlockAllocator; }
     SoundManager* GetSoundManager() { return _soundManager; }
+    ServerGame* GetServerGame() { return _serverGame.get(); }
+    ClientGame* GetClientGame() { return _clientGame.get(); }
+    NeuralNetworkManager* GetNeuralNetworkManager() { return _neuralNetworkManager.get();  }
 
     bool ActiveGame() { return _activeGame; }
     void QuitGame() { _activeGame = false; }
@@ -66,8 +72,6 @@ public:
 
     bool isInitialized = false;
 
-    ConsoleVar<int> targetFps = ConsoleVar<int>("targetFps", 60);
-
     void SetLoadResources(const std::function<void()>& loadResources)
     {
         _loadResources = loadResources;
@@ -78,6 +82,9 @@ public:
     {
         _loadResources();
     }
+
+    void StartLocalServer(int port, StringId mapName);
+    void ConnectToServer(const char* address, int port);
 
 private:
     Engine() = default;
@@ -93,9 +100,12 @@ private:
     PlotManager* _plotManager = nullptr;
     MetricsManager* _metricsManager = nullptr;
     Renderer* _renderer = nullptr;
-    SceneManager* _sceneManager = nullptr;
     BlockAllocator* _defaultBlockAllocator;
     SoundManager* _soundManager;
+    std::unique_ptr<NeuralNetworkManager> _neuralNetworkManager;
+
+    std::unique_ptr<ServerGame> _serverGame;
+    std::unique_ptr<ClientGame> _clientGame;
 
     IGame* _game = nullptr;
     bool _activeGame = true;

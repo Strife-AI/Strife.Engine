@@ -7,8 +7,7 @@
 #include <map>
 
 #include "ConsoleCmd.hpp"
-#include "Memory/ConcurrentQueue.hpp"
-#include "Memory/SpinLock.hpp"
+#include "Container/ConcurrentQueue.hpp"
 
 class Renderer;
 

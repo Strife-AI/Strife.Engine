@@ -2,11 +2,11 @@
 #include "TilemapEntity.hpp"
 
 #include "Components/RigidBodyComponent.hpp"
+#include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
 
 void TilemapEntity::OnAdded(const EntityDictionary& properties)
 {
-    observedObjectType = 1;
     flags |= CastsShadows;
 }
 
@@ -41,6 +41,21 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &shape;
         rigidBody->CreateFixture(fixtureDef);
+    }
+
+    // FIXME: the dimensions of the map should be calculated as part of the content pipeline
+    if (!mapSegment.layers.empty())
+    {
+        auto pathFinder = scene->AddService<PathFinderService>(
+            mapSegment.layers[0].tileMap.Rows(),
+            mapSegment.layers[0].tileMap.Cols(),
+            Vector2{ 32, 32 });
+
+        for (auto& rectangle : mapSegment.colliders)
+        {
+            auto bounds = rectangle.As<float>();
+            pathFinder->AddObstacle(bounds);
+        }
     }
 
     for (auto& rectangle : mapSegment.colliders)

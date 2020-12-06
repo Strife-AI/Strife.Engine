@@ -48,6 +48,19 @@ struct DebugLine
     Color color;
 };
 
+struct DebugRectangle
+{
+    DebugRectangle(const Rectangle& rect_, Color color_)
+        : rect(rect_),
+        color(color_)
+    {
+        
+    }
+
+    Rectangle rect;
+    Color color;
+};
+
 class Renderer
 {
 public:
@@ -72,7 +85,7 @@ public:
 
     void RenderCustomTransparency(const ICustomTransparencyRenderer* renderer, float depth);
 
-    void BeginRender(Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime);
+    void BeginRender(Scene* scene, Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime);
     void DoRendering();
     void RenderSpriteBatch();
 
@@ -89,6 +102,7 @@ public:
     }
 
     static void DrawDebugRectangleOutline(const Rectangle& rect, Color color);
+    static void DrawDebugRectangle(const Rectangle& rect, Color color);
 
 private:
     void InitializeLineRenderer();
@@ -109,8 +123,10 @@ private:
 
     Camera* _camera;
     Vector2 _renderOffset;
+    Scene* _scene;
 
     std::unique_ptr<FrameBuffer> _deferredLightingColorBuffer;
 
     static std::vector<DebugLine> _debugLines;
+    static std::vector<DebugRectangle> _debugRectangles;
 };

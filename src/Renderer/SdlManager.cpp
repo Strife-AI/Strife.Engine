@@ -124,6 +124,8 @@ SdlManager::SdlManager(Input* input)
     }
 }
 
+extern ConsoleVar<bool> isServer;
+
 void SdlManager::SetupOpenGl()
 {
 #if true
@@ -238,6 +240,15 @@ void SdlManager::SetupOpenGl()
     else
     {
         Log("Has double buffering: %d\n", hasDoubleBuffer);
+    }
+
+    if(isServer.Value())
+    {
+        SDL_SetWindowPosition(_window, 0, 200);
+    }
+    else
+    {
+        SDL_SetWindowPosition(_window, 1024, 200);
     }
 }
 
