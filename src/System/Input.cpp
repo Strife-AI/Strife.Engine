@@ -81,7 +81,7 @@ bool InputButton::ButtonIsDown(const InputState* input, const ButtonMapping& map
             return false;
     }
 
-    FatalError("Unhandled input device type: %d", mapping.deviceType);
+    FatalError("Unhandled input device type: %d", (int)mapping.deviceType);
 }
 
 Input* InputButton::GetInput() { return Engine::GetInstance()->GetInput(); }

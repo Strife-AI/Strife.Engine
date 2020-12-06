@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <cmath>
 
 #include "BitMath.hpp"
 
@@ -78,7 +79,7 @@ struct Vector2Template
 
     Vector2Template Round() const
     {
-        return Vector2(round(x), round(y));
+        return Vector2Template(round(x), round(y));
     }
 
     Vector2Template Min(const Vector2Template& rhs) const

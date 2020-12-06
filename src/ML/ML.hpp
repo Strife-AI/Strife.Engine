@@ -40,11 +40,7 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
 
     void Update(float deltaTime) override;
 
-    void SetNetwork(const char* name)
-    {
-        auto nnManager = Engine::GetInstance()->GetNeuralNetworkManager();
-        networkContext = nnManager->GetNetwork<TNeuralNetwork>(name);
-    }
+    void SetNetwork(const char* name);
 
     void MakeDecision();
 
@@ -264,6 +260,13 @@ private:
     std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition = std::make_shared<SensorObjectDefinition>();
 };
 
+template<typename TNeuralNetwork>
+void NeuralNetworkComponent<TNeuralNetwork>::SetNetwork(const char* name)
+{
+    auto nnManager = Engine::GetInstance()->GetNeuralNetworkManager();
+    networkContext = nnManager->GetNetwork<TNeuralNetwork>(name);
+}
+
 gsl::span<uint64_t> ReadGridSensorRectangles(
     Scene* scene,
     Vector2 center,
@@ -357,24 +360,24 @@ struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
 
     Vector2 GridCenter() const
     {
-        return owner->Center() + offsetFromEntityCenter;
+        return this->owner->Center() + offsetFromEntityCenter;
     }
 
     void OnAdded() override
     {
-        sensorObjectDefinition = GetScene()->GetEngine()->GetNeuralNetworkManager()->GetSensorObjectDefinition();
+        sensorObjectDefinition = this->GetScene()->GetEngine()->GetNeuralNetworkManager()->GetSensorObjectDefinition();
     }
 
     void Read(SensorOutput& output)
     {
         auto sensorGridRectangles = ReadGridSensorRectangles(
-            GetScene(),
+            this->GetScene(),
             GridCenter(),
             cellSize,
             Rows,
             Cols,
             sensorObjectDefinition.get(),
-            owner);
+            this->owner);
 
         output.SetRectangles(sensorGridRectangles, sensorObjectDefinition);
     }

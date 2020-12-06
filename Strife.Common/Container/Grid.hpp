@@ -3,8 +3,6 @@
 #include <cstring>
 #include "Math/Vector2.hpp"
 
-#include <System/Logger.hpp>
-
 template <typename T>
 class Grid
 {
@@ -136,11 +134,11 @@ public:
     VariableSizedGrid(int rows, int cols)
         : Grid<T>(rows, cols, new T[rows * cols])
     {
-        
+
     }
 
     ~VariableSizedGrid()
     {
-        delete [] _data;
+        delete [] this->_data;
     }
 };

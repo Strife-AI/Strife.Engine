@@ -42,7 +42,6 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if(!scene->isServer && autoConnect.Value())
         {
-            Sleep(2000);
             scene->GetEngine()->GetConsole()->Execute("connect 127.0.0.1");
 
             //scene->GetCameraFollower()->FollowMouse();

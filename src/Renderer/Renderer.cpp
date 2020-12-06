@@ -25,6 +25,7 @@ Renderer::Renderer()
 
 bool draw = false;
 
+
 void Renderer::RenderSprite(const Sprite* sprite, const Vector2 position, float depth, Vector2 scale, float angle, bool flipHorizontal, Color blendColor)
 {
     if (draw)
@@ -77,7 +78,6 @@ void Renderer::RenderSpriteRepeated(const Sprite* sprite, const Rectangle& bound
             {
                 auto position = RotateXY(center, tileTopLeft + tileSize / 2, angle) - tileSize / 2;
                 RenderSprite(sprite, position, depth, Vector2(1, 1), angle);
-                //return;
             }
             else
             {

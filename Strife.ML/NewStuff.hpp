@@ -40,7 +40,7 @@ namespace StrifeML
 
         }
 
-        const char* what() const override
+        const char* what()  const noexcept override
         {
             return message.c_str();
         }
@@ -165,7 +165,7 @@ namespace StrifeML
 
         void Execute() override
         {
-            network->MakeDecision(gsl::span<InputType>(input.get(), inputLength), _result);
+            network->MakeDecision(gsl::span<InputType>(input.get(), inputLength), this->_result);
         }
 
         std::shared_ptr<TNetwork> network;
@@ -542,7 +542,7 @@ namespace StrifeML
 
                 // TODO: can save the memory allocation by reusing the task
                 trainTask = std::make_shared<ScheduledTask>();
-                trainTask->workItem = std::make_shared<RunTrainingBatchWorkItem<TNeuralNetwork>>(network, shared_from_this(), trainingInput, batchSize, sequenceLength);
+                trainTask->workItem = std::make_shared<RunTrainingBatchWorkItem<TNeuralNetwork>>(network, this->shared_from_this(), trainingInput, batchSize, sequenceLength);
                 trainTask->runTime = runTime;
                 taskScheduler->Start(trainTask);
             }
