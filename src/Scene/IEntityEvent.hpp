@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Memory/StringId.hpp"
 #include "Physics/ColliderHandle.hpp"
 #include "Scene/Entity.hpp"
 
@@ -181,24 +180,10 @@ DEFINE_EVENT(RenderEvent)
     Renderer* renderer;
 };
 
-DEFINE_EVENT(SegmentLoadedEvent)
-{
-    SegmentLoadedEvent(int segmentId_, const Rectangle& bounds_, int difficulty_)
-        : segmentId(segmentId_),
-        bounds(bounds_),
-        difficulty(difficulty_)
-    {
-        
-    }
-
-    int segmentId;
-    int difficulty;
-    Rectangle bounds;
-};
-
 DEFINE_EMPTY_EVENT(RenderImguiEvent)
-DEFINE_EMPTY_EVENT(PreUpdateEvent)
-DEFINE_EMPTY_EVENT(PreRenderEvent)
+DEFINE_EMPTY_EVENT(UpdateEvent)
+DEFINE_EMPTY_EVENT(EndOfUpdateEvent)
+DEFINE_EMPTY_EVENT(FixedUpdateEvent)
 
 /// <summary>
 /// Sent after the scene has been loaded (usually after the first segment is done loading)

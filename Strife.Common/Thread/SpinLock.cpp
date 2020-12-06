@@ -1,4 +1,3 @@
-#include <cstdio>
 #include "SpinLock.hpp"
 
 bool SpinLock::TryLock()

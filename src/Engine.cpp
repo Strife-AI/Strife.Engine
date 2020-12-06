@@ -9,7 +9,9 @@
 #include "Scene/Scene.hpp"
 #include "Memory/ResourceManager.hpp"
 #include <thread>
-#include <Scene/IEntityEvent.hpp>
+
+#include "../Strife.ML/NewStuff.hpp"
+#include "ML/ML.hpp"
 #include "Scene/IGame.hpp"
 #include "System/Input.hpp"
 #include "Renderer/SdlManager.hpp"
@@ -22,10 +24,6 @@
 
 using namespace std::chrono;
 
-void SleepMicroseconds(unsigned int microseconds)
-{
-    std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
-}
 
 Engine Engine::_instance;
 
@@ -35,8 +33,7 @@ extern ConsoleVar<bool> g_developerMode("developer-mode", false, false);
 extern ConsoleVar<bool> g_developerMode("developer-mode", true, true);
 #endif
 
-ConsoleVar<bool> g_stressTest("stress-test", false, false);
-int stressCount = 0;
+ConsoleVar<bool> isServer("server", false);
 
 Engine* Engine::Initialize(const EngineConfig& config)
 {
@@ -64,6 +61,8 @@ Engine* Engine::Initialize(const EngineConfig& config)
         engine->_console->LoadVariables(config.consoleVarsFile.value().c_str());
     }
 
+    engine->_console->Execute(config.initialConsoleCmd);
+
     Log("==============================================================\n");
     Log("Initializing engine\n");
 
@@ -85,7 +84,7 @@ Engine* Engine::Initialize(const EngineConfig& config)
     Log("Initializing sound\n");
     engine->_soundManager = new SoundManager;
 
-    engine->_sceneManager = new SceneManager(engine);
+    engine->_neuralNetworkManager = std::make_unique<NeuralNetworkManager>();
 
     UiCanvas::Initialize(engine->_soundManager);
 
@@ -111,6 +110,16 @@ Engine::~Engine()
             delete _plotManager;
             delete _sdlManager;
             delete _input;
+
+            _serverGame = nullptr;
+            _clientGame = nullptr;
+            _neuralNetworkManager = nullptr;
+
+            auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+            if(peerInterface->IsActive())
+            {
+                peerInterface->Shutdown(500);
+            }
         }
         catch(const std::exception& e)
         {
@@ -127,236 +136,163 @@ Engine::~Engine()
     }
 }
 
-static TimePointType lastFrameStart;
-
-void ThrottleFrameRate()
+void SleepMicroseconds(unsigned int microseconds)
 {
-    auto currentFrameStart = high_resolution_clock::now();
-    auto deltaTimeMicroseconds = duration_cast<microseconds>(currentFrameStart - lastFrameStart);
-    auto realDeltaTime = static_cast<float>(deltaTimeMicroseconds.count()) / 1000000;
-    auto desiredDeltaTime = 1.0f / Engine::GetInstance()->targetFps.Value();
+    std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
+}
 
-    auto diffBias = 0.01f;
-    auto diff = desiredDeltaTime - realDeltaTime - diffBias;
-    auto desiredEndTime = lastFrameStart + std::chrono::microseconds((int)(desiredDeltaTime * 1000000));
+static float GetTimeSeconds()
+{
+    static auto startTime = std::chrono::high_resolution_clock::now();
 
-    if(diff > 0)
+    auto now = std::chrono::high_resolution_clock::now();
+    auto deltaTimeMicroseconds = std::chrono::duration_cast<std::chrono::microseconds>(now - startTime);
+    return static_cast<float>(deltaTimeMicroseconds.count()) / 1000000;
+}
+
+void AccurateSleepFor(float seconds)
+{
+    auto bias = 0.01f;
+    auto diff = seconds - bias;
+    auto desiredEndTime = std::chrono::high_resolution_clock::now() + std::chrono::microseconds((int)(seconds * 1000000));
+
+    if (diff > 0)
     {
         SleepMicroseconds(1000000 * diff);
     }
 
-    while(high_resolution_clock::now() < desiredEndTime)
+    while (std::chrono::high_resolution_clock::now() < desiredEndTime)
     {
-
+        // No-op
     }
-
-    lastFrameStart = high_resolution_clock::now();
 }
-
-ConsoleVar<float> g_timeScale("time-scale", 1.125f);
 
 void Engine::RunFrame()
 {
-    static int frameCount = 0;
-    ++frameCount;
+    BaseGameInstance* games[2];
+    int totalGames = 0;
 
-    if (!g_stressTest.Value())
+    if (_serverGame != nullptr)
     {
-        ThrottleFrameRate();
+        games[totalGames++] = _serverGame.get();
     }
 
-    _input->Update();
-
-    _sdlManager->Update();
-
-    _sceneManager->DoSceneTransition();
-
-    Scene* scene = _sceneManager->GetScene();
-
-    auto currentFrameStart = high_resolution_clock::now();
-
-    if (scene->isFirstFrame)
+    if(_clientGame != nullptr)
     {
-        scene->lastFrameStart = currentFrameStart;
-        scene->isFirstFrame = false;
+        games[totalGames++] = _clientGame.get();
     }
 
-    auto deltaTimeMicroseconds = duration_cast<microseconds>(currentFrameStart - scene->lastFrameStart);
-    auto realDeltaTime = static_cast<float>(deltaTimeMicroseconds.count()) / 1000000 * g_timeScale.Value();
-
-    float renderDeltaTime = !isPaused
-        ? realDeltaTime
-        : 0;
-
-    if(g_stressTest.Value())
+    if (totalGames == 0)
     {
-        realDeltaTime = renderDeltaTime = 0.1;
-        targetFps.SetValue(1000);
+        return;
+    }
 
-        if(scene->timeSinceStart > 0.1 * 60 * 60)
+    BaseGameInstance* nextGameToRun = games[0];
+
+    for(int i = 1; i < totalGames; ++i)
+    {
+        if(games[i]->nextUpdateTime < nextGameToRun->nextUpdateTime)
         {
-            QuitGame();
-        }
-
-        //if(_console->IsOpen())
-        //{
-        //    _console->Close();
-        //}
-    }
-
-    scene->deltaTime = renderDeltaTime;
-
-    _soundManager->UpdateActiveSoundEmitters(scene->deltaTime);
-
-    Entity* soundListener;
-    if (scene->soundListener.TryGetValue(soundListener))
-    {
-        //_soundManager->SetListenerPosition(soundListener->Center(), soundListener->GetVelocity());
-    }
-
-    scene->UpdateEntities(renderDeltaTime);
-
-    if (g_developerMode.Value())
-    {
-        if (_console->IsOpen())
-        {
-            _console->HandleInput(_input);
-        }
-
-        bool tildePressed = InputButton(SDL_SCANCODE_GRAVE).IsPressed();
-
-        if (tildePressed)
-        {
-            if (_console->IsOpen())
-            {
-                _console->Close();
-                isPaused = false;
-            }
-            else
-            {
-                _console->Open();
-                isPaused = true;
-            }
+            nextGameToRun = games[i];
         }
     }
-    else if (_console->IsOpen())
-    {
-        _console->Close();
-        isPaused = false;
-    }
 
-    Render(scene, realDeltaTime, renderDeltaTime);
+    float now = GetTimeSeconds();
+    float timeUntilUpdate = nextGameToRun->nextUpdateTime - now;
 
-    if (frameCount % 60 == 0)
-    {
-        int fps = floor(1.0f / realDeltaTime);
-        char windowTitle[128];
-        snprintf(windowTitle, sizeof(windowTitle), "C.H.A.S.E.R. - %d fps", fps);
-        SDL_SetWindowTitle(_sdlManager->Window(), windowTitle);
-    }
-
-    {
-        float fps = 1.0f / realDeltaTime;
-        _metricsManager->GetOrCreateMetric("fps")->Add(fps);
-    }
-
-    _input->GetMouse()->SetMouseScale(Vector2::Unit() * scene->GetCamera()->Zoom());
-
-    scene->lastFrameStart = currentFrameStart;
-
-    if(_sdlManager->ReceivedQuit())
-    {
-        _activeGame = false;
-    }
-}
-
-void Engine::Render(Scene* scene, float deltaTime, float renderDeltaTime)
-{
-    _sdlManager->BeginRender();
-
-    auto screenSize = _sdlManager->WindowSize().AsVectorOfType<float>();
-    scene->GetCamera()->SetScreenSize(screenSize);
-    scene->GetCamera()->SetZoom(1);// screenSize.y / (1080 / 2));
-
-    auto camera = scene->GetCamera();
-    _renderer->BeginRender(camera, Vector2(0, 0), renderDeltaTime, scene->timeSinceStart);
-    scene->RenderEntities(_renderer);
-
-    scene->SendEvent(RenderImguiEvent());
-
-    // FIXME: add proper ambient lighting
-    _renderer->RenderRectangle(_renderer->GetCamera()->Bounds(), Color(18, 21, 26), 0.99);
-    //_renderer->RenderRectangle(_renderer->GetCamera()->Bounds(), Color(255, 255, 255), 0.99);
-    _renderer->DoRendering();
-
-    // Render HUD
-    _renderer->SetRenderOffset(scene->GetCamera()->TopLeft());
-    scene->RenderHud(_renderer);
-
-    if (g_stressTest.Value())
-    {
-        char text[1024];
-        sprintf(text, "Time elapsed: %f hours", scene->timeSinceStart / 60.0f / 60.0f);
-
-        _renderer->RenderString(
-            FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid)),
-            text,
-            Vector2(200, 200),
-            -1);
-    }
-
-    _renderer->RenderSpriteBatch();
-
-    // Render UI
-    {
-        Camera uiCamera;
-        uiCamera.SetScreenSize(scene->GetCamera()->ScreenSize());
-        uiCamera.SetZoom(screenSize.y / 768.0f);
-        _renderer->BeginRender(&uiCamera, uiCamera.TopLeft(), renderDeltaTime, scene->timeSinceStart);
-        _input->GetMouse()->SetMouseScale(Vector2::Unit() * uiCamera.Zoom());
-
-        scene->BroadcastEvent(RenderUiEvent(_renderer));
-
-        if (_console->IsOpen())
-        {
-            _console->Render(_renderer, deltaTime);
-        }
-
-        _console->Update();
-
-        _renderer->RenderSpriteBatch();
-    }
-
-    _plotManager->RenderPlots();
-
-    if (!g_stressTest.Value() || true)
-    {
-        _sdlManager->EndRender();
-    }
+    AccurateSleepFor(timeUntilUpdate);
+    nextGameToRun->RunFrame();
+    nextGameToRun->nextUpdateTime = now + 1.0f / nextGameToRun->targetTickRate;
 }
 
 void Engine::PauseGame()
 {
-    if (isPaused)
-    {
-        return;
-    }
-    else
-    {
-        isPaused = true;
-    }
+    isPaused = true;
 }
 
 void Engine::ResumeGame()
 {
-    if (!isPaused)
+    isPaused = false;
+}
+
+void ConnectCommand(ConsoleCommandBinder& binder)
+{
+    std::string address;
+    int port;
+
+    binder
+        .Bind(address, "serverAddress")
+        .Bind(port, "port")
+        .Help("Connects to a server");
+
+    Engine::GetInstance()->ConnectToServer(address.c_str(), port);
+}
+
+ConsoleCmd connectCmd("connect", ConnectCommand);
+
+void Engine::StartLocalServer(int port, StringId mapName)
+{
+    SLNet::SocketDescriptor sd(port, nullptr);
+    auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+
+    if(peerInterface->IsActive())
     {
-        return;
+        peerInterface->Shutdown(500);
     }
-    else
+
+    auto result = peerInterface->Startup(1, &sd, 1);
+
+    if (result != SLNet::RAKNET_STARTED)
     {
-        isPaused = false;
+        FatalError("Failed to startup local server");
     }
+
+    peerInterface->SetMaximumIncomingConnections(ServerGame::MaxClients);
+
+    Log("Listening on %d...\n", port);
+
+    _serverGame = std::make_unique<ServerGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
+    _clientGame = std::make_unique<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.3", 1)));
+
+    _serverGame->networkInterface.SetLocalAddress(&_clientGame->networkInterface, _clientGame->localAddress);
+    _clientGame->networkInterface.SetLocalAddress(&_serverGame->networkInterface, _serverGame->localAddress);
+
+    _clientGame->sceneManager.TrySwitchScene(mapName);
+    _serverGame->sceneManager.TrySwitchScene(mapName);
+
+    unsigned char data[1] = { (unsigned char)PacketType::NewConnection };
+
+    _clientGame->networkInterface.SendReliable(_serverGame->localAddress, data);
+}
+
+void Engine::ConnectToServer(const char* address, int port)
+{
+    SLNet::SocketDescriptor sd;
+    auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+
+    if (peerInterface->IsActive())
+    {
+        peerInterface->Shutdown(500);
+    }
+
+    auto result = peerInterface->Startup(1, &sd, 1);
+
+    Log("Trying to connect to %s:%d...\n", address, port);
+
+    if (result != SLNet::RAKNET_STARTED)
+    {
+        FatalError("Failed to startup client");
+    }
+
+    auto connectResult = peerInterface->Connect(address, port, nullptr, 0);
+
+    if (connectResult != SLNet::CONNECTION_ATTEMPT_STARTED)
+    {
+        Log("Failed to initiate server connection");
+    }
+
+    _serverGame = nullptr;
+    _clientGame = std::make_unique<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
 }
 
 static void ReloadResources(ConsoleCommandBinder& binder)

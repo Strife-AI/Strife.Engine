@@ -35,12 +35,12 @@ void IGame::Run()
             auto font = ResourceManager::GetResource<SpriteFont>(StringId(_config.devConsoleFont->c_str()));
             _engine->GetConsole()->SetFont(FontSettings(font, 1));
         }
-
-        _engine->GetSceneManager()->TrySwitchScene(_config.defaultScene);
     }
 
     // Run the game
     {
+        OnGameStart();
+
         while (_engine->ActiveGame())
         {
             _engine->RunFrame();

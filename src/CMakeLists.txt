@@ -5,14 +5,15 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 find_package(SDL2 REQUIRED)
 find_package(SDL2-image REQUIRED)
 find_package(unofficial-box2d CONFIG REQUIRED)
+find_package(slikenet CONFIG REQUIRED)
 
 add_library(Strife.Engine STATIC
         Engine.cpp
         Math/Rectangle.cpp
-        Math/Vector2.cpp
+        
         Math/Polygon.cpp
         Memory/Crc32.cpp
-        Memory/Grid.cpp
+        
         Memory/ResourceManager.cpp
         Physics/Physics.cpp
         Physics/ColliderHandle.cpp
@@ -36,8 +37,8 @@ add_library(Strife.Engine STATIC
         System/TileMapSerialization.cpp
         Memory/Fsm.hpp
         Memory/EnumDictionary.hpp
-        Memory/SpinLock.cpp
-        Memory/SpinLock.hpp
+        
+        
         Tools/ConsoleVar.cpp
         Tools/ConsoleVar.hpp
         Tools/ConsoleCmd.cpp
@@ -73,8 +74,8 @@ add_library(Strife.Engine STATIC
         Renderer/LightAnimations.cpp
         Renderer/Camera.cpp
         Renderer/Camera.hpp
-        Math/Vector3.hpp
-        Math/Vector4.hpp
+        
+        
         Renderer/GL/LineRenderer.cpp
         Renderer/GL/LineRenderer.hpp
         Renderer/RenderVertex.hpp
@@ -118,7 +119,7 @@ add_library(Strife.Engine STATIC
         UI/UiDictionary.hpp
         UI/UiBuilder.cpp
         Memory/Dictionary.hpp
-        Math/BitMath.cpp
+        
         Sound/SoundEffect.cpp
         Memory/ResourcePool.hpp
         Renderer/ParticleSystem.hpp
@@ -137,16 +138,34 @@ add_library(Strife.Engine STATIC
  		Components/RigidBodyComponent.cpp
 
         Memory/Util.hpp        
-)
+        
+        
+        "Scene/ReplicationManager.hpp"
+        "Scene/ReplicationManager.cpp"
+        "Memory/CircularQueue.hpp"
+        "Net/ReplicationManager.hpp"
+        "Net/ReplicationManager.cpp"
+        "Components/NetComponent.hpp"
+        "Components/NetComponent.cpp"
+        "Net/NetworkPhysics.hpp"
+        "Net/NetworkPhysics.cpp"
+        "Physics/PathFinding.hpp"
+        "Physics/PathFinding.cpp"
+        "Scene/EntityManager.cpp"
+        
+     "Net/ServerGame.cpp" "ML/ML.hpp" "ML/ML.cpp")
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
 # Workaround because OALWrapper can't find SDL path
 find_path(SDL_INCLUDE_DIR SDL.h PATH_SUFFIXES SDL2)
 
+find_package(torch REQUIRED)
+
 target_include_directories(Strife.Engine
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/../
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../OALWrapper/include>
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../imgui>
         PRIVATE
@@ -160,6 +179,8 @@ target_link_libraries(Strife.Engine PUBLIC
     SDL2::SDL2_image
     unofficial::box2d::box2d
     OALWrapper
+    SLikeNet
+    Strife.ML
     )
 
 target_compile_definitions(Strife.Engine PUBLIC IMGUI_IMPL_OPENGL_LOADER_GL3W)

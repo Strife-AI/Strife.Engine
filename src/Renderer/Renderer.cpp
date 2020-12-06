@@ -10,6 +10,7 @@
 static ConsoleVar<bool> g_useLighting("light", true);
 
 std::vector<DebugLine> Renderer::_debugLines;
+std::vector<DebugRectangle> Renderer::_debugRectangles;
 
 Renderer::Renderer()
 {
@@ -293,6 +294,24 @@ void Renderer::RenderCircle(Vector2 center, float radius, Color color, float dep
 
 void Renderer::DoRendering()
 {
+    // Only do debug rendering on the client
+    if (!_scene->isServer)
+    {
+        for (auto& rect : _debugRectangles)
+        {
+            RenderRectangle(rect.rect, rect.color, -1, 0);
+        }
+
+        if (!_scene->GetEngine()->IsPaused()) _debugRectangles.clear();
+
+        for (auto& line : _debugLines)
+        {
+            RenderLine(line.start, line.end, line.color, -1);
+        }
+
+        if (!_scene->GetEngine()->IsPaused()) _debugLines.clear();
+    }
+
     if (g_useLighting.Value())
     {
         _deferredLightingColorBuffer->Bind();
@@ -307,8 +326,7 @@ void Renderer::DoRendering()
         _deferredLightingColorBuffer->Unbind();
         glClearColor(0, 0, 0, 1);
         glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-        auto scene = Engine::GetInstance()->GetSceneManager()->GetScene();
-        _lightManager.UpdateVisibleLights(_camera, scene, _deferredLightingColorBuffer->ColorBuffer());
+        _lightManager.UpdateVisibleLights(_camera, _scene, _deferredLightingColorBuffer->ColorBuffer());
 
         // Copy over the depth buffer
         glBindFramebuffer(GL_READ_FRAMEBUFFER, _deferredLightingColorBuffer->Id());
@@ -332,13 +350,6 @@ void Renderer::DoRendering()
         _spriteBatcher.Render();
     }
 
-    for (auto& line : _debugLines)
-    {
-        RenderLine(line.start, line.end, line.color, -1);
-    }
-
-    if (!Engine::GetInstance()->IsPaused()) _debugLines.clear();
-
     _lineRenderer.Render(_camera->ViewMatrix());
 }
 
@@ -352,9 +363,10 @@ void Renderer::RenderSpriteBatch()
     _lineRenderer.Render(_camera->ViewMatrix());
 }
 
-void Renderer::BeginRender(Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime)
+void Renderer::BeginRender(Scene* scene, Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime)
 {
     _camera = camera;
+    _scene = scene;
     _deltaTime = deltaTime;
     _absoluteTime = absoluteTime;
 
@@ -373,6 +385,11 @@ void Renderer::DrawDebugRectangleOutline(const Rectangle& rect, Color color)
     {
         _debugLines.emplace_back(points[i], points[(i + 1) % 4], color);
     }
+}
+
+void Renderer::DrawDebugRectangle(const Rectangle& rect, Color color)
+{
+    _debugRectangles.emplace_back(rect, color);
 }
 
 void Renderer::InitializeLineRenderer()

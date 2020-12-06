@@ -1,5 +1,6 @@
 #include "Entity.hpp"
 #include "BaseEntity.hpp"
+#include "Engine.hpp"
 #include "Scene.hpp"
 #include "IEntityEvent.hpp"
 
@@ -113,11 +114,6 @@ std::map<std::string, std::string> EntityDictionaryBuilder::BuildMap()
     return result;
 }
 
-Entity* SegmentLink::GetEntity()
-{
-    return static_cast<Entity*>(this);
-}
-
 Entity::~Entity()
 {
     Entity* child = children;
@@ -157,19 +153,24 @@ Entity::~Entity()
 
 void Entity::Destroy()
 {
-    scene->DestroyEntity(this);
+    scene->MarkEntityForDestruction(this);
 }
 
 void Entity::SetCenter(const Vector2& newPosition)
 {
-    flags |= WasTeleported;
-    bool moved = _position != newPosition;
+    bool moved = _position.Value() != newPosition;
 
     if (moved)
     {
         _position = newPosition;
-        NotifyMovement();
+        DoTeleport();
     }
+}
+
+void Entity::DoTeleport()
+{
+    NotifyMovement();
+    flags |= WasTeleported;
 }
 
 
@@ -182,6 +183,16 @@ void Entity::SetRotation(float angle)
 Engine* Entity::GetEngine() const
 {
     return scene->GetEngine();
+}
+
+void Entity::SendEvent(const IEntityEvent& ev)
+{
+    ReceiveEvent(ev);
+
+    if(scene->isServer)
+    {
+        ReceiveServerEvent(ev);
+    }
 }
 
 void Entity::Serialize(EntityDictionaryBuilder& builder)
@@ -213,6 +224,16 @@ SoundChannel* Entity::GetChannel(int id)
     Assert(id >= 0 && id < SoundEmitter::MaxChannels);
 
     return _soundEmitter.channels + id;
+}
+
+void Entity::UpdateSyncVars()
+{
+    if (_position.Changed())
+    {
+        DoTeleport();
+    }
+
+    OnSyncVarsUpdated();
 }
 
 void Entity::RemoveComponent(IEntityComponent* component)

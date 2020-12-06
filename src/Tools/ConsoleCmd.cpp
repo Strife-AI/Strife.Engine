@@ -32,11 +32,6 @@ void ConsoleCommandBinder::Error(const std::string& message)
     _errorMessage = message;
 }
 
-Scene* ConsoleCommandBinder::GetScene()
-{
-    return Engine::GetInstance()->GetSceneManager()->GetScene();
-}
-
 static std::map<std::string, ConsoleCmd*>& GetAllConsoleCmds()
 {
     static std::map<std::string, ConsoleCmd*> g_consoleCmdsByName;

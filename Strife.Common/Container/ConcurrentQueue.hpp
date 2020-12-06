@@ -1,8 +1,7 @@
 #pragma once
 
 #include <queue>
-#include "SpinLock.hpp"
-#include "System/Logger.hpp"
+#include "Thread/SpinLock.hpp"
 
 template<typename T>
 class ConcurrentQueue
@@ -15,6 +14,7 @@ public:
 
     void Dequeue();
     const T& Front();
+    bool TryDequeue(T& outItem);
 
     int Size() const { return _queue.size(); }
 	bool IsEmpty() const { return Size() == 0; }
@@ -63,4 +63,23 @@ const T& ConcurrentQueue<T>::Front()
     _lock.Unlock();
 
     return item;
+}
+
+template <typename T>
+bool ConcurrentQueue<T>::TryDequeue(T& outItem)
+{
+    bool hasItem = false;
+
+    _lock.Lock();
+    {
+        if (!_queue.empty())
+        {
+            outItem = _queue.front();
+            _queue.pop();
+            hasItem = true;
+        }
+    }
+    _lock.Unlock();
+
+    return hasItem;
 }

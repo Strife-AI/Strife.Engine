@@ -1,95 +1,48 @@
 #include "Scene.hpp"
-
-#include <box2d/b2_fixture.h>
-#include <box2d/b2_world.h>
-#include <box2d/b2_polygon_shape.h>
-#include <box2d/b2_circle_shape.h>
-#include <box2d/b2_edge_shape.h>
-
-
-#include "AmbientLightEntity.hpp"
 #include "Engine.hpp"
 #include "Physics/Physics.hpp"
 #include "Renderer.hpp"
-#include "SceneManager.hpp"
 #include "SdlManager.hpp"
+#include "ML/ML.hpp"
+#include "Physics/PathFinding.hpp"
 #include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
-#include "IEntityEvent.hpp"
+#include "Net/ReplicationManager.hpp"
 
-template <typename TContainer, typename TItem, int MaxSize>
-void AddIfImplementsInterface(FixedSizeVector<TContainer, MaxSize>& container, const TItem& item)
-{
-    TContainer asContainer;
-    if ((asContainer = dynamic_cast<TContainer>(item)) != nullptr)
-    {
-        container.PushBackUnique(asContainer);
-    }
-}
+Entity* Scene::entityUnderConstruction = nullptr;
 
-template <typename TContainer, typename TItem, int MaxSize>
-void RemoveIfImplementsInterface(FixedSizeVector<TContainer, MaxSize>& container, const TItem& item)
-{
-    TContainer asContainer;
-    if ((asContainer = dynamic_cast<TContainer>(item)) != nullptr)
-    {
-        container.RemoveSingle(asContainer);
-    }
-}
-
-void LoadedSegment::Reset(int segmentId_)
-{
-    segmentId = segmentId_;
-
-    firstLink.next = &lastLink;
-    firstLink.prev = nullptr;
-
-    lastLink.next = nullptr;
-    lastLink.prev = &firstLink;
-}
-
-void LoadedSegment::AddEntity(Entity* entity)
-{
-    firstLink.InsertAfterThis(entity);
-}
-
-void LoadedSegment::BroadcastEvent(const IEntityEvent& ev)
-{
-    for (auto node = firstLink.next; node != &lastLink; node = node->next)
-    {
-        node->GetEntity()->SendEvent(ev);
-    }
-}
-
-Scene::Scene(Engine* engine, StringId mapSegmentName)
-    : _mapSegmentName(mapSegmentName),
+Scene::Scene(Engine* engine, StringId mapSegmentName, bool isServer)
+    : isServer(isServer),
+    _mapSegmentName(mapSegmentName),
     _cameraFollower(&_camera, engine->GetInput()),
     _engine(engine),
-    _freeEntityHeaders(_entityHeaders.begin(), MaxEntities),
     _world(std::make_unique<b2World>(b2Vec2(0, 0))),
-    _collisionManager(_world.get()),
-    _freeSegments(_segmentPool, MaxLoadedSegments)
+    _collisionManager(_world.get())
 {
-    for (int i = 0; i < MaxEntities; ++i)
-    {
-        _entityHeaders[i].id = InvalidEntityHeaderId;
-    }
-
     _world->SetContactListener(&_collisionManager);
-
     _camera.SetScreenSize(engine->GetSdlManager()->WindowSize().AsVectorOfType<float>());
+    replicationManager = AddService<ReplicationManager>(this, isServer);
 }
 
 Scene::~Scene()
 {
-    DestroyScheduledEntities();
-
-    for (int i = _entities.Size() - 1; i >= 0; --i)
+    for (auto entity : _entityManager.entities)
     {
-        DestroyEntity(_entities[i]);
+        MarkEntityForDestruction(entity);
     }
 
     DestroyScheduledEntities();
+}
+
+b2Vec2 Scene::PixelToBox2D(Vector2 v)
+{
+    auto scaled = v * PixelsToBox2DRatio;
+    return b2Vec2(scaled.x, scaled.y);
+}
+
+Vector2 Scene::Box2DToPixel(b2Vec2 v)
+{
+    return Vector2(v.x * Box2DToPixelsRatio.x, v.y * Box2DToPixelsRatio.y);
 }
 
 void Scene::RegisterEntity(Entity* entity, const EntityDictionary& properties)
@@ -100,29 +53,12 @@ void Scene::RegisterEntity(Entity* entity, const EntityDictionary& properties)
     std::string_view name = properties.GetValueOrDefault<std::string_view>("name", "");
     entity->name = StringId(name);
 
-    _entities.PushBackUnique(entity);
+    _entityManager.RegisterEntity(entity);
 
-    AddIfImplementsInterface(_updatables, entity);
-    AddIfImplementsInterface(_fixedUpdatables, entity);
-    AddIfImplementsInterface(_renderables, entity);
-    AddIfImplementsInterface(_hudRenderables, entity);
-
-    EntityHeader* header = _freeEntityHeaders.Borrow();
-
-    header->id = _nextEntityId++;
-    header->entity = entity;
-
-    entity->id = header->id;
-    entity->header = header;
     entity->scene = this;
     _engine->GetSoundManager()->AddSoundEmitter(&entity->_soundEmitter, entity);
 
-    // Make sure entities created in OnAdded() don't get offset by the segment offset
-    auto oldEntityOffset = _entityOffset;
-    _entityOffset = Vector2::Zero();
     entity->OnAdded(properties);
-
-    _entityOffset = oldEntityOffset;
 }
 
 void Scene::RemoveEntity(Entity* entity)
@@ -144,20 +80,14 @@ void Scene::RemoveEntity(Entity* entity)
         entity->_componentList = nullptr;
     }
 
-    RemoveIfImplementsInterface(_updatables, entity);
-    RemoveIfImplementsInterface(_fixedUpdatables, entity);
-    RemoveIfImplementsInterface(_renderables, entity);
-    RemoveIfImplementsInterface(_hudRenderables, entity);
+    _entityManager.UnregisterEntity(entity);
 
-    EntityHeader* header = entity->header;
-    header->id = InvalidEntityHeaderId;
-    _freeEntityHeaders.Return(header);
-    entity->SegmentLink::Unlink();
-
-    auto memoryBlock = entity->GetMemoryBlock();
-    entity->~Entity();
-    _entities.RemoveSingle(entity);
-    FreeMemory(memoryBlock.second, memoryBlock.first);
+    // Free memory
+    {
+        auto memoryBlock = entity->GetMemoryBlock();
+        entity->~Entity();
+        FreeMemory(memoryBlock.second, memoryBlock.first);
+    }
 }
 
 Entity* Scene::CreateEntity(const EntityDictionary& properties)
@@ -167,7 +97,7 @@ Entity* Scene::CreateEntity(const EntityDictionary& properties)
     return result;
 }
 
-void Scene::DestroyEntity(Entity* entity)
+void Scene::MarkEntityForDestruction(Entity* entity)
 {
     if (entity->isDestroyed)
     {
@@ -176,46 +106,19 @@ void Scene::DestroyEntity(Entity* entity)
 
     entity->isDestroyed = true;
 
-    _toBeDestroyed.PushBack(entity);
+    _entityManager.toBeDestroyed.push_back(entity);
 }
 
 void Scene::DestroyScheduledEntities()
 {
-    while (_toBeDestroyed.Size() != 0)
+    auto& toBeDestroyed = _entityManager.toBeDestroyed;
+
+    while (!toBeDestroyed.empty())
     {
-        auto entityToDestroy = _toBeDestroyed[_toBeDestroyed.Size() - 1];
-        _toBeDestroyed.PopBack();
+        auto entityToDestroy = toBeDestroyed[toBeDestroyed.size() - 1];
+        toBeDestroyed.pop_back();
         RemoveEntity(entityToDestroy);
     }
-}
-
-LoadedSegment* Scene::RegisterSegment(int segmentId)
-{
-    if (_loadedSegments.Size() == _loadedSegments.Capacity())
-    {
-        FatalError("Too many segments loaded");
-    }
-
-    LoadedSegment* segment = _freeSegments.Borrow();
-    _loadedSegments.PushBack(segment);
-
-    segment->Reset(segmentId);
-
-    return segment;
-}
-
-
-LoadedSegment* Scene::GetLoadedSegment(int segmentId)
-{
-    for (auto segment : _loadedSegments)
-    {
-        if (segment->segmentId == segmentId)
-        {
-            return segment;
-        }
-    }
-
-    return nullptr;
 }
 
 void* Scene::AllocateMemory(int size) const
@@ -234,32 +137,19 @@ void Scene::SetSoundListener(Entity* entity)
     GetSoundManager()->SetListenerPosition(entity->Center(), { 0, 0});
 }
 
-static Vector2 ToVector2(b2Vec2 v)
-{
-    return Vector2(v.x, v.y);
-}
-
-static b2Vec2 ToB2Vec2(Vector2 v)
-{
-    return b2Vec2(v.x, v.y);
-}
-
 ConsoleVar<bool> g_drawColliders("colliders", false);
 
 void Scene::RenderEntities(Renderer* renderer)
 {
-    PreRender();
-    SendEvent(PreRenderEvent());
-
     SendEvent(RenderEvent(renderer));
 
-    for (auto renderable : _renderables)
+    for (auto renderable : _entityManager.renderables)
     {
         renderable->Render(renderer);
     }
 
     // TODO: more efficient way of rendering components
-    for(auto entity : _entities)
+    for(auto entity : _entityManager.entities)
     {
         for(IEntityComponent* component = entity->_componentList; component != nullptr; component = component->next)
         {
@@ -267,105 +157,39 @@ void Scene::RenderEntities(Renderer* renderer)
         }
     }
 
-    PostRender();
-
     if (g_drawColliders.Value())
     {
-        for (auto body = _world->GetBodyList(); body != nullptr; body = body->GetNext())
-        {
-            for (auto fixture = body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
-            {
-                if (fixture->IsSensor()) continue;;
-
-                auto shape = fixture->GetShape();
-                switch (shape->GetType())
-                {
-                case b2Shape::e_circle:
-                {
-                    auto circle = static_cast<b2CircleShape*>(shape);
-
-                    renderer->RenderCircleOutline(Scene::Box2DToPixel(body->GetWorldPoint(circle->m_p)), circle->m_radius * Scene::Box2DToPixelsRatio.x, Color(0, 255, 0), 0);// FIXME MW DebugRenderLayer);
-                    break;
-                }
-                case b2Shape::e_edge:
-                {
-                    auto edge = static_cast<b2EdgeShape*>(shape);
-                    renderer->RenderLine(
-                        Box2DToPixel(body->GetWorldPoint(edge->m_vertex1)),
-                        Box2DToPixel(body->GetWorldPoint(edge->m_vertex2)),
-                        Color(255, 255, 255),
-                        0);//DebugRenderLayer); FIXME MW
-
-                    break;
-                }
-                case b2Shape::e_polygon:
-                {
-                    auto polygon = static_cast<b2PolygonShape*>(shape);
-
-                    for (int i = 0; i < polygon->m_count; ++i)
-                    {
-                        auto vertex = ToVector2(polygon->m_vertices[i] + body->GetPosition()) * Scene::Box2DToPixelsRatio;
-                        auto next = ToVector2(polygon->m_vertices[(i + 1) % polygon->m_count] + body->GetPosition()) * Scene::Box2DToPixelsRatio;
-
-                        renderer->RenderLine(vertex, next, Color::Red(), 0);// FIXME MW DebugRenderLayer);
-                    }
-
-                    break;
-                }
-                case b2Shape::e_chain: break;
-                case b2Shape::e_typeCount: break;
-                default:;
-                }
-            }
-        }
+        _collisionManager.RenderColliderOutlines(renderer);
     }
 }
 
 void Scene::RenderHud(Renderer* renderer)
 {
-    for (auto hudRenderable : _hudRenderables)
+    for (auto hudRenderable : _entityManager.hudRenderables)
     {
         hudRenderable->RenderHud(renderer);
     }
 
-    DoRenderHud(renderer);
     SendEvent(RenderHudEvent(renderer));
 }
 
-struct FindFixturesQueryCallback : b2QueryCallback
+void Scene::StepPhysicsSimulation()
 {
-    FindFixturesQueryCallback(gsl::span<ColliderHandle> foundFixtures_)
-        : foundFixtures(foundFixtures_)
+    _world->Step(PhysicsDeltaTime, 8, 3);
+    _collisionManager.UpdateEntityPositions();
+}
+
+void Scene::SendEvent(const IEntityEvent& ev)
+{
+    for (auto& service : _services)
     {
-
+        service->SendEvent(ev, inEditor);
     }
-
-    bool ReportFixture(b2Fixture* fixture) override
-    {
-        if (count < foundFixtures.size())
-        {
-            foundFixtures[count++] = ColliderHandle(fixture);
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    gsl::span<ColliderHandle> Results() const
-    {
-        return foundFixtures.subspan(0, count);
-    }
-
-    gsl::span<ColliderHandle> foundFixtures;
-    int count = 0;
-};
-
+}
 
 void Scene::BroadcastEvent(const IEntityEvent& ev)
 {
-    for (auto entity : _entities)
+    for (auto entity : _entityManager.entities)
     {
         entity->SendEvent(ev);
     }
@@ -373,51 +197,24 @@ void Scene::BroadcastEvent(const IEntityEvent& ev)
     SendEvent(ev);
 }
 
+LightManager* Scene::GetLightManager() const
+{
+    return _engine->GetRenderer()->GetLightManager();
+}
+
 SoundManager* Scene::GetSoundManager() const
 {
     return _engine->GetSoundManager();
 }
 
-int Scene::LoadMapSegment(StringId id)
+void Scene::LoadMapSegment(StringId id)
 {
     auto mapSegment = ResourceManager::GetResource<MapSegment>(id);
-
-    segmentsAdded.push_back(id);
-
-    return LoadMapSegment(*mapSegment.Value());
+    LoadMapSegment(*mapSegment.Value());
 }
 
-void CameraCommand(ConsoleCommandBinder& binder)
+void Scene::LoadMapSegment(const MapSegment& segment)
 {
-    binder.Help("Shows info about camera");
-
-    auto position = Engine::GetInstance()->GetSceneManager()->GetScene()->GetCamera()->Position();
-    auto bounds = Engine::GetInstance()->GetSceneManager()->GetScene()->GetCamera()->Bounds();
-
-    binder.GetConsole()->Log("Position: %f %f\n", position.x, position.y);
-    binder.GetConsole()->Log("TopLeft: %f %f\n", bounds.TopLeft().x, bounds.TopLeft().y);
-    binder.GetConsole()->Log("BottomRight: %f %f\n", bounds.BottomRight().x, bounds.BottomRight().y);
-
-}
-
-ConsoleCmd cameraCmd("camera", CameraCommand);
-
-int Scene::LoadMapSegment(const MapSegment& segment)
-{
-    auto loadedSegment = RegisterSegment(_currentSegmentId);
-
-    auto oldEntityOffset = _entityOffset;
-
-    if (_segmentOffset == Vector2(0, 0))
-    {
-        // Make the coordinates for the editor light up if the first segment so we don't have to worry
-        // about segment offsets for the lights
-        _segmentOffset = segment.startMarker;
-    }
-
-    auto offset = _segmentOffset - segment.startMarker;
-    _entityOffset = offset;
-
     EntityDictionary tilemapProperties
     {
         { "type", "tilemap"_sid }
@@ -425,95 +222,12 @@ int Scene::LoadMapSegment(const MapSegment& segment)
 
     auto tileMap = CreateEntityInternal<TilemapEntity>(tilemapProperties);
     tileMap->SetMapSegment(segment);
-    tileMap->segmentId = _currentSegmentId;
-    tileMap->segmentStart = offset;
-    loadedSegment->AddEntity(tileMap);
-
-    loadedSegment->properties = segment.properties;
-
-    EntityDictionary ambientLightProperties
-    {
-        { "type", "ambient-light"_sid }
-    };
-
-    AmbientLightEntity* ambientLight = nullptr;
 
     for (auto& instance : segment.entities)
     {
         EntityDictionary properties(instance.properties.get(), instance.totalProperties);
-        auto entity = CreateEntity(properties);
-        entity->segmentId = _currentSegmentId;
-        loadedSegment->AddEntity(entity);
-
-        if (entity->Is<AmbientLightEntity>())
-        {
-            ambientLight = static_cast<AmbientLightEntity*>(entity);
-        }
-
-        if (entity->flags & PreventUnloading)
-        {
-            entity->Unlink();
-        }
+        CreateEntity(properties);
     }
-
-    if (ambientLight == nullptr)
-    {
-        ambientLight = CreateEntityInternal<AmbientLightEntity>(ambientLightProperties);
-        loadedSegment->AddEntity(ambientLight);
-
-        ambientLight->ambientLight.intensity = 1;
-        ambientLight->ambientLight.color = Color(255, 255, 255);
-        ambientLight->segmentId = _currentSegmentId;
-    }
-
-    Rectangle segmentBounds(Vector2(_segmentOffset.x, _segmentOffset.y - 1e5),
-        Vector2((segment.endMarker - segment.startMarker).x, 2 * 1e5));
-
-    ambientLight->ambientLight.bounds = segmentBounds;
-
-    auto useLocalAmbientLight = segment.properties.GetValueOrDefault("useLocalAmbientLight", false);
-    if (!useLocalAmbientLight)
-    {
-        ambientLight->ambientLight.intensity = currentAmbientBrightness;
-    }
-
-    _segmentOffset += segment.endMarker - segment.startMarker;
-
-    _entityOffset = oldEntityOffset;
-
-    auto segmentLoadedEvent = SegmentLoadedEvent(_currentSegmentId, segmentBounds, currentDifficulty);
-
-    loadedSegment->BroadcastEvent(segmentLoadedEvent);
-    SendEvent(segmentLoadedEvent);
-
-    return _currentSegmentId++;
-}
-
-void Scene::UnloadSegmentsBefore(int segmentId)
-{
-    int lastAliveIndex = 0;
-
-    for (int i = 0; i < _loadedSegments.Size(); ++i)
-    {
-        auto segment = _loadedSegments[i];
-
-        if (segment->segmentId < segmentId && segment->segmentId >= 0)
-        {
-            for (auto node = segment->firstLink.next; node != &segment->lastLink; node = node->next)
-            {
-                node->GetEntity()->Destroy();
-            }
-
-            segment->Reset(-2);
-            _freeSegments.Return(segment);
-        }
-        else
-        {
-            _loadedSegments[lastAliveIndex++] = segment;
-        }
-    }
-
-    _loadedSegments.Resize(lastAliveIndex);
 }
 
 void Scene::StartTimer(float timeSeconds, const std::function<void()>& callback)
@@ -530,8 +244,8 @@ gsl::span<ColliderHandle> Scene::FindOverlappingColliders(const Rectangle& bound
 {
     FindFixturesQueryCallback callback(storage);
     b2AABB aabb;
-    aabb.lowerBound = ToB2Vec2(bounds.TopLeft() * PixelsToBox2DRatio);
-    aabb.upperBound = ToB2Vec2(bounds.BottomRight() * PixelsToBox2DRatio);
+    aabb.lowerBound = PixelToBox2D(bounds.TopLeft());
+    aabb.upperBound = PixelToBox2D(bounds.BottomRight());
 
     _world->QueryAABB(&callback, aabb);
 
@@ -560,9 +274,14 @@ gsl::span<Entity*> Scene::FindOverlappingEntities(const Rectangle& bounds, gsl::
     return storage.subspan(0, totalOverlappingEntities);
 }
 
-bool Scene::RaycastExcludingSelf(Vector2 start, Vector2 end, Entity* self, RaycastResult& outResult, bool allowTriggers, const std::function<bool(ColliderHandle handle)>& includeFixture)
+bool Scene::Raycast(Vector2 start, Vector2 end, RaycastResult& outResult, bool allowTriggers, const std::function<bool(ColliderHandle handle)>& includeFixture) const
 {
-    FindClosestRaycastCallback callback(self, allowTriggers, includeFixture);
+    if (IsApproximately((end - start).TaxiCabDistance(), 0))
+    {
+        return false;
+    }
+
+    FindClosestRaycastCallback callback(allowTriggers, includeFixture);
 
     _world->RayCast(&callback, PixelToBox2D(start), PixelToBox2D(end));
 
@@ -581,108 +300,79 @@ bool Scene::RaycastExcludingSelf(Vector2 start, Vector2 end, Entity* self, Rayca
     }
 }
 
-std::vector<Entity*> Scene::GetEntitiesByNameInSegment(StringId name, int segmentId)
-{
-    std::vector<Entity*> foundEntities;
-
-    auto segment = GetLoadedSegment(segmentId);
-
-    if (segment == nullptr)
-    {
-        return { };
-    }
-
-    for (auto node = segment->firstLink.next; node != &segment->lastLink; node = node->next)
-    {
-        auto entity = node->GetEntity();
-
-        if (entity->name == name)
-        {
-            foundEntities.push_back(entity);
-        }
-    }
-
-    return foundEntities;
-}
-
-Entity* Scene::GetFirstEntityByNameInSegment(StringId name, int segmentId)
-{
-    auto segment = GetLoadedSegment(segmentId);
-
-    if (segment == nullptr)
-    {
-        return { };
-    }
-
-    for (auto node = segment->firstLink.next; node != &segment->lastLink; node = node->next)
-    {
-        auto entity = node->GetEntity();
-
-        if (entity->name == name)
-        {
-            return entity;
-        }
-    }
-
-    return nullptr;
-}
-
-extern ConsoleVar<bool> g_stressTest;
-
 void Scene::UpdateEntities(float deltaTime)
 {
     _physicsTimeLeft += deltaTime;
-    timeSinceStart += deltaTime;
-
-    if (_physicsTimeLeft > 1)
-    {
-        // We're more than a second behind, it's better to just drop the time so we don't get too far behind
-        // trying to catch up
-        _physicsTimeLeft = 0;
-    }
+    relativeTime += deltaTime;
 
     while (_physicsTimeLeft >= PhysicsDeltaTime)
     {
         _physicsTimeLeft -= PhysicsDeltaTime;
 
-        for (auto fixedUpdatable : _fixedUpdatables)
-        {
-            fixedUpdatable->FixedUpdate(PhysicsDeltaTime);
-        }
-
-        _world->Step(PhysicsDeltaTime, 8, 3);
-
-        _collisionManager.UpdateEntityPositions();
+        NotifyFixedUpdate();
+        NotifyServerFixedUpdate();
+        StepPhysicsSimulation();
     }
 
-    PreUpdate();
-    SendEvent(PreUpdateEvent());
+    SendEvent(UpdateEvent());
 
-    for (auto updatable : _updatables)
+    NotifyUpdate(deltaTime);
+    NotifyServerUpdate(deltaTime);
+
+    SendEvent(EndOfUpdateEvent());
+
+    _timerManager.TickTimers(deltaTime);
+
+    _cameraFollower.Update(deltaTime);
+
+    DestroyScheduledEntities();
+}
+
+void Scene::NotifyFixedUpdate()
+{
+    SendEvent(FixedUpdateEvent());
+
+    for (auto fixedUpdatable : _entityManager.fixedUpdatables)
+    {
+        fixedUpdatable->FixedUpdate(PhysicsDeltaTime);
+    }
+}
+
+void Scene::NotifyServerFixedUpdate()
+{
+    if (isServer)
+    {
+        for (auto serverFixedUpdatable : _entityManager.serverFixedUpdatables)
+        {
+            serverFixedUpdatable->ServerFixedUpdate(PhysicsDeltaTime);
+        }
+    }
+}
+
+void Scene::NotifyUpdate(float deltaTime)
+{
+    for (auto updatable : _entityManager.updatables)
     {
         updatable->Update(deltaTime);
     }
 
-    _timerManager.TickTimers(deltaTime);
-
-    PostUpdate();
-
-
-    DestroyScheduledEntities();
-
-    _cameraFollower.Update(deltaTime);
-}
-
-bool Scene::TryGetLoadedSegmentById(const int segmentId, LoadedSegment*& segment)
-{
-    for (int i = 0; i < _loadedSegments.Size(); ++i)
+    // TODO: more efficient way of updating components
+    for (auto entity : _entityManager.entities)
     {
-        if (_loadedSegments[i]->segmentId == segmentId)
+        for (IEntityComponent* component = entity->_componentList; component != nullptr; component = component->next)
         {
-            segment = _loadedSegments[i];
-            return true;
+            component->Update(deltaTime);
         }
     }
+}
 
-    return false;
+void Scene::NotifyServerUpdate(float deltaTime)
+{
+    if (isServer)
+    {
+        for (auto serverUpdatable : _entityManager.serverUpdatables)
+        {
+            serverUpdatable->ServerUpdate(deltaTime);
+        }
+    }
 }
