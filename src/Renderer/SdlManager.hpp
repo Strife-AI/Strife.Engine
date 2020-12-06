@@ -63,7 +63,6 @@ private:
     SDL_GameController* _controller = nullptr;
 
     SDL_Window* _window;
-    SDL_Surface* _windowSurface;
     SDL_Renderer* _renderer;
     SDL_GLContext _context;
     float _dpiRatio;

@@ -677,7 +677,7 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
         return;
     }
 
-    EntityDictionary properties
+    EntityProperty properties[] =
     {
         { "type", message.type },
         { "position", message.position },
@@ -685,7 +685,7 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
         { "net", true }
     };
 
-    auto entity = _scene->CreateEntity(properties);
+    auto entity = _scene->CreateEntity(EntityDictionary(properties));
     auto netComponent = entity->GetComponent<NetComponent>();
 
     if (netComponent != nullptr)

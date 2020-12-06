@@ -150,5 +150,5 @@ private:
         buf[MaxLength - 1] = '\0';
     }
 
-    char buf[MaxLength];
+    mutable char buf[MaxLength];
 };

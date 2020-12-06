@@ -188,8 +188,6 @@ void SdlManager::SetupOpenGl()
     }
 
     _context = SDL_GL_CreateContext(_window);
-
-    _windowSurface = SDL_GetWindowSurface(_window);
     SDL_GL_MakeCurrent(_window, _context);
 
     gl3wInit();

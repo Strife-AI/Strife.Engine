@@ -215,10 +215,12 @@ void Scene::LoadMapSegment(StringId id)
 
 void Scene::LoadMapSegment(const MapSegment& segment)
 {
-    EntityDictionary tilemapProperties
+    EntityProperty properties[] =
     {
         { "type", "tilemap"_sid }
     };
+
+    EntityDictionary tilemapProperties(properties);
 
     auto tileMap = CreateEntityInternal<TilemapEntity>(tilemapProperties);
     tileMap->SetMapSegment(segment);
