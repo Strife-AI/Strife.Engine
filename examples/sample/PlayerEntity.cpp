@@ -49,7 +49,7 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
         // Collects what decision the player made
         nn->collectDecision = [=](PlayerDecision& outDecision)
         {
-
+            outDecision.action = PlayerAction::Down;
         };
     }
 }

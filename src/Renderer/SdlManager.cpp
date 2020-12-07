@@ -171,9 +171,9 @@ void SdlManager::SetupOpenGl()
 
     _dpiRatio = dpi / defaultDpi;
 
-    auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
-        | SDL_WINDOW_INPUT_FOCUS
-        | ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS : 0));
+    auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL);
+        //| SDL_WINDOW_INPUT_FOCUS
+        //| ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS : 0));
 
     _window = SDL_CreateWindow(
         "C.H.A.S.E.R.",
