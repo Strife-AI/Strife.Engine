@@ -30,8 +30,7 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
 
     NeuralNetworkComponent(float decisionsPerSecond_ = 1)
         : decisionInput(StrifeML::MlUtil::MakeSharedArray<InputType>(TNeuralNetwork::SequenceLength)),
-        decisionsPerSecond(decisionsPerSecond_),
-        batchSize(TNeuralNetwork::SequenceLength)
+        decisionsPerSecond(decisionsPerSecond_)
     {
 
     }
@@ -56,8 +55,6 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     std::function<void(OutputType& decision)> collectDecision;
 
     std::function<void(OutputType& decision)> receiveDecision;
-
-    int batchSize;
 
     NeuralNetworkMode mode = NeuralNetworkMode::Disabled;
 };
@@ -332,6 +329,29 @@ struct GridSensorOutput
         }
     }
 
+    void Serialize(StrifeML::ObjectSerializer& serializer)
+    {
+        int rows = Rows;
+        int cols = Cols;
+        serializer.Add(rows);
+        serializer.Add(cols);
+
+        // Dimensions of serialized grid must match the grid being deserialized into
+        assert(rows == Rows);
+        assert(cols == Cols);
+
+        serializer.Add(_isCompressed);
+        if(_isCompressed)
+        {
+            serializer.Add(_totalRectangles);
+            serializer.AddBytes(compressedRectangles, _totalRectangles);
+        }
+        else
+        {
+            serializer.AddBytes(&data[0][0], Rows * Cols);
+        }
+    }
+
 private:
     bool _isCompressed;
     int _totalRectangles;
@@ -405,6 +425,6 @@ namespace StrifeML
     template<int Rows, int Cols>
     void Serialize(GridSensorOutput<Rows, Cols>& value, ObjectSerializer& serializer)
     {
-        // TODO
+        value.Serialize(serializer);
     }
 }

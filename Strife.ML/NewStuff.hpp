@@ -81,6 +81,12 @@ namespace StrifeML
 
         void AddBytes(unsigned char* data, int size);
 
+        template<typename T>
+        void AddBytes(T* data, int count)
+        {
+            AddBytes(reinterpret_cast<unsigned char*>(data), count * sizeof(T));
+        }
+
         std::vector<unsigned char>& bytes;
         bool isReading;
         int readOffset = 0;
@@ -385,7 +391,9 @@ namespace StrifeML
 
         for(int i = 0; i < outSamples.size(); ++i)
         {
-            _owner->TryGetSampleById(endSampleId - (outSamples.size() - 1 - i), outSamples[i]);
+            int sampleId = endSampleId - (outSamples.size() - 1 - i);
+            bool gotSample = _owner->TryGetSampleById(sampleId, outSamples[i]);
+            assert(gotSample);
         }
 
         return true;
