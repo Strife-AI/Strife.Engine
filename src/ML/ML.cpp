@@ -93,7 +93,7 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
     return gsl::span<uint64_t>(outputStorage, outputSize);
 }
 
-void DecompressGridSensorOutput(gsl::span<uint64_t> compressedRectangles, Grid<int>& outGrid, SensorObjectDefinition* objectDefinition)
+void DecompressGridSensorOutput(gsl::span<const uint64_t> compressedRectangles, Grid<int>& outGrid, SensorObjectDefinition* objectDefinition)
 {
     outGrid.FillWithZero();
 

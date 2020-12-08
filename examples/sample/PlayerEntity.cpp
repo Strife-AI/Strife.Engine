@@ -59,6 +59,21 @@ struct DimensionCalculator<Grid<TCell>>
     }
 };
 
+template<int Rows, int Cols>
+struct DimensionCalculator<GridSensorOutput<Rows, Cols>>
+{
+    static constexpr auto Dims(const GridSensorOutput<Rows, Cols>& grid)
+    {
+        return Dimensions<2>(Rows, Cols).Union(DimensionCalculator<int>::Dims(0));
+    }
+};
+
+template<typename ...TArgs>
+struct DimensionCalculator<std::tuple<TArgs...>>
+{
+
+};
+
 template<typename T>
 struct GetCellType
 {
@@ -69,6 +84,12 @@ template<typename TCell>
 struct GetCellType<Grid<TCell>>
 {
     using Type = typename GetCellType<TCell>::Type;
+};
+
+template<int Rows, int Cols>
+struct GetCellType<GridSensorOutput<Rows, Cols>>
+{
+    using Type = int;
 };
 
 template<typename T>
@@ -120,6 +141,25 @@ struct TorchPacker<Grid<TCell>, TorchType>
     }
 };
 
+template<int Rows, int Cols>
+struct TorchPacker<GridSensorOutput<Rows, Cols>, int>
+{
+    static int* Pack(const GridSensorOutput<Rows, Cols>& value, int* outPtr)
+    {
+        if(value.IsCompressed())
+        {
+            FixedSizeGrid<int, Rows, Cols> decompressedGrid;
+            value.Decompress(decompressedGrid);
+            return TorchPacker<Grid<int>, int>::Pack(decompressedGrid, outPtr);
+        }
+        else
+        {
+            Grid<int> grid(Rows, Cols, const_cast<int*>(value.GetRawData()));
+            return TorchPacker<Grid<int>, int>::Pack(grid, outPtr);
+        }
+    }
+};
+
 template<typename T>
 torch::Tensor PackIntoTensor(const T& value)
 {
@@ -144,14 +184,15 @@ torch::Tensor PackIntoTensor(GridSensorOutput<Rows, Cols>& value)
 }
 
 template<typename T, typename TSelector>
-torch::Tensor PackIntoTensor(const Grid<T>& grid, std::function<TSelector(const T& cell)> selector)
+torch::Tensor PackIntoTensor(const Grid<T>& grid, TSelector selector)
 {
-    using CellType = typename GetCellType<TSelector>::Type;
+    using SelectorReturnType = decltype(selector(grid[0][0]));
+    using CellType = typename GetCellType<SelectorReturnType>::Type;
 
-    TSelector selectorTemp;
-    Grid<TSelector> dummyGrid(grid.Rows(), grid.Cols(), &selectorTemp);
+    SelectorReturnType selectorTemp;
+    Grid<SelectorReturnType> dummyGrid(grid.Rows(), grid.Cols(), &selectorTemp);
 
-    auto dimensions = DimensionCalculator<Grid<TSelector>>::Dims(dummyGrid);
+    auto dimensions = DimensionCalculator<Grid<SelectorReturnType>>::Dims(dummyGrid);
 
     torch::IntArrayRef dims(dimensions.dimensions, dimensions.GetTotalDimensions());
     auto torchType = GetTorchType<CellType>();
@@ -164,7 +205,7 @@ torch::Tensor PackIntoTensor(const Grid<T>& grid, std::function<TSelector(const 
         for(int j = 0; j < grid.Cols(); ++j)
         {
             auto selectedValue = selector(grid[i][j]);
-            outPtr = TorchPacker<TSelector, CellType>::Pack(selectedValue, outPtr);
+            outPtr = TorchPacker<SelectorReturnType, CellType>::Pack(selectedValue, outPtr);
         }
     }
 
@@ -173,16 +214,30 @@ torch::Tensor PackIntoTensor(const Grid<T>& grid, std::function<TSelector(const 
 
 struct Value
 {
-    int x;
+    GridSensorOutput<40, 40> grid;
+    Vector2 velocity;
+    float groundDistance;
+    int i;
 };
 
 void Test()
 {
-    FixedSizeGrid<Value, 1, 1> grid;
-    auto tensor = PackIntoTensor<Value, int>(grid, [=](auto& val)  { return val.x; });
+    FixedSizeGrid<Value, 32, 5> grid;
 
+    // 32 x 5 x 40 x 40 float
+    auto spacialInput = PackIntoTensor(
+        grid,
+        [=](auto& val)  { return val.grid; });
 
-    std::cout << tensor << std::endl;
+    // 32 x 5 x 3 float
+    auto featureInput = PackIntoTensor(
+        grid,
+        [=](auto& val) { return std::make_tuple(val.velocity.x, val.velocity.y, val.groundDistance); });
+
+    // 32 x 5 int
+    auto otherInput = PackIntoTensor(
+        grid,
+        [=](auto& val) { return val.i; });
 }
 
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
