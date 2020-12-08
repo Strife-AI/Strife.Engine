@@ -273,7 +273,7 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
     SensorObjectDefinition* objectDefinition,
     Entity* self);
 
-void DecompressGridSensorOutput(gsl::span<uint64_t> compressedRectangles, Grid<int>& outGrid, SensorObjectDefinition* objectDefinition);
+void DecompressGridSensorOutput(gsl::span<const uint64_t> compressedRectangles, Grid<int>& outGrid, SensorObjectDefinition* objectDefinition);
 
 template<int Rows, int Cols>
 struct GridSensorOutput
@@ -283,6 +283,22 @@ struct GridSensorOutput
         _totalRectangles(0)
     {
 
+    }
+
+    GridSensorOutput(const GridSensorOutput& rhs)
+    {
+        Assign(rhs);
+    }
+
+    GridSensorOutput& operator=(const GridSensorOutput& rhs)
+    {
+        if (this == &rhs)
+        {
+            return *this;
+        }
+
+        Assign(rhs);
+        return *this;
     }
 
     void SetRectangles(gsl::span<uint64_t> rectangles, std::shared_ptr<SensorObjectDefinition> sensorObjectDefinition)
@@ -303,11 +319,11 @@ struct GridSensorOutput
         }
     }
 
-    void Decompress(Grid<int>& outGrid)
+    void Decompress(Grid<int>& outGrid) const
     {
         if(_isCompressed)
         {
-            DecompressGridSensorOutput(gsl::span<uint64_t>(compressedRectangles, _totalRectangles), outGrid, _sensorObjectDefinition.get());
+            DecompressGridSensorOutput(gsl::span<const uint64_t>(compressedRectangles, _totalRectangles), outGrid, _sensorObjectDefinition.get());
         }
         else
         {
@@ -327,6 +343,16 @@ struct GridSensorOutput
                 }
             }
         }
+    }
+
+    const int* GetRawData() const
+    {
+        return &data[0][0];
+    }
+
+    bool IsCompressed() const
+    {
+        return _isCompressed;
     }
 
     void Serialize(StrifeML::ObjectSerializer& serializer)
@@ -353,6 +379,21 @@ struct GridSensorOutput
     }
 
 private:
+    void Assign(const GridSensorOutput& rhs)
+    {
+        _isCompressed = rhs._isCompressed;
+        _totalRectangles = rhs._totalRectangles;
+
+        if(_isCompressed)
+        {
+            memcpy(compressedRectangles, rhs.compressedRectangles, sizeof(uint64_t) * rhs._totalRectangles);
+        }
+        else
+        {
+            memcpy(data, rhs.data, sizeof(int) * Rows * Cols);
+        }
+    }
+
     bool _isCompressed;
     int _totalRectangles;
     std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition;
