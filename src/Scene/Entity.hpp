@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <vector>
 
 #ifdef _WIN32
 #include <vcruntime_typeinfo.h>

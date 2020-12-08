@@ -21,6 +21,7 @@ build/
 *.dll
 libtorch-*/
 libtorch.zip
+libtorch/
 
 # User-specific files
 *.rsuser
@@ -370,3 +371,5 @@ MigrationBackup/
 
 # IntelliJ IDEA (Or other IJ based IDEs)
 .idea/
+
+.DS_Store

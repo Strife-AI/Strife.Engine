@@ -7,8 +7,8 @@
 #include "Math/Rectangle.hpp"
 #include "Math/Vector2.hpp"
 
-class BinaryStreamWriter;
-class BinaryStreamReader;
+#include "BinaryStreamReader.hpp"
+#include "BinaryStreamWriter.hpp"
 
 template<typename T>
 void WriteVector(BinaryStreamWriter& writer, const std::vector<T>& v)
