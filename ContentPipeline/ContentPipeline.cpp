@@ -61,7 +61,7 @@ std::string buildAssetPath(const std::string& contentFilePath, const std::string
     fullAssetPath += assetPath;
 
     //Flip the slashes if the platform is Windows.
-#if __linux__
+#if defined(__linux__) || defined(__APPLE__)
     char slash = '/';
     char unwantedSlash = '\\';
 #elif defined(_WIN64) || defined(_Win32)

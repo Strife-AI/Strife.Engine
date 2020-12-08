@@ -1,7 +1,6 @@
 #include <string>
 #include <map>
 #include <SDL2/SDL_image.h>
-#include <SDL2/SDL_mixer.h>
 #include <System/UiSerialization.hpp>
 #include <Tools/RawFile.hpp>
 #include <unordered_map>
