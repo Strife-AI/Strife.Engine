@@ -35,16 +35,16 @@ struct Dimensions
     int64_t dimensions[TotalDimensions] { 0 };
 };
 
-template<typename T>
+template<typename T, typename Enable = void>
 struct DimensionCalculator
 {
 
 };
 
-template<>
-struct DimensionCalculator<int>
+template<typename T>
+struct DimensionCalculator<T, std::enable_if_t<std::is_arithmetic_v<T>>>
 {
-    static constexpr auto Dims(const int& value)
+    static constexpr auto Dims(const T& value)
     {
         return Dimensions<1>(1);
     }
@@ -68,29 +68,26 @@ struct DimensionCalculator<GridSensorOutput<Rows, Cols>>
     }
 };
 
+template<typename T>
+struct DimensionCalculator<gsl::span<T>>
+{
+    static constexpr auto Dims(const gsl::span<T>& span)
+    {
+        return Dimensions<1>(span.size()).Union(DimensionCalculator<T>::Dims(span[0]));
+    }
+};
+
 template<typename ...TArgs>
 struct DimensionCalculator<std::tuple<TArgs...>>
 {
-
+    // TODO: implement for tuple
 };
 
-template<typename T>
-struct GetCellType
-{
-    using Type = T;
-};
-
-template<typename TCell>
-struct GetCellType<Grid<TCell>>
-{
-    using Type = typename GetCellType<TCell>::Type;
-};
-
-template<int Rows, int Cols>
-struct GetCellType<GridSensorOutput<Rows, Cols>>
-{
-    using Type = int;
-};
+template<typename T, typename Enable = void> struct GetCellType;
+template<typename T> struct GetCellType<T, std::enable_if<std::is_arithmetic_v<T>>> { using Type = T; };
+template<typename TCell> struct GetCellType<Grid<TCell>> { using Type = typename GetCellType<TCell>::Type; };
+template<int Rows, int Cols> struct GetCellType<GridSensorOutput<Rows, Cols>> { using Type = int; };
+template<typename T> struct GetCellType<gsl::span<T>> { using Type = typename GetCellType<T>::Type; };
 
 template<typename T>
 c10::ScalarType GetTorchType();
@@ -212,38 +209,16 @@ torch::Tensor PackIntoTensor(const Grid<T>& grid, TSelector selector)
     return t.squeeze();
 }
 
-struct Value
+template<typename T, typename TSelector>
+torch::Tensor PackIntoTensor(const gsl::span<T>& span, TSelector selector)
 {
-    GridSensorOutput<40, 40> grid;
-    Vector2 velocity;
-    float groundDistance;
-    int i;
-};
-
-void Test()
-{
-    FixedSizeGrid<Value, 32, 5> grid;
-
-    // 32 x 5 x 40 x 40 float
-    auto spacialInput = PackIntoTensor(
-        grid,
-        [=](auto& val)  { return val.grid; });
-
-    // 32 x 5 x 3 float
-    auto featureInput = PackIntoTensor(
-        grid,
-        [=](auto& val) { return std::make_tuple(val.velocity.x, val.velocity.y, val.groundDistance); });
-
-    // 32 x 5 int
-    auto otherInput = PackIntoTensor(
-        grid,
-        [=](auto& val) { return val.i; });
+    // Just treat the span as a grid of 1 x span.size() since the dimensions get squeezed anyway
+    Grid<const T> grid(1, span.size(), span.data());
+    return PackIntoTensor(grid, selector);
 }
 
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
-    Test();
-
     rigidBody = AddComponent<RigidBodyComponent>("rb", b2_dynamicBody);
     auto box = rigidBody->CreateBoxCollider(Dimensions());
 
