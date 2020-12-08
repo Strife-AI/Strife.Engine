@@ -9,7 +9,7 @@
 
 void PuckEntity::OnAdded(const EntityDictionary& properties)
 {
-    auto rb = AddComponent<RigidBodyComponent>("rb", b2_dynamicBody);
+    auto rb = AddComponent<RigidBodyComponent>(b2_dynamicBody);
     auto box = rb->CreateBoxCollider(Dimensions());
 
     box->SetFriction(1);

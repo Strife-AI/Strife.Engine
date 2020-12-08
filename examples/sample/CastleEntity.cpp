@@ -9,7 +9,7 @@
 void CastleEntity::OnAdded(const EntityDictionary& properties)
 {
     auto spriteName = StringId(properties.GetValueOrDefault("sprite", "castle"));
-    spriteComponent = AddComponent<SpriteComponent>("sprite", spriteName);
+    spriteComponent = AddComponent<SpriteComponent>(spriteName);
 
     if(!scene->isServer && !properties.HasProperty("net"))
     {
@@ -18,7 +18,7 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
 
     spriteComponent->scale = Vector2(5.0f);
 
-    auto rigidBody = AddComponent<RigidBodyComponent>("rb", b2_staticBody);
+    auto rigidBody = AddComponent<RigidBodyComponent>(b2_staticBody);
     Vector2 size{ 67 * 5, 55 * 5 };
     rigidBody->CreateBoxCollider(size);
 
