@@ -4,7 +4,7 @@
 #include "Net/ReplicationManager.hpp"
 #include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
-#include "Scene/TilemapEntity.hpp"
+#include "torch/torch.h"
 
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
@@ -49,7 +49,7 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
         // Collects what decision the player made
         nn->collectDecision = [=](PlayerDecision& outDecision)
         {
-
+            outDecision.action = PlayerAction::Down;
         };
     }
 }

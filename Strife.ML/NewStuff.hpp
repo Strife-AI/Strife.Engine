@@ -94,6 +94,12 @@ namespace StrifeML
 
         void AddBytes(unsigned char* data, int size);
 
+        template<typename T>
+        void AddBytes(T* data, int count)
+        {
+            AddBytes(reinterpret_cast<unsigned char*>(data), count * sizeof(T));
+        }
+
         std::vector<unsigned char>& bytes;
         bool isReading;
         int readOffset = 0;
@@ -154,7 +160,7 @@ namespace StrifeML
         using SampleType = Sample<InputType, OutputType>;
         static constexpr int SequenceLength = SeqLength;
 
-        virtual void MakeDecision(gsl::span<const TInput> input, TOutput& output) = 0;
+        virtual void MakeDecision(Grid<const TInput> input, TOutput& output) = 0;
         virtual void TrainBatch(Grid<const SampleType> input, TrainingBatchResult& outResult) = 0;
     };
 
@@ -178,7 +184,7 @@ namespace StrifeML
 
         void Execute() override
         {
-            network->MakeDecision(gsl::span<InputType>(input.data.get(), inputLength), this->_result);
+            network->MakeDecision(Grid<const InputType>(1, inputLength, input.data.get()), this->_result);
         }
 
         std::shared_ptr<TNetwork> network;
@@ -398,7 +404,9 @@ namespace StrifeML
 
         for(int i = 0; i < outSamples.size(); ++i)
         {
-            _owner->TryGetSampleById(endSampleId - (outSamples.size() - 1 - i), outSamples[i]);
+            int sampleId = endSampleId - (outSamples.size() - 1 - i);
+            bool gotSample = _owner->TryGetSampleById(sampleId, outSamples[i]);
+            assert(gotSample);
         }
 
         return true;

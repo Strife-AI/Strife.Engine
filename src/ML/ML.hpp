@@ -30,10 +30,9 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     using NetworkType = TNeuralNetwork;
     using SampleType = StrifeML::Sample<InputType, OutputType>;
 
-    NeuralNetworkComponent(float decisionsPerSecond_ = 1)
+    explicit NeuralNetworkComponent(float decisionsPerSecond_ = 1)
         : decisionInput(StrifeML::MlUtil::SharedArray<InputType>(TNeuralNetwork::SequenceLength)),
-        decisionsPerSecond(decisionsPerSecond_),
-        batchSize(TNeuralNetwork::SequenceLength)
+        decisionsPerSecond(decisionsPerSecond_)
     {
 
     }
@@ -58,8 +57,6 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     std::function<void(OutputType& decision)> collectDecision;
 
     std::function<void(OutputType& decision)> receiveDecision;
-
-    int batchSize;
 
     NeuralNetworkMode mode = NeuralNetworkMode::Disabled;
 };
@@ -245,21 +242,22 @@ struct NeuralNetworkManager
         return dynamic_cast<StrifeML::NetworkContext<TNeuralNetwork>*>(_networksByName[name].get());
     }
 
-    void SetSensorObjectDefinition(const SensorObjectDefinition& definition)
+    static void SetSensorObjectDefinition(const SensorObjectDefinition& definition)
     {
         _sensorObjectDefinition = std::make_shared<SensorObjectDefinition>(definition);
     }
 
-    std::shared_ptr<SensorObjectDefinition> GetSensorObjectDefinition() const
+    static std::shared_ptr<SensorObjectDefinition> GetSensorObjectDefinition()
     {
         return _sensorObjectDefinition;
     }
 
 private:
+    static std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition;
+
     std::unordered_set<std::unique_ptr<StrifeML::IDecider>> _deciders;
     std::unordered_set<std::shared_ptr<StrifeML::ITrainer>> _trainers;
     std::unordered_map<std::string, std::shared_ptr<StrifeML::INetworkContext>> _networksByName;
-    std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition = std::make_shared<SensorObjectDefinition>();
 };
 
 template<typename TNeuralNetwork>
@@ -278,7 +276,7 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
     SensorObjectDefinition* objectDefinition,
     Entity* self);
 
-void DecompressGridSensorOutput(gsl::span<uint64_t> compressedRectangles, Grid<int>& outGrid, SensorObjectDefinition* objectDefinition);
+void DecompressGridSensorOutput(gsl::span<const uint64_t> compressedRectangles, Grid<int>& outGrid, SensorObjectDefinition* objectDefinition);
 
 template<int Rows, int Cols>
 struct GridSensorOutput
@@ -290,10 +288,24 @@ struct GridSensorOutput
 
     }
 
-    void SetRectangles(gsl::span<uint64_t> rectangles, std::shared_ptr<SensorObjectDefinition> sensorObjectDefinition)
+    GridSensorOutput(const GridSensorOutput& rhs)
     {
-        _sensorObjectDefinition = sensorObjectDefinition;
+        Assign(rhs);
+    }
 
+    GridSensorOutput& operator=(const GridSensorOutput& rhs)
+    {
+        if (this == &rhs)
+        {
+            return *this;
+        }
+
+        Assign(rhs);
+        return *this;
+    }
+
+    void SetRectangles(gsl::span<uint64_t> rectangles)
+    {
         if (rectangles.size() <= MaxCompressedRectangles)
         {
             _isCompressed = true;
@@ -304,15 +316,15 @@ struct GridSensorOutput
         {
             _isCompressed = false;
             Grid<int> grid(Rows, Cols, &data[0][0]);
-            DecompressGridSensorOutput(rectangles, grid, sensorObjectDefinition.get());
+            DecompressGridSensorOutput(rectangles, grid, NeuralNetworkManager::GetSensorObjectDefinition().get());
         }
     }
 
-    void Decompress(Grid<int>& outGrid)
+    void Decompress(Grid<int>& outGrid) const
     {
         if(_isCompressed)
         {
-            DecompressGridSensorOutput(gsl::span<uint64_t>(compressedRectangles, _totalRectangles), outGrid, _sensorObjectDefinition.get());
+            DecompressGridSensorOutput(gsl::span<const uint64_t>(compressedRectangles, _totalRectangles), outGrid, NeuralNetworkManager::GetSensorObjectDefinition().get());
         }
         else
         {
@@ -334,10 +346,57 @@ struct GridSensorOutput
         }
     }
 
+    const int* GetRawData() const
+    {
+        return &data[0][0];
+    }
+
+    bool IsCompressed() const
+    {
+        return _isCompressed;
+    }
+
+    void Serialize(StrifeML::ObjectSerializer& serializer)
+    {
+        int rows = Rows;
+        int cols = Cols;
+        serializer.Add(rows);
+        serializer.Add(cols);
+
+        // Dimensions of serialized grid must match the grid being deserialized into
+        assert(rows == Rows);
+        assert(cols == Cols);
+
+        serializer.Add(_isCompressed);
+        if(_isCompressed)
+        {
+            serializer.Add(_totalRectangles);
+            serializer.AddBytes(compressedRectangles, _totalRectangles);
+        }
+        else
+        {
+            serializer.AddBytes(&data[0][0], Rows * Cols);
+        }
+    }
+
 private:
+    void Assign(const GridSensorOutput& rhs)
+    {
+        _isCompressed = rhs._isCompressed;
+        _totalRectangles = rhs._totalRectangles;
+
+        if(_isCompressed)
+        {
+            memcpy(compressedRectangles, rhs.compressedRectangles, sizeof(uint64_t) * rhs._totalRectangles);
+        }
+        else
+        {
+            memcpy(data, rhs.data, sizeof(int) * Rows * Cols);
+        }
+    }
+
     bool _isCompressed;
     int _totalRectangles;
-    std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition;
 
     static constexpr int MaxCompressedRectangles = NearestPowerOf2(sizeof(int) * Rows * Cols, sizeof(uint64_t)) / sizeof(uint64_t);
 
@@ -381,7 +440,7 @@ struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
             sensorObjectDefinition.get(),
             this->owner);
 
-        output.SetRectangles(sensorGridRectangles, sensorObjectDefinition);
+        output.SetRectangles(sensorGridRectangles);
     }
 
     void Render(Renderer* renderer) override
@@ -407,6 +466,6 @@ namespace StrifeML
     template<int Rows, int Cols>
     void Serialize(GridSensorOutput<Rows, Cols>& value, ObjectSerializer& serializer)
     {
-        // TODO
+        value.Serialize(serializer);
     }
 }
