@@ -147,7 +147,7 @@ namespace StrifeML
         using SampleType = Sample<InputType, OutputType>;
         static constexpr int SequenceLength = SeqLength;
 
-        virtual void MakeDecision(gsl::span<const TInput> input, TOutput& output) = 0;
+        virtual void MakeDecision(Grid<const TInput> input, TOutput& output) = 0;
         virtual void TrainBatch(Grid<const SampleType> input, TrainingBatchResult& outResult) = 0;
     };
 
@@ -171,7 +171,7 @@ namespace StrifeML
 
         void Execute() override
         {
-            network->MakeDecision(gsl::span<InputType>(input.get(), inputLength), this->_result);
+            network->MakeDecision(Grid<const InputType>(1, inputLength, input.get()), this->_result);
         }
 
         std::shared_ptr<TNetwork> network;
