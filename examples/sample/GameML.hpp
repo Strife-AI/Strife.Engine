@@ -3,6 +3,7 @@
 #include "../../Strife.ML/NewStuff.hpp"
 #include "Math/Vector2.hpp"
 #include "ML/ML.hpp"
+#include "../../Strife.ML/TensorPacking.hpp"
 
 struct PlayerModelInput : StrifeML::ISerializable
 {
@@ -41,13 +42,15 @@ struct PlayerDecision : StrifeML::ISerializable
 
 struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision, 1>
 {
-    void MakeDecision(gsl::span<const InputType> input, OutputType& output) override
+    void MakeDecision(Grid<const InputType> input, OutputType& output) override
     {
-
+        auto spacialInput = StrifeML::PackIntoTensor(input, [=](auto& input) { return input.grid; });
     }
 
     void TrainBatch(Grid<const SampleType> input, StrifeML::TrainingBatchResult& outResult) override
     {
+        auto spacialInput = StrifeML::PackIntoTensor(input, [=](auto& sample) { return sample.input.grid; });
+
         Log("Train batch\n");
     }
 };
