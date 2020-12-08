@@ -69,7 +69,8 @@ BehaviorStatus WaitBehavior::Update()
 
 float WaitBehavior::GetTime()
 {
-    return Engine::GetInstance()->GetSceneManager()->GetScene()->relativeTime;
+    FatalError("Not implemented");
+    //return Engine::GetInstance()->GetSceneManager()->GetScene()->relativeTime;
 }
 
 void CompositeBehavior::OnStop(BehaviorStatus status)

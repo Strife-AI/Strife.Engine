@@ -42,7 +42,6 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if(!scene->isServer && autoConnect.Value())
         {
-            Sleep(2000);
             scene->GetEngine()->GetConsole()->Execute("connect 127.0.0.1");
 
             //scene->GetCameraFollower()->FollowMouse();
@@ -51,11 +50,13 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 
         if(scene->isServer)
         {
-            scene->CreateEntity({
-                EntityProperty::EntityType<PuckEntity>(),
-                { "position", { 1800, 1800} },
-                { "dimensions", { 32, 32} },
-            });
+            EntityProperty properties[] = {
+                    EntityProperty::EntityType<PuckEntity>(),
+                    { "position", { 1800, 1800} },
+                    { "dimensions", { 32, 32} },
+            };
+
+            scene->CreateEntity(EntityDictionary(properties));
         }
     }
     if (ev.Is<UpdateEvent>())
@@ -114,11 +115,13 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             {
                 auto position = positions[connectedEvent->id] + offset * 128;
 
-                auto player = static_cast<PlayerEntity*>(scene->CreateEntity({
-                  EntityProperty::EntityType<PlayerEntity>(),
-                  { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : position },
-                  { "dimensions", { 30, 30 } },
-                    }));
+                EntityProperty properties[] = {
+                        EntityProperty::EntityType<PlayerEntity>(),
+                        { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : position },
+                        { "dimensions", { 30, 30 } },
+                };
+
+                auto player = static_cast<PlayerEntity*>(scene->CreateEntity(EntityDictionary(properties)));
 
                 player->GetComponent<NetComponent>()->ownerClientId = connectedEvent->id;
 
@@ -197,7 +200,15 @@ void InputService::HandleInput()
                 if(player->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition()))
                     && player->net->ownerClientId == scene->replicationManager->localClientId)
                 {
+                    PlayerEntity* oldPlayer;
+                    if(activePlayer.TryGetValue(oldPlayer))
+                    {
+                        oldPlayer->GetComponent<PlayerEntity::NeuralNetwork>()->mode = NeuralNetworkMode::Deciding;
+                    }
+
                     activePlayer = player;
+                    player->GetComponent<PlayerEntity::NeuralNetwork>()->mode = NeuralNetworkMode::CollectingSamples;
+
                     break;
                 }
             }

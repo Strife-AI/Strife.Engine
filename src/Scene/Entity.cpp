@@ -2,8 +2,14 @@
 #include "BaseEntity.hpp"
 #include "Engine.hpp"
 #include "Scene.hpp"
+#include "IEntityEvent.hpp"
 
 const EntityHeader InvalidEntityHeader::InvalidHeader;
+
+void* AllocateComponent(Scene* scene, int size)
+{
+    return scene->AllocateMemory(size);
+}
 
 std::unordered_map<unsigned, EntityUtil::EntityMetadata*>& GetEntityMetadataByType()
 {

@@ -39,9 +39,9 @@ public:
         return &_data[CalculateIndex(0, row)];
     }
 
-    T& operator[](const Vector2& position)
+    T& operator[](Vector2 index)
     {
-        return _data[CalculateIndex(position.x, position.y)];
+        return _data[CalculateIndex(index.x, index.y)];
     }
 
     void FillWithZero()
@@ -134,11 +134,11 @@ public:
     VariableSizedGrid(int rows, int cols)
         : Grid<T>(rows, cols, new T[rows * cols])
     {
-        
+
     }
 
     ~VariableSizedGrid()
     {
-        delete [] _data;
+        delete [] this->_data;
     }
 };

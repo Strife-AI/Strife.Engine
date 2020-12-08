@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <slikenet/BitStream.h>
-
+#include <memory>
 
 #include "Math/Vector2.hpp"
 #include "Memory/CircularQueue.hpp"

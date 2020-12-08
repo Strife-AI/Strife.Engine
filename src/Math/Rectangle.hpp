@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <algorithm>
 
-#include "Vector2.hpp"
-#include "BitMath.hpp"
+#include "Math/Vector2.hpp"
+#include "Math/BitMath.hpp"
 #include <gsl/span>
 
 template <typename T>

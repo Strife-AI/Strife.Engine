@@ -3,6 +3,7 @@
 #include "Components/NetComponent.hpp"
 #include "Components/SpriteComponent.hpp"
 #include "Scene/BaseEntity.hpp"
+#include "Scene/IEntityEvent.hpp"
 
 DEFINE_ENTITY(CastleEntity, "castle"), IUpdatable
 {

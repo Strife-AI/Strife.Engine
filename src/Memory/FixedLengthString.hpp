@@ -50,8 +50,6 @@ public:
     void operator=(const FixedLengthString<OtherMaxLength>& str)
     {
         CopyFromCString(str.buf);
-
-        return *this;
     }
 
     int Capacity() const
@@ -146,11 +144,11 @@ public:
 private:
     void CopyFromCString(const char* str)
     {
-        strncpy_s(buf, str, MaxLength);
+        strncpy(buf, str, MaxLength);
 
         // Always append a null terminator just to be safe
         buf[MaxLength - 1] = '\0';
     }
 
-    char buf[MaxLength];
+    mutable char buf[MaxLength];
 };

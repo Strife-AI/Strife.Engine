@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <algorithm>
 
+#include "math.h"
+
 static constexpr int NearestPowerOf2(const int value, const int powerOf2)
 {
     return (value + powerOf2 - 1) & ~(powerOf2 - 1);

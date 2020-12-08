@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <list>
 
 #include "Math/Rectangle.hpp"
 #include "Memory/ResourceManager.hpp"

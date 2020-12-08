@@ -9,6 +9,7 @@ cmake-build-debug
 cmake-build-release
 cmake-build-production
 build-*
+torch-debug/
 
 #x2d resource pak files.
 *.x2rp

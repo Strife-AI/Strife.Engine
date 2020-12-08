@@ -7,12 +7,11 @@ add_executable(Sample
 	"InputService.hpp"
 	"InputService.cpp"
 	"CastleEntity.cpp"
- "PuckEntity.hpp" "PuckEntity.cpp")
+ "PuckEntity.hpp" "PuckEntity.cpp" "GameML.hpp")
 
 find_package(torch REQUIRED)
 
 set_property(TARGET Sample PROPERTY CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -DNOGDI -DWIN32")
 
 target_link_libraries(Sample Strife.Engine Strife.ML torch)
 
