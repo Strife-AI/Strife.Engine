@@ -7,7 +7,7 @@
 #include <Renderer/RenderVertex.hpp>
 #include <Renderer/Color.hpp>
 
-#include "Lighting.hpp"
+#include "Renderer/Lighting.hpp"
 #include "Shader.hpp"
 #include "gsl/span"
 #include "Memory/FixedSizeVector.hpp"
@@ -134,8 +134,8 @@ private:
     unsigned int _currentFrame = 0;
 
     static constexpr int MaxTransparentTriangles = 8192;
-    FixedSizeVector<TransparentObject, MaxTransparentTriangles> _transparentObjects;
-    FixedSizeVector<RenderVertex, MaxElementsPerBatch> _vertices;
+    std::vector<TransparentObject> _transparentObjects;
+    std::vector<RenderVertex> _vertices;
 
     std::unique_ptr<Texture> _solidColor;
     std::unique_ptr<Texture> _transparencyTexture;

@@ -129,7 +129,10 @@ void SpriteBatcher::RenderSolidPolygon(Vector2* vertices, int vertexCount, float
 
 void SpriteBatcher::RenderCustomTransparency(const ICustomTransparencyRenderer* renderer, float z)
 {
-    _transparentObjects.PushBackIfRoom(TransparentObject(renderer, z));
+    if(_transparentObjects.size() < MaxTransparentTriangles)
+    {
+        _transparentObjects.emplace_back(renderer, z);
+    }
 }
 
 void SpriteBatcher::BeginRender(Camera* camera)
@@ -137,7 +140,7 @@ void SpriteBatcher::BeginRender(Camera* camera)
     _camera = camera;
     _ignoreTransparency = false;
     _vertexResetSize = 0;
-    _vertices.Clear();
+    _vertices.clear();
 }
 
 void SpriteBatcher::Initialize(Shader* shader)
@@ -201,7 +204,7 @@ void SpriteBatcher::Render()
     glBufferSubData(
         GL_ARRAY_BUFFER,
         _vertexResetSize * sizeof(RenderVertex),
-        sizeof(RenderVertex) * (_vertices.Size() - _vertexResetSize), _vertices.begin() + _vertexResetSize);
+        sizeof(RenderVertex) * (_vertices.size() - _vertexResetSize), _vertices.data() + _vertexResetSize);
 
     glActiveTexture(GL_TEXTURE0);
 
@@ -232,12 +235,12 @@ void SpriteBatcher::Render()
         {
             if (object.customRenderer != nullptr)
             {
-                _vertexResetSize = _vertices.Size();
+                _vertexResetSize = _vertices.size();
                 _ignoreTransparency = true;
                 object.customRenderer->Render(this, _camera, object.z);
                 _ignoreTransparency = false;
                 lastTexture = nullptr;
-                _vertices.Resize(_vertexResetSize);
+                _vertices.resize(_vertexResetSize);
                 _vertexResetSize = 0;
             }
             else
@@ -254,8 +257,8 @@ void SpriteBatcher::Render()
             }
         }
 
-        _vertices.Clear();
-        _transparentObjects.Clear();
+        _vertices.clear();
+        _transparentObjects.clear();
     }
 }
 
@@ -272,12 +275,15 @@ void SpriteBatcher::RenderPolygon(Polygon& polygon, Texture* texture)
         {
             int a = 0, b = i, c = i + 1;
 
-            int firstVertex = _vertices.Size();
-            _vertices.PushBack(polygon.vertices[a]);
-            _vertices.PushBack(polygon.vertices[b]);
-            _vertices.PushBack(polygon.vertices[c]);
+            int firstVertex = _vertices.size();
+            _vertices.push_back(polygon.vertices[a]);
+            _vertices.push_back(polygon.vertices[b]);
+            _vertices.push_back(polygon.vertices[c]);
 
-            _transparentObjects.PushBackIfRoom(TransparentObject(firstVertex, polygon.vertices[0].position.z, texture));
+            if(_transparentObjects.size() < MaxTransparentTriangles)
+            {
+                _transparentObjects.push_back(TransparentObject(firstVertex, polygon.vertices[0].position.z, texture));
+            }
         }
 
         return;
@@ -291,11 +297,11 @@ void SpriteBatcher::RenderPolygon(Polygon& polygon, Texture* texture)
         _texturesRenderedThisFrame.PushBackIfRoom(texture);
     }
 
-    int first =_vertices.Size();
+    int first =_vertices.size();
 
     for(auto& v : polygon.vertices)
     {
-        _vertices.PushBack(v);
+        _vertices.push_back(v);
     }
 
     for (int i = 1; i < polygon.vertices.size() - 1; ++i)
@@ -311,7 +317,7 @@ void SpriteBatcher::RenderPolygon(Polygon& polygon, Texture* texture)
 int SpriteBatcher::UnformArrayLocation(const char* arrayName, const char* property, int index) const
 {
     char name[1024];
-    sprintf_s(name, "%s[%d].%s", arrayName, index, property);
+    sprintf(name, "%s[%d].%s", arrayName, index, property);
 
     return glGetUniformLocation(_shader->ProgramId(), name);
 }

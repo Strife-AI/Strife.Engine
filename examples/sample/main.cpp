@@ -6,11 +6,12 @@
 #include "Net/NetworkPhysics.hpp"
 #include "Scene/IGame.hpp"
 #include "Scene/Scene.hpp"
+#include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
 
-ConsoleVar<int> g_serverPort("port", 6666);
+ConsoleVar<int> g_serverPort("port", 60001);
 
-struct BreakoutGame : IGame
+struct Game : IGame
 {
     void ConfigureGame(GameConfig& config) override
     {
@@ -42,6 +43,26 @@ struct BreakoutGame : IGame
     void OnGameStart() override
     {
         GetEngine()->StartLocalServer(g_serverPort.Value(), "isengard"_sid);
+
+        auto engine = GetEngine();
+        auto neuralNetworkManager = engine->GetNeuralNetworkManager();
+
+        // Create networks
+        {
+            auto playerDecider = neuralNetworkManager->CreateDecider<PlayerDecider>();
+            auto playerTrainer = neuralNetworkManager->CreateTrainer<PlayerTrainer>();
+
+            neuralNetworkManager->CreateNetwork("nn", playerDecider, playerTrainer);
+        }
+
+        // Add types of objects the sensors can pick up
+        {
+            SensorObjectDefinition sensorDefinition;
+            sensorDefinition.Add<PlayerEntity>(1).SetColor(Color::Red()).SetPriority(1);
+            sensorDefinition.Add<TilemapEntity>(2).SetColor(Color::Gray()).SetPriority(0);
+
+            neuralNetworkManager->SetSensorObjectDefinition(sensorDefinition);
+        }
     }
 
     std::string initialConsoleCmd;
@@ -49,7 +70,7 @@ struct BreakoutGame : IGame
 
 int main(int argc, char* argv[])
 {
-    BreakoutGame game;
+    Game game;
 
     if (argc >= 2)
     {

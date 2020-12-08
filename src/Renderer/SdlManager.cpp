@@ -40,9 +40,11 @@ void ResolutionCommand(ConsoleCommandBinder& binder)
 }
 ConsoleCmd g_resolutionCmd("resolution", ResolutionCommand);
 
+#ifdef _WIN32
 #include <Windows.h>
 #include <ShellScalingAPI.h>
 #include <comdef.h>
+#endif
 
 #pragma comment(lib, "Shcore.lib")
 
@@ -169,9 +171,9 @@ void SdlManager::SetupOpenGl()
 
     _dpiRatio = dpi / defaultDpi;
 
-    auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
-        | SDL_WINDOW_INPUT_FOCUS
-        | ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS : 0));
+    auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL);
+        //| SDL_WINDOW_INPUT_FOCUS
+        //| ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS : 0));
 
     _window = SDL_CreateWindow(
         "C.H.A.S.E.R.",
@@ -186,8 +188,6 @@ void SdlManager::SetupOpenGl()
     }
 
     _context = SDL_GL_CreateContext(_window);
-
-    _windowSurface = SDL_GetWindowSurface(_window);
     SDL_GL_MakeCurrent(_window, _context);
 
     gl3wInit();

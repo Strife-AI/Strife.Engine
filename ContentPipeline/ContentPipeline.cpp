@@ -1,7 +1,5 @@
- #include <iostream>
-#include <cstdio>
+#include <iostream>
 #include <SDL_image.h>
-
 
 #include "nlohmann/json.hpp"
 #include "tmxlite/Map.hpp"
@@ -17,9 +15,12 @@
 #include "System/SpriteAtlasSerialization.hpp"
 #include "System/UiSerialization.hpp"
 
+#include <fstream>
+
 #ifdef _WIN32
 #include <windows.h>
-#include <fstream>
+#else
+#include <zconf.h>
 #endif
 
 using json = nlohmann::json;
@@ -77,14 +78,18 @@ std::string ToColor(int r, int g, int b, int a)
     return std::to_string(r) + " " + std::to_string(g) + " " + std::to_string(b) + " " + std::to_string(a);
 }
 
-//TODO: Only works with windows.
 std::string WorkingDirectory()
 {
+#ifdef _WIN32
     char path[MAX_PATH] = "";
     GetCurrentDirectoryA(MAX_PATH, path);
-
+#else
+    char path[PATH_MAX] = "";
+    getcwd(path, PATH_MAX);
+#endif
     return path;
 }
+
 
 StringId AddPng(ResourceFileWriter& writer, const std::string& fileName, const std::string& resourceName)
 {
@@ -729,7 +734,7 @@ void AddContent(ResourceFileWriter& writer, const json& resources)
                 break;
 
             default:
-                FatalError("Unknown content type: %s\n", resourceType.key);
+                std::cerr << "Unknown content type: " << resourceType.key << "\n";
         }
     }
 }
@@ -777,11 +782,14 @@ int main(int argc, char* argv[])
 
     CheckForMissingKeys("Resource Pack", "project", content, contentKeys);
 
-    const std::string pathToAssets = buildAssetPath(contentFilePath, content[contentKeys[0]].get<std::string>());
-    const std::string outputFile = outputDirectory + '\\' + content[contentKeys[1]].get<std::string>() + ".x2rp";
+    const std::string pathToAssets = buildAssetPath(contentFilePath, '/' + content[contentKeys[0]].get<std::string>()) + '/';
+    const std::string outputFile = outputDirectory + '/' + content[contentKeys[1]].get<std::string>() + ".x2rp";
 
 #ifdef __linux__
-    chdir(pathToAssets);
+    chdir(pathToAssets.c_str());
+
+    system("pwd");
+    printf("\n");
 #elif defined(_WIN64) || defined(_Win32)
     SetCurrentDirectory(pathToAssets.c_str());
 #endif

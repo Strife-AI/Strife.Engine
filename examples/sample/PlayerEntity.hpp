@@ -1,7 +1,10 @@
 #pragma once
 
+#include "GameML.hpp"
 #include "Components/NetComponent.hpp"
+#include "ML/ML.hpp"
 #include "Scene/BaseEntity.hpp"
+#include "Scene/IEntityEvent.hpp"
 
 struct PlayerEntity;
 
@@ -36,6 +39,8 @@ enum class PlayerState
 
 DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable
 {
+    using NeuralNetwork = NeuralNetworkComponent<PlayerNetwork>;
+
     void OnAdded(const EntityDictionary& properties) override;
     void ReceiveEvent(const IEntityEvent& ev) override;
     void ReceiveServerEvent(const IEntityEvent& ev) override;
@@ -44,7 +49,6 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
     void Render(Renderer* renderer) override;
     void ServerFixedUpdate(float deltaTime) override;
     void ServerUpdate(float deltaTime) override;
-
     void SetMoveDirection(Vector2 direction);
 
     RigidBodyComponent* rigidBody;

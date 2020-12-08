@@ -3,8 +3,15 @@
 #include <slikenet/BitStream.h>
 
 #include "Net/ServerGame.hpp"
-#include "NetworkManager.hpp"
 #include "Scene/Scene.hpp"
+
+#ifdef _WIN32
+namespace SLNet
+{
+    const RakNetGUID UNASSIGNED_RAKNET_GUID((uint64_t)-1);
+    const SystemAddress UNASSIGNED_SYSTEM_ADDRESS;
+}
+#endif
 
 enum class MessageType : uint8
 {
@@ -670,7 +677,7 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
         return;
     }
 
-    EntityDictionary properties
+    EntityProperty properties[] =
     {
         { "type", message.type },
         { "position", message.position },
@@ -678,7 +685,7 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
         { "net", true }
     };
 
-    auto entity = _scene->CreateEntity(properties);
+    auto entity = _scene->CreateEntity(EntityDictionary(properties));
     auto netComponent = entity->GetComponent<NetComponent>();
 
     if (netComponent != nullptr)

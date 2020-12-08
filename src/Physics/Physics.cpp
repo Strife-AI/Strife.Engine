@@ -11,6 +11,7 @@
 #include "Components/RigidBodyComponent.hpp"
 #include "Scene/Entity.hpp"
 #include "Scene/Scene.hpp"
+#include "PathFinding.hpp"
 
 void MoveEntityRecursive(RigidBodyComponent* rigidBody, Vector2 offset)
 {

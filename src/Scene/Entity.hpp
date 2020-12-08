@@ -3,13 +3,14 @@
 #include <functional>
 #include <map>
 #include <string>
+
+#ifdef _WIN32
 #include <vcruntime_typeinfo.h>
-#include <charconv>
+#endif
 
 
 #include "EntityComponent.hpp"
 #include "Math/Vector2.hpp"
-#include "IEntityEvent.hpp"
 #include "Memory/Dictionary.hpp"
 #include "Memory/FixedLengthString.hpp"
 #include "Physics/Physics.hpp"
@@ -126,9 +127,9 @@ public:
 
     }
 
-    constexpr EntityDictionary(const std::initializer_list<EntityProperty>& properties)
+    constexpr EntityDictionary(gsl::span<EntityProperty> properties)
         : _totalProperties(properties.size()),
-        _properties(&properties.begin()[0])
+        _properties(properties.data())
     {
 
     }
@@ -281,7 +282,6 @@ struct Entity
     EntityHeader* header;
     bool isDestroyed = false;
     Scene* scene;
-    int observedObjectType = 0;
 
     unsigned int flags = 0;
     Entity* parent = nullptr;
@@ -332,10 +332,12 @@ bool Entity::Is(TEntity*& outEntity)
     }
 }
 
+void* AllocateComponent(Scene* scene, int size);
+
 template <typename TComponent, typename ...Args>
 TComponent* Entity::AddComponent(const char* name, Args&& ...args)
 {
-    auto newComponent = static_cast<TComponent*>(scene->AllocateMemory(sizeof(TComponent)));
+    auto newComponent = static_cast<TComponent*>(AllocateComponent(scene, sizeof(TComponent)));
 
     new (newComponent) TComponent(std::forward<Args>(args)...);
     newComponent->owner = this;

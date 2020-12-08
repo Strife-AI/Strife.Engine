@@ -1,6 +1,6 @@
 {
     "projectName": "sample",
-    "resourceDirectory": "./assets",
+    "resourceDirectory": "assets",
     "resources": [
         {
             "type": "spritefont",

@@ -1,11 +1,10 @@
 #include "PlayerEntity.hpp"
-
-
 #include "InputService.hpp"
 #include "Components/RigidBodyComponent.hpp"
 #include "Net/ReplicationManager.hpp"
 #include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
+#include "torch/torch.h"
 
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
@@ -20,6 +19,39 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
     scene->SendEvent(PlayerAddedToGame(this));
 
     scene->GetService<InputService>()->players.push_back(this);
+
+    // Setup network and sensors
+    {
+        auto nn = AddComponent<NeuralNetworkComponent<PlayerNetwork>>();
+        nn->SetNetwork("nn");
+
+        // Network only runs on server
+        if (scene->isServer) nn->mode = NeuralNetworkMode::Deciding;
+
+        auto gridSensor = AddComponent<GridSensorComponent<40, 40>>("grid", Vector2(16, 16));
+        gridSensor->render = true;
+
+        // Called when:
+        //  * Collecting input to make a decision
+        //  * Adding a training sample
+        nn->collectInput = [=](PlayerModelInput& input)
+        {
+            input.velocity = rigidBody->GetVelocity();
+            gridSensor->Read(input.grid);
+        };
+
+        // Called when the decider makes a decision
+        nn->receiveDecision = [=](PlayerDecision& decision)
+        {
+
+        };
+
+        // Collects what decision the player made
+        nn->collectDecision = [=](PlayerDecision& outDecision)
+        {
+            outDecision.action = PlayerAction::Down;
+        };
+    }
 }
 
 void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)
@@ -205,3 +237,4 @@ void PlayerEntity::SetMoveDirection(Vector2 direction)
 {
     rigidBody->SetVelocity(direction);
 }
+

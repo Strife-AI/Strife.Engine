@@ -12,7 +12,7 @@
 #include "Math/Polygon.hpp"
 #include "Renderer/Sprite.hpp"
 #include "Memory/StringId.hpp"
-#include "Memory/Grid.hpp"
+#include "Container/Grid.hpp"
 
 struct TileProperties
 {
