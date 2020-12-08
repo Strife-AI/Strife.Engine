@@ -240,21 +240,22 @@ struct NeuralNetworkManager
         return dynamic_cast<StrifeML::NetworkContext<TNeuralNetwork>*>(_networksByName[name].get());
     }
 
-    void SetSensorObjectDefinition(const SensorObjectDefinition& definition)
+    static void SetSensorObjectDefinition(const SensorObjectDefinition& definition)
     {
         _sensorObjectDefinition = std::make_shared<SensorObjectDefinition>(definition);
     }
 
-    std::shared_ptr<SensorObjectDefinition> GetSensorObjectDefinition() const
+    static std::shared_ptr<SensorObjectDefinition> GetSensorObjectDefinition()
     {
         return _sensorObjectDefinition;
     }
 
 private:
+    static std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition;
+
     std::unordered_set<std::unique_ptr<StrifeML::IDecider>> _deciders;
     std::unordered_set<std::shared_ptr<StrifeML::ITrainer>> _trainers;
     std::unordered_map<std::string, std::shared_ptr<StrifeML::INetworkContext>> _networksByName;
-    std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition = std::make_shared<SensorObjectDefinition>();
 };
 
 template<typename TNeuralNetwork>
@@ -301,10 +302,8 @@ struct GridSensorOutput
         return *this;
     }
 
-    void SetRectangles(gsl::span<uint64_t> rectangles, std::shared_ptr<SensorObjectDefinition> sensorObjectDefinition)
+    void SetRectangles(gsl::span<uint64_t> rectangles)
     {
-        _sensorObjectDefinition = sensorObjectDefinition;
-
         if (rectangles.size() <= MaxCompressedRectangles)
         {
             _isCompressed = true;
@@ -315,7 +314,7 @@ struct GridSensorOutput
         {
             _isCompressed = false;
             Grid<int> grid(Rows, Cols, &data[0][0]);
-            DecompressGridSensorOutput(rectangles, grid, sensorObjectDefinition.get());
+            DecompressGridSensorOutput(rectangles, grid, NeuralNetworkManager::GetSensorObjectDefinition().get());
         }
     }
 
@@ -323,7 +322,7 @@ struct GridSensorOutput
     {
         if(_isCompressed)
         {
-            DecompressGridSensorOutput(gsl::span<const uint64_t>(compressedRectangles, _totalRectangles), outGrid, _sensorObjectDefinition.get());
+            DecompressGridSensorOutput(gsl::span<const uint64_t>(compressedRectangles, _totalRectangles), outGrid, NeuralNetworkManager::GetSensorObjectDefinition().get());
         }
         else
         {
@@ -396,7 +395,6 @@ private:
 
     bool _isCompressed;
     int _totalRectangles;
-    std::shared_ptr<SensorObjectDefinition> _sensorObjectDefinition;
 
     static constexpr int MaxCompressedRectangles = NearestPowerOf2(sizeof(int) * Rows * Cols, sizeof(uint64_t)) / sizeof(uint64_t);
 
@@ -440,7 +438,7 @@ struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
             sensorObjectDefinition.get(),
             this->owner);
 
-        output.SetRectangles(sensorGridRectangles, sensorObjectDefinition);
+        output.SetRectangles(sensorGridRectangles);
     }
 
     void Render(Renderer* renderer) override

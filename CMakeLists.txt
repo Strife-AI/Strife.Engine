@@ -4,11 +4,13 @@ project(Engine VERSION 1 LANGUAGES C CXX)
 
 # Enable exception unwind semantics
 if(MSVC)
-add_compile_options("/EHsc")
-add_compile_options("/MP")
-endif()
+	add_compile_options("/EHsc")
+	add_compile_options("/MP")
 
-set(CMAKE_CXX_FLAGS "-lasan -fsanitize=address")
+	set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -DNOGDI -DWIN32")
+else()
+	set(CMAKE_CXX_FLAGS "-lasan -fsanitize=address")
+endif()
 
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")

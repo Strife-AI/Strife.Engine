@@ -7,6 +7,8 @@
 #include "Physics/ColliderHandle.hpp"
 #include "Scene/Scene.hpp"
 
+std::shared_ptr<SensorObjectDefinition> NeuralNetworkManager::_sensorObjectDefinition;
+
 int bitsPerField = 12;
 
 static void ClampInRange(int& value)
