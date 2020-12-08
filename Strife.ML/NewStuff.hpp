@@ -15,15 +15,28 @@ namespace StrifeML
     namespace MlUtil
     {
         template<typename T>
-        std::shared_ptr<T[]> MakeSharedArray(int count)
+        struct SharedArray
         {
-            // This *should* go away with C++ 17 since it should provide a version of std::make_shared<> for arrays, but that doesn't seem
-            // to be the case in MSVC
-            return std::shared_ptr<T[]>(new T[count], [](T* ptr)
+            SharedArray(int count_)
+                : count(count_)
             {
-                delete[] ptr;
-            });
-        }
+                data = MakeSharedArray(count);
+            }
+
+            std::shared_ptr<T> data;
+            int count;
+
+        private:
+            std::shared_ptr<T> MakeSharedArray(int count)
+            {
+                // This *should* go away with C++ 17 since it should provide a version of std::make_shared<> for arrays, but that doesn't seem
+                // to be the case in MSVC
+                return std::shared_ptr<T>(new T[count], [](T* ptr)
+                {
+                    delete[] ptr;
+                });
+            }
+        };
     }
 
     struct StrifeException : std::exception
@@ -155,7 +168,7 @@ namespace StrifeML
     {
         using InputType = typename TNetwork::InputType;
 
-        MakeDecisionWorkItem(std::shared_ptr<TNetwork> network_, std::shared_ptr<InputType[]> input_, int inputLength_)
+        MakeDecisionWorkItem(std::shared_ptr<TNetwork> network_, MlUtil::SharedArray<InputType> input_, int inputLength_)
             : network(network_),
             input(input_),
             inputLength(inputLength_)
@@ -165,11 +178,11 @@ namespace StrifeML
 
         void Execute() override
         {
-            network->MakeDecision(gsl::span<InputType>(input.get(), inputLength), this->_result);
+            network->MakeDecision(gsl::span<InputType>(input.data.get(), inputLength), this->_result);
         }
 
         std::shared_ptr<TNetwork> network;
-        std::shared_ptr<InputType[]> input;
+        MlUtil::SharedArray<InputType> input;
         int inputLength;
     };
 
@@ -185,7 +198,7 @@ namespace StrifeML
             static_assert(std::is_base_of_v<INeuralNetwork, TNeuralNetwork>, "Neural network must inherit from INeuralNetwork<>");
         }
 
-        auto MakeDecision(std::shared_ptr<InputType[]> input, int inputLength)
+        auto MakeDecision(MlUtil::SharedArray<InputType> input, int inputLength)
         {
             auto workItem = std::make_shared<MakeDecisionWorkItem<TNeuralNetwork>>(network, input, inputLength);
             auto threadPool = ThreadPool::GetInstance();
@@ -432,7 +445,7 @@ namespace StrifeML
         RunTrainingBatchWorkItem(
             std::shared_ptr<TNeuralNetwork> network_,
             std::shared_ptr<Trainer<TNeuralNetwork>> trainer_,
-            std::shared_ptr<SampleType[]> samples_,
+            MlUtil::SharedArray<SampleType> samples_,
             int batchSize_,
             int sequenceLength_)
             : network(network_),
@@ -447,7 +460,7 @@ namespace StrifeML
         void Execute() override;
 
         std::shared_ptr<TNeuralNetwork> network;
-        std::shared_ptr<SampleType[]> samples;
+        MlUtil::SharedArray<SampleType> samples;
         std::shared_ptr<Trainer<TNeuralNetwork>> trainer;
         int batchSize;
         int sequenceLength;
@@ -504,7 +517,7 @@ namespace StrifeML
 
         Trainer(int batchSize_, float trainsPerSecond_)
             : sampleRepository(rng),
-            trainingInput(MlUtil::MakeSharedArray<SampleType>(batchSize_ * TNeuralNetwork::SequenceLength)),
+            trainingInput(MlUtil::SharedArray<SampleType>(batchSize_ * TNeuralNetwork::SequenceLength)),
             batchSize(batchSize_),
             sequenceLength(TNeuralNetwork::SequenceLength),
             trainsPerSecond(trainsPerSecond_)
@@ -529,7 +542,7 @@ namespace StrifeML
         void RunBatch()
         {
             sampleLock.Lock();
-            bool successful = TryCreateBatch(Grid<SampleType>(batchSize, sequenceLength, trainingInput.get()));
+            bool successful = TryCreateBatch(Grid<SampleType>(batchSize, sequenceLength, trainingInput.data.get()));
             sampleLock.Unlock();
 
             if (successful)
@@ -579,7 +592,7 @@ namespace StrifeML
         SpinLock sampleLock;
         RandomNumberGenerator rng;
         SampleRepository<SampleType> sampleRepository;
-        std::shared_ptr<SampleType[]> trainingInput;
+        MlUtil::SharedArray<SampleType> trainingInput;
         int batchSize;
         int sequenceLength;
         float trainsPerSecond;
@@ -594,7 +607,7 @@ namespace StrifeML
     template<typename TNeuralNetwork>
     void RunTrainingBatchWorkItem<TNeuralNetwork>::Execute()
     {
-        Grid<const SampleType> input(batchSize, sequenceLength, samples.get());
+        Grid<const SampleType> input(batchSize, sequenceLength, samples.data.get());
         network->TrainBatch(input, _result);
         std::stringstream stream;
         torch::save(network, stream);
