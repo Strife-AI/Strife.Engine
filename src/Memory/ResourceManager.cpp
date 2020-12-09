@@ -62,7 +62,7 @@ void ResourceManager::AddResourceInternal(StringId id, IResource* resource)
     resource->generation = currentGeneration;
 }
 
-static Texture* LoadTexture(gsl::span<std::byte> data, SDL_Renderer* sdlRenderer)
+static Texture* LoadTexture(gsl::span<std::byte> data)
 {
     //Load image at specified path
     auto ops = SDL_RWFromMem(&data[0], data.size());
@@ -88,6 +88,8 @@ static void CleanupSprite(IResource* resource)
     delete sprite;
 }
 
+extern ConsoleVar<bool> g_isServer;
+
 void LoadSprite(StringId id, gsl::span<std::byte> data)
 {
     if(ResourceManager::HasResource(id))
@@ -95,15 +97,24 @@ void LoadSprite(StringId id, gsl::span<std::byte> data)
         return;
     }
 
-    auto texture = LoadTexture(data, ResourceManager::engine->GetSdlManager()->Renderer());
+    if(g_isServer.Value())
+    {
+        auto texture = new Texture();
+        auto sprite = new Sprite(texture, Rectangle(Vector2::Zero(), texture->Size()));
+        ResourceManager::AddResource(id, sprite, CleanupSprite);
+    }
+    else
+    {
+        auto texture = LoadTexture(data);
 
-    Uint32 format;
-    int access;
-    int w;
-    int h;
+        Uint32 format;
+        int access;
+        int w;
+        int h;
 
-    auto sprite = new Sprite(texture, Rectangle(Vector2::Zero(), texture->Size()));
-    ResourceManager::AddResource(id, sprite, CleanupSprite);
+        auto sprite = new Sprite(texture, Rectangle(Vector2::Zero(), texture->Size()));
+        ResourceManager::AddResource(id, sprite, CleanupSprite);
+    }
 }
 
 static void CleanupSoundFx(IResource* resource)

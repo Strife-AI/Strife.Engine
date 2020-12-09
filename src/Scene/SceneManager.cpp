@@ -21,6 +21,7 @@ void MapCmd(ConsoleCommandBinder& binder)
 
     binder.Help("Change scene to specified map.");
 
+    // TODO: map command for server mode
     Engine::GetInstance()->StartLocalServer(port, StringId(mapName));
 }
 ConsoleCmd mapCmd("map", MapCmd);
@@ -72,7 +73,7 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
 
     _newScene = new Scene(_engine, mapSegment->name, _isServer);
 
-    auto screenSize = _engine->GetSdlManager()->WindowSize().AsVectorOfType<float>();
+    auto screenSize = (_engine->GetSdlManager() != nullptr ? _engine->GetSdlManager()->WindowSize().AsVectorOfType<float>() : Vector2(0, 0));
     _newScene->GetCamera()->SetScreenSize(screenSize);
     _newScene->GetCamera()->SetZoom(screenSize.y / (1080.0f / 2));
 

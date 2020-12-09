@@ -68,7 +68,6 @@ public:
 
     float DeltaTime() const { return _deltaTime; }
     float CurrentTime() const { return _absoluteTime; }
-    SDL_Renderer* SdlRenderer() const { return _sdlRenderer; }
 
     void RenderSprite(const Sprite* sprite, Vector2 position, float depth, Vector2 scale = Vector2(1, 1), float angle = 0, bool flipHorizontal = false, Color blendColor = Color());
     void RenderSpriteRepeated(const Sprite* sprite, const Rectangle& bounds, float depth, Vector2 center, float angle = 0);
@@ -109,7 +108,6 @@ private:
     void InitializeSpriteBatcher();
     void ResizeScreen(int w, int h);
 
-    struct SDL_Renderer* _sdlRenderer;
     float _deltaTime;
     float _absoluteTime;
 

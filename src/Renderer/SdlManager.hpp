@@ -30,10 +30,10 @@ struct WindowSizeChangedEvent : EngineEvent<WindowSizeChangedEvent>
 class SdlManager
 {
 public:
-    SdlManager(Input* input);
+    SdlManager(Input* input, bool isHeadless);
+
     ~SdlManager();
 
-    SDL_Renderer* Renderer() const { return _renderer; }
     SDL_Window* Window() const { return _window; }
     Vector2i WindowSize() const;
     float DpiRatio() const { return _dpiRatio; }
@@ -55,7 +55,7 @@ public:
     void EndRender();
 
 private:
-    void SetupOpenGl();
+    void SetupOpenGl(bool isHeadless);
 
     Logger* _logger;
 
@@ -63,7 +63,6 @@ private:
     SDL_GameController* _controller = nullptr;
 
     SDL_Window* _window;
-    SDL_Renderer* _renderer;
     SDL_GLContext _context;
     float _dpiRatio;
 
