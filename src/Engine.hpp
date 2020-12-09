@@ -83,8 +83,9 @@ public:
         _loadResources();
     }
 
-    void StartLocalServer(int port, StringId mapName);
+    void StartServer(int port, StringId mapName);
     void ConnectToServer(const char* address, int port);
+    void StartLocalServer(int port, StringId mapName);
 
 private:
     Engine() = default;
@@ -104,8 +105,8 @@ private:
     SoundManager* _soundManager;
     std::unique_ptr<NeuralNetworkManager> _neuralNetworkManager;
 
-    std::unique_ptr<ServerGame> _serverGame;
-    std::unique_ptr<ClientGame> _clientGame;
+    std::shared_ptr<ServerGame> _serverGame;
+    std::shared_ptr<ClientGame> _clientGame;
 
     IGame* _game = nullptr;
     bool _activeGame = true;

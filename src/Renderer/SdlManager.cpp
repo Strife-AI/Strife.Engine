@@ -96,7 +96,7 @@ void SetDefaultValuesOnFirstRun()
     g_Resolution.SetValue(closestResolution);
 }
 
-SdlManager::SdlManager(Input* input)
+SdlManager::SdlManager(Input* input, bool isHeadless)
     : _input(input)
 {
 #ifdef _WIN32
@@ -114,7 +114,7 @@ SdlManager::SdlManager(Input* input)
 
     SetDefaultValuesOnFirstRun();
 
-    SetupOpenGl();
+    SetupOpenGl(isHeadless);
 
     IMG_Init(IMG_INIT_PNG);
 
@@ -124,9 +124,7 @@ SdlManager::SdlManager(Input* input)
     }
 }
 
-extern ConsoleVar<bool> isServer;
-
-void SdlManager::SetupOpenGl()
+void SdlManager::SetupOpenGl(bool isHeadless)
 {
 #if true
     #if __APPLE__
@@ -175,20 +173,24 @@ void SdlManager::SetupOpenGl()
         //| SDL_WINDOW_INPUT_FOCUS
         //| ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS : 0));
 
-    _window = SDL_CreateWindow(
-        "C.H.A.S.E.R.",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        g_Resolution.Value().x,
-        g_Resolution.Value().y,
-        window_flags);
+    if(!isHeadless)
+    {
+        _window = SDL_CreateWindow(
+                "C.H.A.S.E.R.",
+                SDL_WINDOWPOS_CENTERED,
+                SDL_WINDOWPOS_CENTERED,
+                g_Resolution.Value().x,
+                g_Resolution.Value().y,
+                window_flags);
 
-    if (_window == nullptr) {
-        FatalError("Failed to create window");
+        if (_window == nullptr)
+        {
+            FatalError("Failed to create window");
+        }
+
+        _context = SDL_GL_CreateContext(_window);
+        SDL_GL_MakeCurrent(_window, _context);
     }
-
-    _context = SDL_GL_CreateContext(_window);
-    SDL_GL_MakeCurrent(_window, _context);
 
     gl3wInit();
 
@@ -238,15 +240,6 @@ void SdlManager::SetupOpenGl()
     else
     {
         Log("Has double buffering: %d\n", hasDoubleBuffer);
-    }
-
-    if(isServer.Value())
-    {
-        SDL_SetWindowPosition(_window, 0, 200);
-    }
-    else
-    {
-        SDL_SetWindowPosition(_window, 1024, 200);
     }
 }
 

@@ -10,6 +10,7 @@
 #include "Tools/Console.hpp"
 
 ConsoleVar<int> g_serverPort("port", 60001);
+extern ConsoleVar<bool> g_isServer;
 
 struct Game : IGame
 {
@@ -42,9 +43,18 @@ struct Game : IGame
 
     void OnGameStart() override
     {
-        GetEngine()->StartLocalServer(g_serverPort.Value(), "isengard"_sid);
-
+        auto map = "isengard"_sid;
         auto engine = GetEngine();
+
+        if(!g_isServer.Value())
+        {
+            engine->StartLocalServer(g_serverPort.Value(), map);
+        }
+        else
+        {
+            engine->StartServer(g_serverPort.Value(), map);
+        }
+
         auto neuralNetworkManager = engine->GetNeuralNetworkManager();
 
         // Create networks
