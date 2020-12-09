@@ -116,7 +116,7 @@ void Mouse::Update()
     int x, y;
     int buttons = SDL_GetMouseState(&x, &y);
 
-    bool imguiItemHovered = ImGui::IsAnyWindowHovered() || ImGui::IsAnyItemHovered();
+    bool imguiItemHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemHovered();
 
     _leftDown = !imguiItemHovered && (buttons & SDL_BUTTON(SDL_BUTTON_LEFT));
     _rightDown = !imguiItemHovered && (buttons & SDL_BUTTON(SDL_BUTTON_RIGHT));

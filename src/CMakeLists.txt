@@ -46,12 +46,13 @@ add_library(Strife.Engine STATIC
         Tools/Console.cpp
         #../../cpp.hint
 
+		../imgui/imgui_tables.cpp
         ../imgui/imgui_widgets.cpp
         ../imgui/imgui.cpp
         ../imgui/imgui_draw.cpp
         ../imgui/imgui_demo.cpp
-        ../imgui/examples/imgui_impl_opengl3.cpp
-        ../imgui/examples/imgui_impl_sdl.cpp
+        ../imgui/backends/imgui_impl_opengl3.cpp
+        ../imgui/backends/imgui_impl_sdl.cpp
 
         Renderer/Lighting.hpp
         Renderer/Lighting.cpp
