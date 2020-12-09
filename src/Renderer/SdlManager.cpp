@@ -12,8 +12,8 @@
 
 #include "GL/gl3w.h"
 #include "imgui.h"
-#include "imgui_impl_sdl.h"
-#include "imgui_impl_opengl3.h"
+#include "backends/imgui_impl_sdl.h"
+#include "backends/imgui_impl_opengl3.h"
 #include "Tools/Console.hpp"
 
 #if _WIN32
