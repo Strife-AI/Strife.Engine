@@ -17,9 +17,9 @@ if(MSVC)
 endif()
 
 if (LINUX)
-set(CMAKE_CXX_FLAGS "-lasan -fsanitize=address")
+	set(CMAKE_CXX_FLAGS "-lasan -fsanitize=address")
 elseif(APPLE)
-set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0")
+	set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0")
 endif()
 
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
