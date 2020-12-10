@@ -12,7 +12,7 @@ constexpr const char* EntityName = "unknown";
 #define DEFINE_ENTITY(structName_, stringIdName_)           \
 struct structName_; \
 template<>                                                  \
-static constexpr const char* EntityName<structName_> = stringIdName_;           \
+inline constexpr const char* EntityName<structName_> = stringIdName_;           \
 struct structName_ : BaseEntity<structName_>
 
 namespace EntityUtil
