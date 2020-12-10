@@ -20,7 +20,7 @@ Scene::Scene(Engine* engine, StringId mapSegmentName, bool isServer)
     _collisionManager(_world.get())
 {
     _world->SetContactListener(&_collisionManager);
-    _camera.SetScreenSize(engine->GetSdlManager()->WindowSize().AsVectorOfType<float>());
+    _camera.SetScreenSize(engine->GetSdlManager() == nullptr ? Vector2(0, 0) : engine->GetSdlManager()->WindowSize().AsVectorOfType<float>());
     replicationManager = AddService<ReplicationManager>(this, isServer);
 }
 

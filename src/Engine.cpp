@@ -33,7 +33,7 @@ extern ConsoleVar<bool> g_developerMode("developer-mode", false, false);
 extern ConsoleVar<bool> g_developerMode("developer-mode", true, true);
 #endif
 
-ConsoleVar<bool> isServer("server", false);
+ConsoleVar<bool> g_isServer("server", false);
 
 Engine* Engine::Initialize(const EngineConfig& config)
 {
@@ -66,20 +66,30 @@ Engine* Engine::Initialize(const EngineConfig& config)
     Log("==============================================================\n");
     Log("Initializing engine\n");
 
+    Log("Running as %s\n", g_isServer.Value() ? "server" : "client");
+
     engine->isInitialized = true;
 
     Log("Initializing resource manager\n");
     ResourceManager::Initialize(engine);
 
     engine->_input = new Input;
-    Log("Initializing SDL2\n");
-    engine->_sdlManager = new SdlManager(engine->_input);
+
+    if(!g_isServer.Value())
+    {
+        Log("Initializing SDL2\n");
+        engine->_sdlManager = new SdlManager(engine->_input, false);
+    }
 
     engine->_plotManager = new PlotManager;
     engine->_metricsManager = new MetricsManager;
 
-    Log("Initializing renderer\n");
-    engine->_renderer = new Renderer;
+    if(!g_isServer.Value())
+    {
+        Log("Initializing renderer\n");
+        engine->_renderer = new Renderer;
+        WindowSizeChangedEvent(engine->_sdlManager->WindowSize().x, engine->_sdlManager->WindowSize().y).Send();
+    }
 
     Log("Initializing sound\n");
     engine->_soundManager = new SoundManager;
@@ -87,8 +97,6 @@ Engine* Engine::Initialize(const EngineConfig& config)
     engine->_neuralNetworkManager = std::make_unique<NeuralNetworkManager>();
 
     UiCanvas::Initialize(engine->_soundManager);
-
-    WindowSizeChangedEvent(engine->_sdlManager->WindowSize().x, engine->_sdlManager->WindowSize().y).Send();
 
     return &_instance;
 }
@@ -169,17 +177,17 @@ void AccurateSleepFor(float seconds)
 
 void Engine::RunFrame()
 {
-    BaseGameInstance* games[2];
+    std::shared_ptr<BaseGameInstance> games[2];
     int totalGames = 0;
 
     if (_serverGame != nullptr)
     {
-        games[totalGames++] = _serverGame.get();
+        games[totalGames++] = _serverGame;
     }
 
     if(_clientGame != nullptr)
     {
-        games[totalGames++] = _clientGame.get();
+        games[totalGames++] = _clientGame;
     }
 
     if (totalGames == 0)
@@ -187,13 +195,13 @@ void Engine::RunFrame()
         return;
     }
 
-    BaseGameInstance* nextGameToRun = games[0];
+    BaseGameInstance* nextGameToRun = games[0].get();
 
     for(int i = 1; i < totalGames; ++i)
     {
         if(games[i]->nextUpdateTime < nextGameToRun->nextUpdateTime)
         {
-            nextGameToRun = games[i];
+            nextGameToRun = games[i].get();
         }
     }
 
@@ -230,7 +238,7 @@ void ConnectCommand(ConsoleCommandBinder& binder)
 
 ConsoleCmd connectCmd("connect", ConnectCommand);
 
-void Engine::StartLocalServer(int port, StringId mapName)
+void Engine::StartServer(int port, StringId mapName)
 {
     SLNet::SocketDescriptor sd(port, nullptr);
     auto peerInterface = SLNet::RakPeerInterface::GetInstance();
@@ -244,25 +252,17 @@ void Engine::StartLocalServer(int port, StringId mapName)
 
     if (result != SLNet::RAKNET_STARTED)
     {
-        FatalError("Failed to startup local server");
+        FatalError("Failed to startup server");
     }
 
     peerInterface->SetMaximumIncomingConnections(ServerGame::MaxClients);
 
     Log("Listening on %d...\n", port);
 
-    _serverGame = std::make_unique<ServerGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
-    _clientGame = std::make_unique<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.3", 1)));
+    _serverGame = std::make_shared<ServerGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
+    _clientGame = nullptr;
 
-    _serverGame->networkInterface.SetLocalAddress(&_clientGame->networkInterface, _clientGame->localAddress);
-    _clientGame->networkInterface.SetLocalAddress(&_serverGame->networkInterface, _serverGame->localAddress);
-
-    _clientGame->sceneManager.TrySwitchScene(mapName);
     _serverGame->sceneManager.TrySwitchScene(mapName);
-
-    unsigned char data[1] = { (unsigned char)PacketType::NewConnection };
-
-    _clientGame->networkInterface.SendReliable(_serverGame->localAddress, data);
 }
 
 void Engine::ConnectToServer(const char* address, int port)
@@ -292,7 +292,31 @@ void Engine::ConnectToServer(const char* address, int port)
     }
 
     _serverGame = nullptr;
-    _clientGame = std::make_unique<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
+    _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
+}
+
+void Engine::StartLocalServer(int port, StringId mapName)
+{
+    if(g_isServer.Value())
+    {
+        Log(LogType::Error, "Can't start local server when running in server mode\n");
+        return;
+    }
+
+    StartServer(port, mapName);
+
+    auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+
+    _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.3", 1)));
+
+    _serverGame->networkInterface.SetLocalAddress(&_clientGame->networkInterface, _clientGame->localAddress);
+    _clientGame->networkInterface.SetLocalAddress(&_serverGame->networkInterface, _serverGame->localAddress);
+
+    _clientGame->sceneManager.TrySwitchScene(mapName);
+
+    unsigned char data[1] = { (unsigned char)PacketType::NewConnection };
+
+    _clientGame->networkInterface.SendReliable(_serverGame->localAddress, data);
 }
 
 static void ReloadResources(ConsoleCommandBinder& binder)

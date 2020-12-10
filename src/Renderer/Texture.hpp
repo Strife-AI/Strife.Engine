@@ -37,6 +37,12 @@ enum class TextureDataType
 class Texture
 {
 public:
+    Texture()
+        :  _id(-1)
+    {
+
+    }
+
     Texture(SDL_Surface* surface);
     Texture(Color color, int width, int height);
     Texture(Color* texels, int width, int height);
