@@ -4,8 +4,6 @@ project(Engine VERSION 1 LANGUAGES C CXX)
 
 if (UNIX AND NOT APPLE)
 	set(LINUX TRUE)
-else()
-	set(APPLE TRUE)
 endif()
 
 # Enable exception unwind semantics
@@ -14,9 +12,8 @@ if(MSVC)
 	add_compile_options("/MP")
 
 	set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -DNOGDI -DWIN32")
-endif()
 
-if (LINUX)
+elseif(LINUX)
 	set(CMAKE_CXX_FLAGS "-lasan -fsanitize=address")
 elseif(APPLE)
 	set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0")
