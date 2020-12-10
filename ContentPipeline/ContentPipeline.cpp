@@ -786,9 +786,6 @@ int main(int argc, char* argv[])
 
 #if defined(__linux__) || defined(__APPLE__)
     chdir(pathToAssets.c_str());
-
-    system("pwd");
-    printf("\n");
 #elif defined(_WIN64) || defined(_Win32)
     SetCurrentDirectory(pathToAssets.c_str());
 #endif
