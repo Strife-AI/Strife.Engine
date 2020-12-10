@@ -102,7 +102,7 @@ struct Color
 
     unsigned int PackRGBA() const
     {
-        return r | g << 8 | b << 16 | a << 24;
+        return r | (g << 8) | (b << 16) | (a << 24);
     }
 
     static Color FromPacked(unsigned int rgba)

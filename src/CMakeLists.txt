@@ -6,6 +6,7 @@ find_package(SDL2 REQUIRED)
 find_package(SDL2-image REQUIRED)
 find_package(unofficial-box2d CONFIG REQUIRED)
 find_package(slikenet CONFIG REQUIRED)
+find_package(Ogg REQUIRED)
 
 add_library(Strife.Engine STATIC
         Engine.cpp
@@ -46,12 +47,13 @@ add_library(Strife.Engine STATIC
         Tools/Console.cpp
         #../../cpp.hint
 
+		../imgui/imgui_tables.cpp
         ../imgui/imgui_widgets.cpp
         ../imgui/imgui.cpp
         ../imgui/imgui_draw.cpp
         ../imgui/imgui_demo.cpp
-        ../imgui/examples/imgui_impl_opengl3.cpp
-        ../imgui/examples/imgui_impl_sdl.cpp
+        ../imgui/backends/imgui_impl_opengl3.cpp
+        ../imgui/backends/imgui_impl_sdl.cpp
 
         Renderer/Lighting.hpp
         Renderer/Lighting.cpp
@@ -173,6 +175,8 @@ target_include_directories(Strife.Engine
             ../imgui/examples
             Renderer)
 
+find_package(Vorbis REQUIRED)
+
 target_link_libraries(Strife.Engine PUBLIC
     SDL2::SDL2
     SDL2::SDL2main
@@ -182,6 +186,10 @@ target_link_libraries(Strife.Engine PUBLIC
     SLikeNet
     Strife.ML
     )
+
+if(APPLE)
+	target_link_libraries(Strife.Engine PUBLIC Vorbis::vorbis Vorbis::vorbisenc Vorbis::vorbisfile)
+endif()
 
 target_compile_definitions(Strife.Engine PUBLIC IMGUI_IMPL_OPENGL_LOADER_GL3W)
 
