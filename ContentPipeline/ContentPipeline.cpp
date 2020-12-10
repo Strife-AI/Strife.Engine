@@ -90,7 +90,6 @@ std::string WorkingDirectory()
     return path;
 }
 
-
 StringId AddPng(ResourceFileWriter& writer, const std::string& fileName, const std::string& resourceName)
 {
 	return writer.WriteResourceFile(fileName, resourceName, "png");
@@ -785,7 +784,7 @@ int main(int argc, char* argv[])
     const std::string pathToAssets = buildAssetPath(contentFilePath, '/' + content[contentKeys[0]].get<std::string>()) + '/';
     const std::string outputFile = outputDirectory + '/' + content[contentKeys[1]].get<std::string>() + ".x2rp";
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
     chdir(pathToAssets.c_str());
 
     system("pwd");
