@@ -185,8 +185,11 @@ target_link_libraries(Strife.Engine PUBLIC
     OALWrapper
     SLikeNet
     Strife.ML
-		Vorbis::vorbis Vorbis::vorbisenc Vorbis::vorbisfile  # TODO: only if mac
     )
+
+if(APPLE)
+	target_link_libraries(Strife.Engine PUBLIC Vorbis::vorbis Vorbis::vorbisenc Vorbis::vorbisfile)
+endif()
 
 target_compile_definitions(Strife.Engine PUBLIC IMGUI_IMPL_OPENGL_LOADER_GL3W)
 
