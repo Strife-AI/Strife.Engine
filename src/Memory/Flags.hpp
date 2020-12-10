@@ -5,7 +5,7 @@ struct Flags
 {
     bool HasFlag(TEnum flag) const
     {
-        return flags & static_cast<unsigned int>(flag) != 0;
+        return (flags & static_cast<unsigned int>(flag)) != 0;
     }
 
     void SetFlag(TEnum flag)
