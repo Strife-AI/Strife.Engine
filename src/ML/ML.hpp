@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "Engine.hpp"
 #include "../../Strife.ML/NewStuff.hpp"
 #include "Math/Vector2.hpp"
