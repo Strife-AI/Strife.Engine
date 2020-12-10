@@ -6,6 +6,7 @@ find_package(SDL2 REQUIRED)
 find_package(SDL2-image REQUIRED)
 find_package(unofficial-box2d CONFIG REQUIRED)
 find_package(slikenet CONFIG REQUIRED)
+find_package(Ogg REQUIRED)
 
 add_library(Strife.Engine STATIC
         Engine.cpp
@@ -174,6 +175,8 @@ target_include_directories(Strife.Engine
             ../imgui/examples
             Renderer)
 
+find_package(Vorbis REQUIRED)
+
 target_link_libraries(Strife.Engine PUBLIC
     SDL2::SDL2
     SDL2::SDL2main
@@ -182,6 +185,7 @@ target_link_libraries(Strife.Engine PUBLIC
     OALWrapper
     SLikeNet
     Strife.ML
+		Vorbis::vorbis Vorbis::vorbisenc Vorbis::vorbisfile  # TODO: only if mac
     )
 
 target_compile_definitions(Strife.Engine PUBLIC IMGUI_IMPL_OPENGL_LOADER_GL3W)
