@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Engine.hpp"
 #include "../../Strife.ML/NewStuff.hpp"
 #include "Math/Vector2.hpp"
@@ -28,8 +29,8 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
     using NetworkType = TNeuralNetwork;
     using SampleType = StrifeML::Sample<InputType, OutputType>;
 
-    NeuralNetworkComponent(float decisionsPerSecond_ = 1)
-        : decisionInput(StrifeML::MlUtil::MakeSharedArray<InputType>(TNeuralNetwork::SequenceLength)),
+    explicit NeuralNetworkComponent(float decisionsPerSecond_ = 1)
+        : decisionInput(StrifeML::MlUtil::SharedArray<InputType>(TNeuralNetwork::SequenceLength)),
         decisionsPerSecond(decisionsPerSecond_)
     {
 
@@ -45,7 +46,7 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
 
     StrifeML::NetworkContext<NetworkType>* networkContext = nullptr;
     std::shared_ptr<StrifeML::MakeDecisionWorkItem<TNeuralNetwork>> decisionInProgress;
-    std::shared_ptr<InputType[]> decisionInput;
+    StrifeML::MlUtil::SharedArray<InputType> decisionInput;
     float makeDecisionsTimer = 0;
     float decisionsPerSecond;
 
@@ -116,11 +117,11 @@ void NeuralNetworkComponent<TNeuralNetwork>::MakeDecision()
     // Expire oldest input
     for (int i = 0; i < TNeuralNetwork::SequenceLength - 1; ++i)
     {
-        decisionInput[i] = std::move(decisionInput[i + 1]);
+        decisionInput.data.get()[i] = std::move(decisionInput.data.get()[i + 1]);
     }
 
     // Collect new input
-    collectInput(decisionInput[TNeuralNetwork::SequenceLength - 1]);
+    collectInput(decisionInput.data.get()[TNeuralNetwork::SequenceLength - 1]);
 
     // Start making decision
     decisionInProgress = networkContext->decider->MakeDecision(decisionInput, TNeuralNetwork::SequenceLength);

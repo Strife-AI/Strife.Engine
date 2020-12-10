@@ -3,7 +3,7 @@
 
 #include "Memory/Flags.hpp"
 
-#ifdef __linux__
+#if  defined(__linux__) || defined(__APPLE__)
 #include <typeinfo>
 #endif
 

@@ -13,7 +13,7 @@ int bitsPerField = 12;
 
 static void ClampInRange(int& value)
 {
-    value = Clamp(value, 0, 1 << bitsPerField - 1);
+    value = Clamp(value, 0, 1 << (bitsPerField - 1));
 }
 
 static uint64_t PackCompressedRectangle(int x1, int y1, int x2, int y2, int type)

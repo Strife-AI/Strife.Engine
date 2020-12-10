@@ -4,6 +4,8 @@
 #include "Scene.hpp"
 #include "IEntityEvent.hpp"
 
+#include <unordered_map>
+
 const EntityHeader InvalidEntityHeader::InvalidHeader;
 
 void* AllocateComponent(Scene* scene, int size)

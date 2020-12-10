@@ -8,7 +8,7 @@
 
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
-    rigidBody = AddComponent<RigidBodyComponent>("rb", b2_dynamicBody);
+    rigidBody = AddComponent<RigidBodyComponent>(b2_dynamicBody);
     auto box = rigidBody->CreateBoxCollider(Dimensions());
 
     box->SetDensity(1);
@@ -28,7 +28,7 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
         // Network only runs on server
         if (scene->isServer) nn->mode = NeuralNetworkMode::Deciding;
 
-        auto gridSensor = AddComponent<GridSensorComponent<40, 40>>("grid", Vector2(16, 16));
+        auto gridSensor = AddComponent<GridSensorComponent<40, 40>>(Vector2(16, 16));
         gridSensor->render = true;
 
         // Called when:

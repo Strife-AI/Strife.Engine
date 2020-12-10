@@ -126,12 +126,13 @@ b2Fixture* RigidBodyComponent::CreateCircleCollider(float radius, bool isTrigger
 b2Fixture* RigidBodyComponent::CreateLineCollider(Vector2 start, Vector2 end)
 {
     b2EdgeShape edge;
-#ifdef WIN32
-    edge.Set(b2Vec2(start.x, start.y), b2Vec2(end.x, end.y));
+
+#ifdef __APPLE__
+    edge.SetTwoSided(edge.m_vertex1, edge.m_vertex2);
 #else
-    edge.SetTwoSided(b2Vec2(start.x, start.y), b2Vec2(end.x, end.y));
+    edge.Set(edge.m_vertex1, edge.m_vertex2);
 #endif
-    
+
     b2FixtureDef fixtureDef;
     fixtureDef.isSensor = false;
     fixtureDef.shape = &edge;
@@ -169,12 +170,12 @@ b2Fixture* RigidBodyComponent::CreateFixture(b2FixtureDef& fixtureDef)
         ScaleToBox2D(edge->m_vertex1);
         ScaleToBox2D(edge->m_vertex2);
 
-#ifdef WIN32
-        edge->Set(edge->m_vertex1, edge->m_vertex2);
-#else
+#ifdef __APPLE__
         edge->SetTwoSided(edge->m_vertex1, edge->m_vertex2);
+#else
+        edge->Set(edge->m_vertex1, edge->m_vertex2);
 #endif
-        
+
         break;
     }
 

@@ -1,9 +1,12 @@
 #include "ParticleRenderer.hpp"
 
 #include <random>
+
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#else
 #include <GL/gl.h>
-
-
+#endif
 
 #include "GL/gl3w.h"
 #include "Scene/Scene.hpp"

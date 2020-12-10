@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <vector>
 
 #ifdef _WIN32
 #include <vcruntime_typeinfo.h>
@@ -272,7 +273,7 @@ struct Entity
 
     void UpdateSyncVars();
 
-    template<typename TComponent, typename ...Args> TComponent* AddComponent(const char* name = "<default>", Args&& ...args);
+    template<typename TComponent, typename ...Args> TComponent* AddComponent(Args&& ...args);
     template<typename TComponent> TComponent* GetComponent();
     void RemoveComponent(IEntityComponent* component);
 
@@ -335,13 +336,12 @@ bool Entity::Is(TEntity*& outEntity)
 void* AllocateComponent(Scene* scene, int size);
 
 template <typename TComponent, typename ...Args>
-TComponent* Entity::AddComponent(const char* name, Args&& ...args)
+TComponent* Entity::AddComponent(Args&& ...args)
 {
     auto newComponent = static_cast<TComponent*>(AllocateComponent(scene, sizeof(TComponent)));
 
     new (newComponent) TComponent(std::forward<Args>(args)...);
     newComponent->owner = this;
-    newComponent->name = name;
 
     newComponent->next = _componentList;
     _componentList = newComponent;
