@@ -130,7 +130,7 @@ b2Fixture* RigidBodyComponent::CreateLineCollider(Vector2 start, Vector2 end)
 #ifdef __APPLE__
     edge.SetTwoSided(edge.m_vertex1, edge.m_vertex2);
 #else
-    edge->Set(edge->m_vertex1, edge->m_vertex2);
+    edge.Set(edge.m_vertex1, edge.m_vertex2);
 #endif
 
     b2FixtureDef fixtureDef;
