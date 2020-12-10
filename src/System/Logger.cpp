@@ -9,6 +9,7 @@
 
 #include <fstream>
 #include <thread>
+#include <iostream>
 
 #include "SDL.h"
 #include "Container/ConcurrentQueue.hpp"
@@ -60,6 +61,7 @@ static bool g_finishLogging = false;
 static bool g_logToFile = true;
 static bool g_logToConsole = false;
 
+extern ConsoleVar<bool> g_isServer;
 
 void LoggingThread()
 {
@@ -76,7 +78,7 @@ void LoggingThread()
                 timeString.pop_back();
             }
 
-            auto message = (event.type == LogType::Info ? "[INFO " : "[ERR ") + timeString + "] " + event.message;
+            auto message = (event.type == LogType::Info ? "[INFO " : "[ERR  ") + timeString + "] " + event.message;
 
             g_logMessages.Dequeue();
 
@@ -86,6 +88,11 @@ void LoggingThread()
             {
                 g_logFile << message;
                 g_logFile.flush();
+            }
+
+            if (g_isServer.Value())
+            {
+                std::cout << message;
             }
         }
 
