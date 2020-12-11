@@ -121,8 +121,14 @@ bool SoundEmitter::HasAnyActiveSounds() const
     return false;
 }
 
-SoundManager::SoundManager()
+SoundManager::SoundManager(bool isHeadless)
 {
+    if(isHeadless)
+    {
+        // TODO: do other stuff to prevent playing sounds
+        return;
+    }
+
     cOAL_Init_Params oal_parms;
     oal_parms.mlStreamingBufferSize = 64 * 1024;
 

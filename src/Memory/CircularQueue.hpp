@@ -123,6 +123,11 @@ public:
         return CircularQueueIterator<T, size>(items, tail);
     }
 
+    void Clear()
+    {
+        head = tail = items;
+    }
+
 private:
     T* Next(T* ptr)
     {

@@ -167,9 +167,17 @@ void InputService::OnAdded()
             {
                 auto& c = scene->replicationManager->GetClients()[scene->replicationManager->localClientId].commands;
 
+                int count = 0;
+                for(auto it : c)
+                {
+                    ++count;
+                }
+
+                status.VFormat("Commands behind: %d\n", count);
+
                 auto last = c.IsEmpty() ? 0.0f : (*(--c.end())).timeRecorded;
 
-                status.VFormat("%d bytes (%f ms)", NearestPowerOf2(message.GetNumberOfUnreadBits(), 8) / 8, (scene->relativeTime - last) * 1000);
+                //status.VFormat("%d bytes (%f ms)", NearestPowerOf2(message.GetNumberOfUnreadBits(), 8) / 8, (scene->relativeTime - last) * 1000);
 
                 scene->replicationManager->Client_ReceiveUpdateResponse(message);
             };
