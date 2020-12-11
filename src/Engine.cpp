@@ -92,7 +92,7 @@ Engine* Engine::Initialize(const EngineConfig& config)
     }
 
     Log("Initializing sound\n");
-    engine->_soundManager = new SoundManager;
+    engine->_soundManager = new SoundManager(g_isServer.Value());
 
     engine->_neuralNetworkManager = std::make_unique<NeuralNetworkManager>();
 
@@ -160,7 +160,7 @@ static float GetTimeSeconds()
 
 void AccurateSleepFor(float seconds)
 {
-    auto bias = 0.01f;
+    auto bias = 0;//0.01f;
     auto diff = seconds - bias;
     auto desiredEndTime = std::chrono::high_resolution_clock::now() + std::chrono::microseconds((int)(seconds * 1000000));
 
@@ -209,8 +209,8 @@ void Engine::RunFrame()
     float timeUntilUpdate = nextGameToRun->nextUpdateTime - now;
 
     AccurateSleepFor(timeUntilUpdate);
-    nextGameToRun->RunFrame();
-    nextGameToRun->nextUpdateTime = now + 1.0f / nextGameToRun->targetTickRate;
+    nextGameToRun->RunFrame(GetTimeSeconds());
+    nextGameToRun->nextUpdateTime = nextGameToRun->nextUpdateTime + 1.0f / nextGameToRun->targetTickRate;
 }
 
 void Engine::PauseGame()

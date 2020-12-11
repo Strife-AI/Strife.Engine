@@ -22,7 +22,9 @@ enum class PacketType : unsigned char
     NewConnectionResponse = (unsigned char)ID_USER_PACKET_ENUM + 1,
     UpdateRequest,
     UpdateResponse,
-    ServerFull
+    ServerFull,
+    Ping,
+    PingResponse
 };
 
 enum class ClientConnectionStatus
@@ -154,7 +156,7 @@ struct BaseGameInstance
 
     }
 
-    void RunFrame();
+    void RunFrame(float currentTime);
     void Render(Scene* scene, float deltaTime, float renderDeltaTime);
     Scene* GetScene() { return sceneManager.GetScene(); }
 
@@ -177,7 +179,7 @@ struct ServerGame : BaseGameInstance
         : BaseGameInstance(engine, raknetInterface, localAddress_, true)
     {
         isHeadless = true;
-        targetTickRate = 60;
+        targetTickRate = 30;
     }
 
     void HandleNewConnection(SLNet::Packet* packet);
