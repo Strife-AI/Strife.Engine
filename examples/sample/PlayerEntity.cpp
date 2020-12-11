@@ -28,8 +28,12 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
         // Network only runs on server
         if (scene->isServer) nn->mode = NeuralNetworkMode::Deciding;
 
+<<<<<<< Updated upstream
         auto gridSensor = AddComponent<GridSensorComponent<40, 40>>(Vector2(16, 16));
         gridSensor->render = true;
+=======
+        auto gridSensor = AddComponent<GridSensorComponent<40, 40>>("grid", Vector2(16, 16));
+>>>>>>> Stashed changes
 
         // Called when:
         //  * Collecting input to make a decision

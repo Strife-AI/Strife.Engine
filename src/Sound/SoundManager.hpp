@@ -63,7 +63,7 @@ class SoundManager
 public:
     static constexpr  int MaxDistance = 1000;
 
-    SoundManager();
+    SoundManager(bool isHeadless);
     ~SoundManager();
 
     void AddSoundEmitter(SoundEmitter* emitter, Entity* owner);

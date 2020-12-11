@@ -44,8 +44,6 @@ void SceneManager::DoSceneTransition()
         DestroyScene();
 
         _scene = _newScene;
-
-        _scene->lastFrameStart = std::chrono::high_resolution_clock::now();
         _newScene = nullptr;
 
         _scene->SendEvent(SceneLoadedEvent());

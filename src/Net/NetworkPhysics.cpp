@@ -15,6 +15,8 @@ void UpdateVarsToTime(ISyncVar* head, float time)
     }
 }
 
+ConsoleVar<float> g_jitterTime("jitter", 0.2);
+
 void NetworkPhysics::ReceiveEvent(const IEntityEvent& ev)
 {
     if(ev.Is<FixedUpdateEvent>())
@@ -27,7 +29,7 @@ void NetworkPhysics::ReceiveEvent(const IEntityEvent& ev)
         {
             for (auto net : scene->replicationManager->components)
             {
-                UpdateVarsToTime(net->owner->syncVarHead, scene->relativeTime - 0.2);
+                UpdateVarsToTime(net->owner->syncVarHead, scene->relativeTime - g_jitterTime.Value());
                 net->owner->UpdateSyncVars();
             }
         }
