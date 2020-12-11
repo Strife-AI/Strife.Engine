@@ -29,7 +29,6 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
         if (scene->isServer) nn->mode = NeuralNetworkMode::Deciding;
 
         auto gridSensor = AddComponent<GridSensorComponent<40, 40>>(Vector2(16, 16));
-        gridSensor->render = true;
 
         // Called when:
         //  * Collecting input to make a decision

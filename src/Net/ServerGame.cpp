@@ -18,7 +18,7 @@ int stressCount = 0;
 
 ConsoleVar<float> g_timeScale("time-scale", 1);
 
-void BaseGameInstance::RunFrame()
+void BaseGameInstance::RunFrame(float currentTime)
 {
     auto input = engine->GetInput();
     auto sdlManager = engine->GetSdlManager();
@@ -37,12 +37,11 @@ void BaseGameInstance::RunFrame()
 
     if (scene->isFirstFrame)
     {
-        scene->lastFrameStart = currentFrameStart;
+        scene->lastFrameStart = currentTime;
         scene->isFirstFrame = false;
     }
 
-    auto deltaTimeMicroseconds = std::chrono::duration_cast<std::chrono::microseconds>(currentFrameStart - scene->lastFrameStart);
-    auto realDeltaTime = static_cast<float>(deltaTimeMicroseconds.count()) / 1000000 * g_timeScale.Value();
+    auto realDeltaTime = currentTime - scene->lastFrameStart;
 
     float renderDeltaTime = !engine->IsPaused()
         ? realDeltaTime
@@ -96,14 +95,22 @@ void BaseGameInstance::RunFrame()
         Render(scene, realDeltaTime, renderDeltaTime);
 
         {
+            static int count = 0;
+
             float fps = 1.0f / realDeltaTime;
             engine->GetMetricsManager()->GetOrCreateMetric("fps")->Add(fps);
+
+            count = (count + 1) % 60;
+            if(count == 0)
+            {
+                SDL_SetWindowTitle(engine->GetSdlManager()->Window(), std::to_string(fps).c_str());
+            }
         }
 
         input->GetMouse()->SetMouseScale(Vector2::Unit() * scene->GetCamera()->Zoom());
     }
 
-    scene->lastFrameStart = currentFrameStart;
+    scene->lastFrameStart = currentTime;
 
     if (!isHeadless)
     {
