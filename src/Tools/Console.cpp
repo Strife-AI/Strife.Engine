@@ -750,7 +750,8 @@ void Console::MoveToHistory(int index)
     _cursorPosition = _textInput.size();
 }
 
-Console::Console()
+Console::Console(Engine* engine)
+    : _engine(engine)
 {
     for (int i = 0; i < MaxConsoleLines; ++i)
     {

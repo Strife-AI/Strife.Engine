@@ -224,6 +224,8 @@ public:
         return _mouseWheelY;
     }
 
+    static Input* GetInstance() { return &instance; }
+
     Mouse* GetMouse() { return &_mouse; }
 
     // Left is -1
@@ -241,6 +243,7 @@ public:
     ButtonMapping TryRetrievePressedInput() const;
 
 private:
+    static Input instance;
 
     ButtonMapping RetrieveFirstPressedKey() const;
     ButtonMapping RetrieveFirstPressedGamepadButton() const;

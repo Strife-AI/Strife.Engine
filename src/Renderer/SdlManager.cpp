@@ -35,7 +35,7 @@ void ResolutionCommand(ConsoleCommandBinder& binder)
         .Bind(h, "height")
         .Help("Changes the screen resolution");
 
-    Engine::GetInstance()->GetSdlManager()->SetScreenSize(w, h);
+    binder.GetEngine()->GetSdlManager()->SetScreenSize(w, h);
     g_Resolution.SetValue(Vector2(w, h));
 }
 ConsoleCmd g_resolutionCmd("resolution", ResolutionCommand);

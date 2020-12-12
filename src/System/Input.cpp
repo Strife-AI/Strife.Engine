@@ -7,6 +7,8 @@
 #include "Engine.hpp"
 #include "imgui.h"
 
+Input Input::instance;
+
 KeyboardState::KeyboardState()
 {
     for (int i = 0; i < TOTAL_KEYS; ++i)
@@ -84,7 +86,7 @@ bool InputButton::ButtonIsDown(const InputState* input, const ButtonMapping& map
     FatalError("Unhandled input device type: %d", (int)mapping.deviceType);
 }
 
-Input* InputButton::GetInput() { return Engine::GetInstance()->GetInput(); }
+Input* InputButton::GetInput() { return Input::GetInstance(); }
 
 bool InputButton::ButtonIsDown(const InputState* input) const
 {

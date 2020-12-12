@@ -22,7 +22,7 @@ void MapCmd(ConsoleCommandBinder& binder)
     binder.Help("Change scene to specified map.");
 
     // TODO: map command for server mode
-    Engine::GetInstance()->StartLocalServer(port, StringId(mapName));
+    binder.GetEngine()->StartLocalServer(port, StringId(mapName));
 }
 ConsoleCmd mapCmd("map", MapCmd);
 

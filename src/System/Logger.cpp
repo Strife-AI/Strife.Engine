@@ -60,6 +60,7 @@ static std::ofstream g_logFile;
 static bool g_finishLogging = false;
 static bool g_logToFile = true;
 static bool g_logToConsole = false;
+static Console* g_console;
 
 extern ConsoleVar<bool> g_isServer;
 
@@ -82,7 +83,7 @@ void LoggingThread()
 
             g_logMessages.Dequeue();
 
-            Engine::GetInstance()->GetConsole()->logItems.Enqueue(message);
+            g_console->logItems.Enqueue(message);
 
             if (g_logFile)
             {
@@ -100,8 +101,9 @@ void LoggingThread()
     } while (!g_finishLogging || !g_logMessages.IsEmpty());
 }
 
-void InitializeLogging(const char* fileName)
+void InitializeLogging(const char* fileName, Console* console)
 {
+    g_console = console;
     g_logFile.open(fileName, std::ofstream::app);
     g_logToFile = g_logFile.is_open();
     g_finishLogging = false;

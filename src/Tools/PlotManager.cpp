@@ -17,7 +17,7 @@ void PlotManager::PlotCommand(ConsoleCommandBinder& binder)
         .Bind(screenY, "screenY")
         .Help("Creates a line plot");
 
-    auto engine = Engine::GetInstance();
+    auto engine = binder.GetEngine();
     auto& openPlots = engine->GetPlotManager()->_openPlots;
     for(auto plot : openPlots)
     {
@@ -54,7 +54,7 @@ void PlotManager::RenderPlots()
 
             ImGui::SetNextWindowPos(ImVec2(plot->x, plot->y), ImGuiCond_Once);
 
-            auto dpiRatio = Engine::GetInstance()->GetSdlManager()->DpiRatio();
+            auto dpiRatio = _sdlManager->DpiRatio();
             ImGui::SetNextWindowSize(ImVec2(300 * dpiRatio, 150 * dpiRatio), ImGuiCond_Once);
 
             ImGui::Begin(plot->metric->name.c_str(), &isOpen);

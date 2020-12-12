@@ -37,19 +37,17 @@ struct EngineConfig
 class Engine
 {
 public:
+    explicit Engine(const EngineConfig& config);
     ~Engine();
 
-    static Engine* GetInstance() { return &_instance; }
-    static Engine* Initialize(const EngineConfig& config);
-
     Input* GetInput() { return _input; }
-    SdlManager* GetSdlManager() { return _sdlManager; }
-    Console* GetConsole() { return _console; }
-    PlotManager* GetPlotManager() { return _plotManager; }
-    MetricsManager* GetMetricsManager() { return _metricsManager; }
-    Renderer* GetRenderer() { return _renderer; }
-    BlockAllocator* GetDefaultBlockAllocator() { return _defaultBlockAllocator; }
-    SoundManager* GetSoundManager() { return _soundManager; }
+    SdlManager* GetSdlManager() { return _sdlManager.get(); }
+    Console* GetConsole() { return _console.get(); }
+    PlotManager* GetPlotManager() { return _plotManager.get(); }
+    MetricsManager* GetMetricsManager() { return _metricsManager.get(); }
+    Renderer* GetRenderer() { return _renderer.get(); }
+    BlockAllocator* GetDefaultBlockAllocator() { return _defaultBlockAllocator.get(); }
+    SoundManager* GetSoundManager() { return _soundManager.get(); }
     ServerGame* GetServerGame() { return _serverGame.get(); }
     ClientGame* GetClientGame() { return _clientGame.get(); }
     NeuralNetworkManager* GetNeuralNetworkManager() { return _neuralNetworkManager.get();  }
@@ -70,8 +68,6 @@ public:
     void PauseGame();
     void ResumeGame();
 
-    bool isInitialized = false;
-
     void SetLoadResources(const std::function<void()>& loadResources)
     {
         _loadResources = loadResources;
@@ -90,19 +86,16 @@ public:
 private:
     Engine() = default;
 
-    void Render(Scene* scene, float deltaTime, float renderDeltaTime);
-
     bool isPaused = false;
-    static Engine _instance;
 
-    Input* _input = nullptr;
-    SdlManager* _sdlManager = nullptr;
-    Console* _console = nullptr;
-    PlotManager* _plotManager = nullptr;
-    MetricsManager* _metricsManager = nullptr;
-    Renderer* _renderer = nullptr;
-    BlockAllocator* _defaultBlockAllocator;
-    SoundManager* _soundManager;
+    Input* _input;
+    std::unique_ptr<SdlManager> _sdlManager;
+    std::unique_ptr<Console> _console;
+    std::unique_ptr<PlotManager> _plotManager;
+    std::unique_ptr<MetricsManager> _metricsManager;
+    std::unique_ptr<Renderer> _renderer;
+    std::unique_ptr<BlockAllocator> _defaultBlockAllocator;
+    std::unique_ptr<SoundManager> _soundManager;
     std::unique_ptr<NeuralNetworkManager> _neuralNetworkManager;
 
     std::shared_ptr<ServerGame> _serverGame;
