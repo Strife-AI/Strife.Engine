@@ -24,9 +24,6 @@
 
 using namespace std::chrono;
 
-
-Engine Engine::_instance;
-
 #ifdef RELEASE_BUILD
 extern ConsoleVar<bool> g_developerMode("developer-mode", false, false);
 #else
@@ -35,113 +32,84 @@ extern ConsoleVar<bool> g_developerMode("developer-mode", true, true);
 
 ConsoleVar<bool> g_isServer("server", false);
 
-Engine* Engine::Initialize(const EngineConfig& config)
+Engine::Engine(const EngineConfig& config)
 {
-    InitializeLogging("log.txt");
+    _config = config;
+    _defaultBlockAllocator = std::make_unique<BlockAllocator>(config.blockAllocatorSizeBytes);
 
-    Engine* engine = &_instance;
-
-    if (engine->isInitialized)
-    {
-        FatalError("Engine::Initialize() called more than once");
-    }
-
-    engine->_config = config;
-    engine->_defaultBlockAllocator = new BlockAllocator(config.blockAllocatorSizeBytes);
-
-    BlockAllocator::SetDefaultAllocator(engine->GetDefaultBlockAllocator());
+    BlockAllocator::SetDefaultAllocator(GetDefaultBlockAllocator());
 
     // Needs to be initialized first for logging
-    engine->_console = new Console;
+    _console = std::make_unique<Console>(this);
+    InitializeLogging("log.txt", _console.get());
 
     // Load variables from vars.cfg
     // This is needed to be done here for loading up configurations for resolution and fullscreen
     if (config.consoleVarsFile.has_value())
     {
-        engine->_console->LoadVariables(config.consoleVarsFile.value().c_str());
+        _console->LoadVariables(config.consoleVarsFile.value().c_str());
     }
 
-    engine->_console->Execute(config.initialConsoleCmd);
+    _console->Execute(config.initialConsoleCmd);
 
     Log("==============================================================\n");
     Log("Initializing engine\n");
 
     Log("Running as %s\n", g_isServer.Value() ? "server" : "client");
 
-    engine->isInitialized = true;
-
     Log("Initializing resource manager\n");
-    ResourceManager::Initialize(engine);
+    ResourceManager::Initialize(this);
 
-    engine->_input = new Input;
+    _input = Input::GetInstance();
 
     if(!g_isServer.Value())
     {
         Log("Initializing SDL2\n");
-        engine->_sdlManager = new SdlManager(engine->_input, false);
+        _sdlManager = std::make_unique<SdlManager>(_input, false);
+        _plotManager = std::make_unique<PlotManager>(_sdlManager.get());
     }
 
-    engine->_plotManager = new PlotManager;
-    engine->_metricsManager = new MetricsManager;
+    _metricsManager = std::make_unique<MetricsManager>();
 
     if(!g_isServer.Value())
     {
         Log("Initializing renderer\n");
-        engine->_renderer = new Renderer;
-        WindowSizeChangedEvent(engine->_sdlManager->WindowSize().x, engine->_sdlManager->WindowSize().y).Send();
+        _renderer = std::make_unique<Renderer>();
+        WindowSizeChangedEvent(_sdlManager->WindowSize().x, _sdlManager->WindowSize().y).Send();
     }
 
     Log("Initializing sound\n");
-    engine->_soundManager = new SoundManager(g_isServer.Value());
+    _soundManager = std::make_unique<SoundManager>(g_isServer.Value());
 
-    engine->_neuralNetworkManager = std::make_unique<NeuralNetworkManager>();
+    _neuralNetworkManager = std::make_unique<NeuralNetworkManager>();
 
-    UiCanvas::Initialize(engine->_soundManager);
-
-    return &_instance;
+    UiCanvas::Initialize(_soundManager.get());
 }
 
 Engine::~Engine()
 {
-    if (isInitialized)
+    Log("Shutting down engine...\n");
+    try
     {
-        Log("Shutting down engine...\n");
-        try
+        if (_config.consoleVarsFile.has_value())
         {
-            if (_config.consoleVarsFile.has_value())
-            {
-                _console->SerializeVariables(_config.consoleVarsFile.value().c_str());
-            }
-
-            delete _renderer;
-            delete _metricsManager;
-            delete _plotManager;
-            delete _sdlManager;
-            delete _input;
-
-            _serverGame = nullptr;
-            _clientGame = nullptr;
-            _neuralNetworkManager = nullptr;
-
-            auto peerInterface = SLNet::RakPeerInterface::GetInstance();
-            if(peerInterface->IsActive())
-            {
-                peerInterface->Shutdown(500);
-            }
-        }
-        catch(const std::exception& e)
-        {
-            Log("Failed to shutdown engine: %s\n", e.what());
+            _console->SerializeVariables(_config.consoleVarsFile.value().c_str());
         }
 
-        Log("Shutdown complete\n");
-
-        ShutdownLogging();
-        delete _console;
-        _console = nullptr;
-
-        isInitialized = false;
+        auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+        if(peerInterface->IsActive())
+        {
+            peerInterface->Shutdown(500);
+        }
     }
+    catch(const std::exception& e)
+    {
+        Log("Failed to shutdown engine: %s\n", e.what());
+    }
+
+    Log("Shutdown complete\n");
+
+    ShutdownLogging();
 }
 
 void SleepMicroseconds(unsigned int microseconds)
@@ -233,7 +201,7 @@ void ConnectCommand(ConsoleCommandBinder& binder)
         .Bind(port, "port")
         .Help("Connects to a server");
 
-    Engine::GetInstance()->ConnectToServer(address.c_str(), port);
+    binder.GetEngine()->ConnectToServer(address.c_str(), port);
 }
 
 ConsoleCmd connectCmd("connect", ConnectCommand);
@@ -323,7 +291,7 @@ static void ReloadResources(ConsoleCommandBinder& binder)
 {
     binder.Help("Reloads the resource files");
 
-    Engine::GetInstance()->ReloadResources();
+    binder.GetEngine()->ReloadResources();
 }
 
 ConsoleCmd _reloadCmd("reload", ReloadResources);

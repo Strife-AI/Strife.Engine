@@ -27,8 +27,9 @@ struct PlotInstance
 class PlotManager
 {
 public:
-    PlotManager()
-        : _plotCommand("plot", PlotCommand)
+    explicit PlotManager(SdlManager* sdlManager)
+        : _plotCommand("plot", PlotCommand),
+        _sdlManager(sdlManager)
     {
 
     }
@@ -42,5 +43,6 @@ private:
     ConsoleCmd _plotCommand;
 
     std::vector<PlotInstance*> _openPlots;
+    SdlManager* _sdlManager;
 };
 
