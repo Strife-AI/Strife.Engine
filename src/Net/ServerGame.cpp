@@ -33,6 +33,8 @@ void BaseGameInstance::RunFrame(float currentTime)
 
     Scene* scene = sceneManager.GetScene();
 
+    scene->absoluteTime = currentTime;
+
     auto currentFrameStart = std::chrono::high_resolution_clock::now();
 
     if (scene->isFirstFrame)
@@ -60,8 +62,9 @@ void BaseGameInstance::RunFrame(float currentTime)
         //_soundManager->SetListenerPosition(soundListener->Center(), soundListener->GetVelocity());
     }
 
-    scene->UpdateEntities(renderDeltaTime);
     UpdateNetwork();
+    scene->UpdateEntities(renderDeltaTime);
+    PostUpdateEntities();
 
     bool allowConsole = !isHeadless && g_developerMode.Value();
     auto console = engine->GetConsole();
@@ -207,23 +210,38 @@ void ServerGame::UpdateNetwork()
     {
         switch ((PacketType)packet->data[0])
         {
-        case PacketType::NewConnection:
-            HandleNewConnection(packet);
-            break;
+            case PacketType::NewConnection:
+                HandleNewConnection(packet);
+                break;
 
-        case PacketType::UpdateRequest:
-        {
-            int clientId = GetClientId(packet->systemAddress);
-            if (clientId == -1) continue;
+            case PacketType::UpdateRequest:
+            {
+                int clientId = GetClientId(packet->systemAddress);
+                if (clientId == -1) continue;
 
-            SLNet::BitStream request(packet->data, packet->length, false);
-            SLNet::BitStream response;
+                SLNet::BitStream request(packet->data, packet->length, false);
+                SLNet::BitStream response;
 
-            request.IgnoreBytes(1);
-            onUpdateRequest(request, response, clientId);
-            networkInterface.SendUnreliable(packet->systemAddress, response);
-            break;
-        }
+                request.IgnoreBytes(1);
+                onUpdateRequest(request, response, clientId);
+
+                //networkInterface.SendReliable(packet->systemAddress, response);
+                break;
+            }
+            case PacketType::Ping:
+            {
+                SLNet::BitStream request(packet->data, packet->length, false);
+                request.IgnoreBytes(1);
+
+                float sentClientTime;
+                request.Read(sentClientTime);
+
+                SLNet::BitStream response;
+                response.Write(PacketType::PingResponse);
+                response.Write(sentClientTime);
+                networkInterface.SendUnreliable(packet->systemAddress, response);
+                break;
+            }
         }
     }
 }
@@ -235,36 +253,71 @@ void ClientGame::UpdateNetwork()
     {
         switch ((PacketType)packet->data[0])
         {
-        case PacketType::NewConnectionResponse:
-        {
-            SLNet::BitStream message(packet->data, packet->length, false);
-            message.IgnoreBytes(1);
-
-            message.Read(clientId);
-
-            StringId mapName;
-            message.Read(mapName.key);
-            if(!sceneManager.TrySwitchScene(mapName))
+            case PacketType::NewConnectionResponse:
             {
-                Log("Failed to switch scene\n");
-                return;
-            }
+                SLNet::BitStream message(packet->data, packet->length, false);
+                message.IgnoreBytes(1);
 
-            Log("Assigned client id %d\n", clientId);
-            serverAddress = packet->systemAddress;
-            sceneManager.GetNewScene()->SendEvent(JoinedServerEvent(clientId));
-            break;
-        }
-        case PacketType::UpdateResponse:
-        {
-            SLNet::BitStream stream(packet->data, packet->length, false);
-            stream.IgnoreBytes(1);
-            onUpdateResponse(stream);
-            break;
-        }
+                message.Read(clientId);
+
+                StringId mapName;
+                message.Read(mapName.key);
+                if(!sceneManager.TrySwitchScene(mapName))
+                {
+                    Log("Failed to switch scene\n");
+                    return;
+                }
+
+                Log("Assigned client id %d\n", clientId);
+                serverAddress = packet->systemAddress;
+                sceneManager.GetNewScene()->SendEvent(JoinedServerEvent(clientId));
+                break;
+            }
+            case PacketType::UpdateResponse:
+            {
+                SLNet::BitStream stream(packet->data, packet->length, false);
+                stream.IgnoreBytes(1);
+                onUpdateResponse(stream);
+                break;
+            }
+            case PacketType::PingResponse:
+            {
+                SLNet::BitStream stream(packet->data, packet->length, false);
+                stream.IgnoreBytes(1);
+                float sentTime;
+                stream.Read(sentTime);
+
+                Log("Ping time: %f ms\n", 1000 * (sceneManager.GetScene()->absoluteTime - sentTime));
+                break;
+            }
         }
     }
 }
+
+void ClientGame::PingServer()
+{
+    SLNet::BitStream request;
+    request.Write(PacketType::Ping);
+    float sentTime = sceneManager.GetScene()->absoluteTime;
+
+    request.Write(sentTime);
+    networkInterface.SendUnreliable(serverAddress, request);
+}
+
+void PingCommand(ConsoleCommandBinder& binder)
+{
+    binder.Help("Measures ping time to the server");
+
+    auto clientGame = binder.GetEngine()->GetClientGame();
+    if(clientGame == nullptr)
+    {
+        binder.GetConsole()->Log("No client game running\n");
+        return;
+    }
+
+    clientGame->PingServer();
+}
+ConsoleCmd pingCmd("ping", PingCommand);
 
 int ServerGame::AddClient(const SLNet::AddressOrGUID& address)
 {
@@ -295,4 +348,26 @@ int ServerGame::GetClientId(const SLNet::AddressOrGUID& address)
     }
 
     return -1;
+}
+
+void ServerGame::PostUpdateEntities()
+{
+    if(rand() % 2 == 0)
+    {
+        return;
+    }
+
+    SLNet::BitStream worldUpdateStream;
+    for(auto& client : clients)
+    {
+        if(client.status != ClientConnectionStatus::Connected) continue;
+
+        auto replicationManager = sceneManager.GetScene()->GetService<ReplicationManager>();
+
+        worldUpdateStream.Reset();
+        if(replicationManager->Server_SendWorldUpdate(client.clientId, worldUpdateStream))
+        {
+            networkInterface.SendReliable(client.address, worldUpdateStream);
+        }
+    }
 }

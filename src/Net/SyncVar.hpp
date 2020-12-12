@@ -285,9 +285,13 @@ struct SyncVar final : ISyncVar
 
     void AddValue(const T& value, float time, uint32 snapshotId)
     {
-        if (!snapshots.IsEmpty() && time <= (*(--snapshots.end())).time)
+        if (!snapshots.IsEmpty())
         {
-            return;
+            auto& lastSnapshot = *(--snapshots.end());
+            float lastTime = lastSnapshot.time;
+
+            if(time <= lastTime)
+                return;
         }
 
         if (snapshots.IsFull())
@@ -316,6 +320,8 @@ struct SyncVar final : ISyncVar
     {
         auto it = snapshots.begin();
 
+        auto& last = *(--snapshots.end());
+
         if (snapshots.IsEmpty())
         {
             return currentValue;
@@ -339,7 +345,7 @@ struct SyncVar final : ISyncVar
             auto& currentSnapshot = *it;
             auto& nextSnapshot = *next;
 
-            if (nextSnapshot.time > time)
+            if (nextSnapshot.time >= time)
             {
                 if (interpolation == SyncVarInterpolation::Linear)
                 {

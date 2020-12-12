@@ -312,7 +312,7 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, ClientGame* g
         ReadWriteBitStream stream(message, false);
         request.ReadWrite(stream);
 
-        game->networkInterface.SendUnreliable(game->serverAddress, message);
+        game->networkInterface.SendReliable(game->serverAddress, message);
     }
 }
 
@@ -395,7 +395,7 @@ void CheckForChangedVars(VarGroup* group, uint32 lastClientSequenceId)
 {
     for (int i = 0; i < group->varCount; ++i)
     {
-        group->changed[i] = group->vars[i]->CurrentValueChangedFromSequence(lastClientSequenceId);
+        group->changed[i] = true; //group->vars[i]->CurrentValueChangedFromSequence(lastClientSequenceId);
         group->changedCount += group->changed[i];
     }
 }
@@ -448,8 +448,6 @@ void ReadVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, float 
     PartitionVars(head, &frequent, &infrequent);
 
     bool anyChanged = stream.ReadBit();
-
-
 
     if (!anyChanged)
     {
@@ -521,14 +519,18 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
             }
         }
     }
+}
 
+bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& response)
+{
+    auto& client = _clientStateByClientId[clientId];
     ReadWriteBitStream responseStream(response, false);
 
     response.Write(PacketType::UpdateResponse);
 
     if(client.lastReceivedSnapshotId == _currentSnapshotId)
     {
-        return;
+        return false;
     }
 
     UpdateResponseMessage responseMessage;
@@ -546,7 +548,7 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
 
         if (lastClientState == nullptr)
         {
-            Log("Have to send from %d -> %d\n", clientState.lastReceivedSnapshotId, _currentSnapshotId);
+            //Log("Have to send from %d -> %d\n", clientState.lastReceivedSnapshotId, _currentSnapshotId);
             lastClientState = &g_emptyWorldState;
         }
 
@@ -564,7 +566,7 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
 
         // Send new entities that don't exist on the client
         for (auto addedEntity : diff.addedEntities)
-        {   
+        {
             auto net = _componentsByNetId[addedEntity];
             auto entity = net->owner;
 
@@ -598,6 +600,8 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
             WriteVars(c.second->owner->syncVarHead, fromSnapshotId, toSnapshotId, response);
         }
     }
+
+    return true;
 }
 
 void ReplicationManager::Client_AddPlayerCommand(const PlayerCommand& command)
@@ -731,14 +735,14 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
     client.lastServerSequenceNumber = message.lastServerSequence;
     client.lastServerExecuted = message.lastServerExecuted;
 
+    auto cmd = client.GetCommandById(client.lastServerExecuted);
+
+    float time = cmd == nullptr
+         ? -1
+         : cmd->timeRecorded;
+
     for (auto& c : _componentsByNetId)
     {
-        auto cmd = client.GetCommandById(client.lastServerExecuted);
-
-        float time = cmd == nullptr
-            ? -1
-            : cmd->timeRecorded;
-
         ReadVars(c.second->owner->syncVarHead, snapshotFromId, client.lastReceivedSnapshotId, time, stream.stream);
     }
 }

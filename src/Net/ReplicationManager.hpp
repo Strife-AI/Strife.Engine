@@ -113,6 +113,7 @@ public:
     void Client_AddPlayerCommand(const PlayerCommand& command);
 
     void Server_ProcessUpdateRequest(SLNet::BitStream& message, SLNet::BitStream& response, int clientId);
+    bool Server_SendWorldUpdate(int clientId, SLNet::BitStream &response);
 
     WorldState GetCurrentWorldState();
 
