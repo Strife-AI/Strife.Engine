@@ -80,7 +80,7 @@ struct NetworkInterface
                 (char*)data.data(),
                 data.size_bytes(),
                 PacketPriority::HIGH_PRIORITY,
-                PacketReliability::RELIABLE,
+                PacketReliability::RELIABLE_ORDERED_WITH_ACK_RECEIPT,
                 0,
                 address,
                 false);
@@ -161,6 +161,7 @@ struct BaseGameInstance
     Scene* GetScene() { return sceneManager.GetScene(); }
 
     virtual void UpdateNetwork() = 0;
+    virtual void PostUpdateEntities() { }
 
     SceneManager sceneManager;
     NetworkInterface networkInterface;
@@ -179,11 +180,12 @@ struct ServerGame : BaseGameInstance
         : BaseGameInstance(engine, raknetInterface, localAddress_, true)
     {
         isHeadless = true;
-        targetTickRate = 30;
+        targetTickRate = 10;
     }
 
     void HandleNewConnection(SLNet::Packet* packet);
     void UpdateNetwork() override;
+    void PostUpdateEntities() override;
     int AddClient(const SLNet::AddressOrGUID& address);
     int GetClientId(const SLNet::AddressOrGUID& address);
 
@@ -204,6 +206,7 @@ struct ClientGame : BaseGameInstance
     }
 
     void UpdateNetwork() override;
+    void PingServer();
 
     std::function<void(SLNet::BitStream& message)> onUpdateResponse;
     int clientId = -1;
