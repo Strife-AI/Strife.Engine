@@ -323,7 +323,7 @@ float ClientGame::GetServerClockOffset()
 {
     if(pingBuffer.size() == 0)
     {
-        return 0;
+        return 1e10;
     }
 
     std::sort(pingBuffer.begin(), pingBuffer.end());
