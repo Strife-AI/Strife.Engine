@@ -4,6 +4,8 @@
 
 #include "Net/ServerGame.hpp"
 #include "Scene/Scene.hpp"
+#include "Engine.hpp"
+
 
 #ifdef _WIN32
 namespace SLNet
@@ -105,10 +107,12 @@ struct EntitySnapshotMessage
     void ReadWrite(ReadWriteBitStream& stream)
     {
         stream
+            .Add(sentTime)
             .Add(lastServerSequence)
             .Add(lastServerExecuted);
     }
 
+    float sentTime;
     int lastServerSequence;
     int lastServerExecuted;
 };
@@ -589,6 +593,7 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
         EntitySnapshotMessage responseMessage;
         responseMessage.lastServerSequence = client.lastServerSequenceNumber;
         responseMessage.lastServerExecuted = client.lastServerExecuted;
+        responseMessage.sentTime = scene->absoluteTime;
 
         responseMessage.ReadWrite(responseStream);
 
@@ -737,9 +742,8 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
 
     auto cmd = client.GetCommandById(client.lastServerExecuted);
 
-    float time = cmd == nullptr
-         ? -1
-         : cmd->timeRecorded;
+    float time = message.sentTime - scene->GetEngine()->GetClientGame()->GetServerClockOffset();
+    Log("Local time: %f\n", time);
 
     for (auto& c : _componentsByNetId)
     {

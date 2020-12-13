@@ -180,7 +180,7 @@ struct ServerGame : BaseGameInstance
         : BaseGameInstance(engine, raknetInterface, localAddress_, true)
     {
         isHeadless = true;
-        targetTickRate = 10;
+        targetTickRate = 30;
     }
 
     void HandleNewConnection(SLNet::Packet* packet);
@@ -196,8 +196,6 @@ struct ServerGame : BaseGameInstance
 
 struct ClientGame : BaseGameInstance
 {
-    static constexpr int MaxClients = 8;
-
     ClientGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_)
         : BaseGameInstance(engine, raknetInterface, localAddress_, false)
     {
@@ -206,9 +204,12 @@ struct ClientGame : BaseGameInstance
     }
 
     void UpdateNetwork() override;
-    void PingServer();
+    void MeasureRoundTripTime();
+
+    float GetServerClockOffset();
 
     std::function<void(SLNet::BitStream& message)> onUpdateResponse;
     int clientId = -1;
     SLNet::AddressOrGUID serverAddress;
+    std::vector<float> pingBuffer;
 };

@@ -127,6 +127,8 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 
                 scene->GetCameraFollower()->FollowEntity(player);
                 scene->GetCameraFollower()->CenterOn(player->Center());
+
+                break;
             }
         }
     }
@@ -237,7 +239,7 @@ void InputService::HandleInput()
 
                 command.keys = keyBits;
                 command.fixedUpdateCount = fixedUpdateCount;
-                command.timeRecorded = scene->relativeTime - command.fixedUpdateCount * Scene::PhysicsDeltaTime;
+                command.timeRecorded = currentFixedUpdateId * Scene::PhysicsDeltaTime - command.fixedUpdateCount * Scene::PhysicsDeltaTime;
                 command.netId = self->net->netId;
                 fixedUpdateCount = 0;
 

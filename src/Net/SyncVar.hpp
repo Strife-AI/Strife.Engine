@@ -26,7 +26,7 @@ enum class SyncVarInterpolation
 template<typename T>
 bool TryLerp(const T& start, const T& end, float t, T& outValue)
 {
-    if constexpr (std::is_integral_v<T>)
+    if constexpr (std::is_arithmetic_v<T>)
     {
         outValue = Lerp(start, end, t);
         return true;
@@ -66,7 +66,7 @@ inline void WriteSyncVarDelta<bool>(const bool& before, const bool& after, bool 
 template<>
 inline void WriteSyncVarDelta<Vector2>(const Vector2& before, const Vector2& after, bool forceFullUpdate, SyncVarDeltaMode mode, SLNet::BitStream& stream)
 {
-    if (mode == SyncVarDeltaMode::SmallIntegerOffset)
+    if (mode == SyncVarDeltaMode::SmallIntegerOffset && false)
     {
         int beforeX = round(before.x);
         int beforeY = round(before.y);
@@ -106,7 +106,7 @@ inline void WriteSyncVarDelta<Vector2>(const Vector2& before, const Vector2& aft
 template<>
 inline void ReadSyncVarDelta<Vector2>(const Vector2& before, Vector2& result, SyncVarDeltaMode mode, SLNet::BitStream& stream)
 {
-    if (mode == SyncVarDeltaMode::SmallIntegerOffset)
+    if (mode == SyncVarDeltaMode::SmallIntegerOffset && false)
     {
         unsigned int encodedOffset = 0;
         stream.ReadBits(reinterpret_cast<unsigned char*>(&encodedOffset), 9);
@@ -206,6 +206,8 @@ struct SyncVar final : ISyncVar
         {
             newValue = currentValue;
         }
+
+        newValue = currentValue;
 
         WriteSyncVarDelta(oldValue, newValue, !hasOldValue, deltaMode, stream);
     }

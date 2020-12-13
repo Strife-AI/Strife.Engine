@@ -47,7 +47,7 @@ void BaseGameInstance::RunFrame(float currentTime)
 
     float renderDeltaTime = !engine->IsPaused()
         ? realDeltaTime
-        : 0;
+        : realDeltaTime; //0;
 
     scene->deltaTime = renderDeltaTime;
 
@@ -230,6 +230,7 @@ void ServerGame::UpdateNetwork()
             }
             case PacketType::Ping:
             {
+                Log("Got ping\n");
                 SLNet::BitStream request(packet->data, packet->length, false);
                 request.IgnoreBytes(1);
 
@@ -239,6 +240,7 @@ void ServerGame::UpdateNetwork()
                 SLNet::BitStream response;
                 response.Write(PacketType::PingResponse);
                 response.Write(sentClientTime);
+                response.Write(GetScene()->absoluteTime);
                 networkInterface.SendUnreliable(packet->systemAddress, response);
                 break;
             }
@@ -271,6 +273,8 @@ void ClientGame::UpdateNetwork()
                 Log("Assigned client id %d\n", clientId);
                 serverAddress = packet->systemAddress;
                 sceneManager.GetNewScene()->SendEvent(JoinedServerEvent(clientId));
+
+                MeasureRoundTripTime();
                 break;
             }
             case PacketType::UpdateResponse:
@@ -285,23 +289,45 @@ void ClientGame::UpdateNetwork()
                 SLNet::BitStream stream(packet->data, packet->length, false);
                 stream.IgnoreBytes(1);
                 float sentTime;
+                float serverTime;
                 stream.Read(sentTime);
+                stream.Read(serverTime);
 
-                Log("Ping time: %f ms\n", 1000 * (sceneManager.GetScene()->absoluteTime - sentTime));
+                float pingTime = (sceneManager.GetScene()->relativeTime - sentTime);
+                float clockOffset = serverTime + pingTime / 2 - sentTime;
+
+                Log("Clock offset: %f ms\n", clockOffset);
+                pingBuffer.push_back(clockOffset);
                 break;
             }
         }
     }
 }
 
-void ClientGame::PingServer()
+void ClientGame::MeasureRoundTripTime()
 {
-    SLNet::BitStream request;
-    request.Write(PacketType::Ping);
-    float sentTime = sceneManager.GetScene()->absoluteTime;
+    pingBuffer.clear();
 
-    request.Write(sentTime);
-    networkInterface.SendUnreliable(serverAddress, request);
+    for(int i = 0; i < 5; ++i)
+    {
+        SLNet::BitStream request;
+        request.Write(PacketType::Ping);
+        float sentTime = sceneManager.GetScene()->relativeTime;
+
+        request.Write(sentTime);
+        networkInterface.SendUnreliable(serverAddress, request);
+    }
+}
+
+float ClientGame::GetServerClockOffset()
+{
+    if(pingBuffer.size() == 0)
+    {
+        return 0;
+    }
+
+    std::sort(pingBuffer.begin(), pingBuffer.end());
+    return pingBuffer[pingBuffer.size() / 2];
 }
 
 void PingCommand(ConsoleCommandBinder& binder)
@@ -315,7 +341,7 @@ void PingCommand(ConsoleCommandBinder& binder)
         return;
     }
 
-    clientGame->PingServer();
+    clientGame->MeasureRoundTripTime();
 }
 ConsoleCmd pingCmd("ping", PingCommand);
 
@@ -352,11 +378,6 @@ int ServerGame::GetClientId(const SLNet::AddressOrGUID& address)
 
 void ServerGame::PostUpdateEntities()
 {
-    if(rand() % 2 == 0)
-    {
-        return;
-    }
-
     SLNet::BitStream worldUpdateStream;
     for(auto& client : clients)
     {
