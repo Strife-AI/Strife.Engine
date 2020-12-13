@@ -15,6 +15,15 @@ namespace SLNet
 }
 #endif
 
+//#define NET_DEBUG
+
+#ifdef NET_DEBUG
+    #define NetLog Log
+#else
+    #define NetLog(...)
+#endif
+
+
 enum class MessageType : uint8
 {
     SpawnEntity,
@@ -232,6 +241,8 @@ void ReplicationManager::Client_ReceiveUpdateResponse(SLNet::BitStream& stream)
 
     client.lastReceivedSnapshotId = responseMessage.snapshotTo;
 
+    NetLog("=========================Receive Update Response=========================\n");
+
     while (stream.GetNumberOfUnreadBits() >= 8)
     {
         uint8 messageType;
@@ -240,18 +251,22 @@ void ReplicationManager::Client_ReceiveUpdateResponse(SLNet::BitStream& stream)
         switch ((MessageType)messageType)
         {
         case MessageType::SpawnEntity:
+            NetLog("    Receive spawn entity\n");
             ProcessSpawnEntity(rw);
             break;
 
         case MessageType::EntitySnapshot:
+            NetLog("    Receive entity snapshot\n");
             ProcessEntitySnapshotMessage(rw, responseMessage.snapshotFrom);
             break;
 
         case MessageType::RemoveEntity:
+            NetLog("    Receive destroy entity\n");
             ProcessDestroyEntity(rw);
             break;
 
         default:
+            NetLog("Unknown message type: %d\n", messageType);
             break;
         }
     }
@@ -399,7 +414,7 @@ void CheckForChangedVars(VarGroup* group, uint32 lastClientSequenceId)
 {
     for (int i = 0; i < group->varCount; ++i)
     {
-        group->changed[i] = true; //group->vars[i]->CurrentValueChangedFromSequence(lastClientSequenceId);
+        group->changed[i] = group->vars[i]->CurrentValueChangedFromSequence(lastClientSequenceId);
         group->changedCount += group->changed[i];
     }
 }
@@ -740,10 +755,7 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
     client.lastServerSequenceNumber = message.lastServerSequence;
     client.lastServerExecuted = message.lastServerExecuted;
 
-    auto cmd = client.GetCommandById(client.lastServerExecuted);
-
     float time = message.sentTime - scene->GetEngine()->GetClientGame()->GetServerClockOffset();
-    Log("Local time: %f\n", time);
 
     for (auto& c : _componentsByNetId)
     {

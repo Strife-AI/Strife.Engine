@@ -116,11 +116,11 @@ void PlayerEntity::Render(Renderer* renderer)
         renderer->RenderLine(Center(), attackPosition.currentValue, Color::Red(), -1);
     }
 
-//    for(auto p : PositionData().snapshots)
-//    {
-//        renderer->RenderCircle(p.
-//        value, 2, Color::Red(), -1);
-//    }
+    for(auto p : PositionData().snapshots)
+    {
+        renderer->RenderCircle(p.
+        value, 2, Color::Red(), -1);
+    }
 
     //if(net->netId == )
 //    printf("========================================\n");

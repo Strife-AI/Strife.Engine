@@ -207,8 +207,6 @@ struct SyncVar final : ISyncVar
             newValue = currentValue;
         }
 
-        newValue = currentValue;
-
         WriteSyncVarDelta(oldValue, newValue, !hasOldValue, deltaMode, stream);
     }
 
