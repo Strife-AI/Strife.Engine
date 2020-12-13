@@ -50,8 +50,6 @@ struct PlayerNetwork : StrifeML::NeuralNetwork<PlayerModelInput, PlayerDecision,
     void TrainBatch(Grid<const SampleType> input, StrifeML::TrainingBatchResult& outResult) override
     {
         auto spacialInput = StrifeML::PackIntoTensor(input, [=](auto& sample) { return sample.input.grid; });
-
-        Log("Train batch\n");
     }
 };
 

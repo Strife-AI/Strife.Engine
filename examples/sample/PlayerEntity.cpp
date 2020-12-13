@@ -116,11 +116,31 @@ void PlayerEntity::Render(Renderer* renderer)
         renderer->RenderLine(Center(), attackPosition.currentValue, Color::Red(), -1);
     }
 
-    for(auto p : PositionData().snapshots)
-    {
-        renderer->RenderCircle(p.
-        value, 2, Color::Red(), -1);
-    }
+//    for(auto p : PositionData().snapshots)
+//    {
+//        renderer->RenderCircle(p.
+//        value, 2, Color::Red(), -1);
+//    }
+
+    //if(net->netId == )
+//    printf("========================================\n");
+//    Vector2 prev(0, 0);
+//
+//    for(auto it = PositionData().snapshots.begin(); it != PositionData().snapshots.end(); ++it)
+//    {
+//        auto next = it;
+//        ++next;
+//
+//        if(next == PositionData().snapshots.end()) break;
+//
+//        float diff = (*next).time - (*it).time;
+//
+//        float length = ((*next).value - (*it).value).Length();
+//
+//        prev = (*it).value;
+//
+//        printf("time: %f, position: %f %f\n", (*it).time, (*it).value.x, (*it).value.y);
+//    }
 }
 
 void PlayerEntity::ServerFixedUpdate(float deltaTime)
