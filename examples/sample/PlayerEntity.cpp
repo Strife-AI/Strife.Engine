@@ -9,6 +9,7 @@
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
     rigidBody = AddComponent<RigidBodyComponent>(b2_dynamicBody);
+
     auto box = rigidBody->CreateBoxCollider(Dimensions());
 
     box->SetDensity(1);
