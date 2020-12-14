@@ -7,9 +7,10 @@
 #include <slikenet/BitStream.h>
 #include <slikenet/MessageIdentifiers.h>
 #include <slikenet/peerinterface.h>
-
+#include "Math/Vector2.hpp"
 
 #include "Scene/SceneManager.hpp"
+#include "Memory/StringId.hpp"
 
 namespace SLNet {
     class BitStream;
@@ -27,7 +28,8 @@ enum class PacketType : unsigned char
     UpdateResponse,
     ServerFull,
     Ping,
-    PingResponse
+    PingResponse,
+    RpcCall
 };
 
 enum class ClientConnectionStatus
@@ -35,6 +37,62 @@ enum class ClientConnectionStatus
     Connected,
     NotConnected
 };
+
+
+struct ReadWriteBitStream
+{
+    ReadWriteBitStream(SLNet::BitStream& stream_, bool isReading_)
+            : stream(stream_),
+              isReading(isReading_)
+    {
+
+    }
+
+    template<typename T>
+    ReadWriteBitStream& Add(T& out)
+    {
+        if (isReading) stream.Read(out);
+        else stream.Write(out);
+
+        return *this;
+    }
+
+    ReadWriteBitStream& Add(Vector2& out);
+    ReadWriteBitStream& Add(std::string& str);
+
+    SLNet::BitStream& stream;
+    bool isReading;
+};
+
+struct IRemoteProcedureCall
+{
+    virtual void Serialize(ReadWriteBitStream& stream) { }
+    virtual void Execute() = 0;
+    virtual const char* GetName() const = 0;
+};
+
+template<typename T>
+constexpr const char* GetRpcName();
+
+template<typename T>
+struct RemoteProcedureCall : IRemoteProcedureCall
+{
+    const char* GetName() const override
+    {
+        return GetRpcName<T>();
+    }
+
+    static void ExecuteInternal(ReadWriteBitStream& stream)
+    {
+        T rpc;
+        rpc.Serialize(stream);
+        rpc.Execute();
+    }
+};
+
+#define DEFINE_RPC(structName_) struct structName_; \
+    template<> inline constexpr const char* GetRpcName<structName_>() { return #structName_; } \
+    struct structName_ : RemoteProcedureCall<structName_>
 
 struct NetworkInterface
 {
@@ -139,6 +197,31 @@ struct NetworkInterface
     SLNet::Packet* lastPacket = nullptr;
 };
 
+class RpcManager
+{
+public:
+    RpcManager(NetworkInterface* networkInterface)
+        : _networkInterface(networkInterface)
+    {
+
+    }
+
+    template<typename T>
+    void Register()
+    {
+        // TODO: check for duplicates
+        _handlersByStringIdName[StringId(GetRpcName<T>()).key] = T::ExecuteInternal;
+    }
+
+    void Execute(SLNet::AddressOrGUID address, const IRemoteProcedureCall& rpc);
+
+    void Receive(SLNet::BitStream& stream);
+
+private:
+    std::unordered_map<unsigned int, void (*)(ReadWriteBitStream& stream)> _handlersByStringIdName;
+    NetworkInterface* _networkInterface;
+};
+
 struct ServerGameClient
 {
     ClientConnectionStatus status = ClientConnectionStatus::NotConnected;
@@ -153,6 +236,7 @@ struct BaseGameInstance
     BaseGameInstance(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_, bool isServer)
         : sceneManager(engine, isServer),
         networkInterface(raknetInterface),
+        rpcManager(&networkInterface),
         localAddress(localAddress_),
         engine(engine)
     {
@@ -168,6 +252,7 @@ struct BaseGameInstance
 
     SceneManager sceneManager;
     NetworkInterface networkInterface;
+    RpcManager rpcManager;
     SLNet::AddressOrGUID localAddress;
     Engine* engine;
     bool isHeadless = false;
@@ -179,12 +264,7 @@ struct ServerGame : BaseGameInstance
 {
     static constexpr int MaxClients = 8;
 
-    ServerGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_)
-        : BaseGameInstance(engine, raknetInterface, localAddress_, true)
-    {
-        isHeadless = true;
-        targetTickRate = 30;
-    }
+    ServerGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_);
 
     void HandleNewConnection(SLNet::Packet* packet);
     void UpdateNetwork() override;
@@ -219,4 +299,28 @@ struct ClientGame : BaseGameInstance
     int clientId = -1;
     SLNet::AddressOrGUID serverAddress;
     std::vector<float> pingBuffer;
+};
+
+DEFINE_RPC(ServerSetPlayerInfoRpc)
+{
+    ServerSetPlayerInfoRpc()
+    {
+
+    }
+
+    ServerSetPlayerInfoRpc(const std::string& name)
+            : name(name)
+    {
+
+    }
+
+    void Serialize(ReadWriteBitStream& rw)
+    {
+        printf("Begin serialize\n");
+        rw.Add(name);
+    }
+
+    void Execute() override;
+
+    std::string name;
 };

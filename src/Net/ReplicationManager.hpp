@@ -70,6 +70,7 @@ struct ClientState
     unsigned int clientClock = 0;
 
     CircularQueue<PlayerCommand, 128> commands;
+    std::string clientName;
 };
 
 class ReplicationManager : public ISceneService
@@ -107,6 +108,7 @@ public:
     }
 
     auto& GetClients() { return _clientStateByClientId; }
+    auto& GetClient(int clientId) { return _clientStateByClientId[clientId]; }
 
     void Client_ReceiveUpdateResponse(SLNet::BitStream& stream);
     void Client_SendUpdateRequest(float deltaTime, ClientGame* game);
