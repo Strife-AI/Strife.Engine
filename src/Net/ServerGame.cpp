@@ -266,6 +266,13 @@ void ServerGame::UpdateNetwork()
                 networkInterface.SendUnreliable(packet->systemAddress, response);
                 break;
             }
+            case PacketType::RpcCall:
+            {
+                SLNet::BitStream stream(packet->data, packet->length, false);
+                stream.IgnoreBytes(1);
+                rpcManager.Receive(stream);
+                break;
+            }
         }
     }
 }
@@ -309,6 +316,8 @@ void ClientGame::UpdateNetwork()
                 sceneManager.GetNewScene()->SendEvent(JoinedServerEvent(clientId));
 
                 MeasureRoundTripTime();
+
+                rpcManager.Execute(serverAddress, ServerSetPlayerInfoRpc("Michael"));
                 break;
             }
             case PacketType::ConnectionAttemptFailed:
@@ -342,6 +351,13 @@ void ClientGame::UpdateNetwork()
 
                 Log("Clock offset: %f ms\n", clockOffset);
                 pingBuffer.push_back(clockOffset);
+                break;
+            }
+            case PacketType::RpcCall:
+            {
+                SLNet::BitStream stream(packet->data, packet->length, false);
+                stream.IgnoreBytes(1);
+                rpcManager.Receive(stream);
                 break;
             }
         }
@@ -442,4 +458,81 @@ void ServerGame::PostUpdateEntities()
             networkInterface.SendReliable(client.address, worldUpdateStream);
         }
     }
+}
+
+ServerGame::ServerGame(Engine *engine, SLNet::RakPeerInterface *raknetInterface, SLNet::AddressOrGUID localAddress_)
+        : BaseGameInstance(engine, raknetInterface, localAddress_, true)
+{
+    isHeadless = true;
+    targetTickRate = 30;
+
+    rpcManager.Register<ServerSetPlayerInfoRpc>();
+}
+
+ReadWriteBitStream &ReadWriteBitStream::Add(Vector2 &out)
+{
+    if (isReading)
+    {
+        stream.Read(out.x);
+        stream.Read(out.y);
+    }
+    else
+    {
+        stream.Write(out.x);
+        stream.Write(out.y);
+    }
+
+    return *this;
+}
+
+ReadWriteBitStream &ReadWriteBitStream::Add(std::string& str)
+{
+    if(isReading)
+    {
+        SLNet::RakString rakstr;
+        stream.Read(rakstr);
+        str = rakstr.C_String();
+    }
+    else
+    {
+        stream.Write(str.c_str());
+    }
+
+    return *this;
+}
+
+void RpcManager::Execute(SLNet::AddressOrGUID address, const IRemoteProcedureCall &rpc)
+{
+    SLNet::BitStream stream;
+    stream.Write(PacketType::RpcCall);
+    stream.Write(StringId(rpc.GetName()).key);
+
+    ReadWriteBitStream rw(stream, false);
+
+    // Safe to const_cast<> because we're in reading mode
+    const_cast<IRemoteProcedureCall&>(rpc).Serialize(rw);
+
+    _networkInterface->SendReliable(address, stream);
+}
+
+void RpcManager::Receive(SLNet::BitStream &stream)
+{
+    unsigned int rpcName;
+    stream.Read(rpcName);
+
+    auto handler = _handlersByStringIdName.find(rpcName);
+    if(handler != _handlersByStringIdName.end())
+    {
+        ReadWriteBitStream rw(stream, true);
+        handler->second(rw);
+    }
+    else
+    {
+        Log("RPC not found: %u\n", rpcName);
+    }
+}
+
+void ServerSetPlayerInfoRpc::Execute()
+{
+    Log("Got set name RPC: %s\n", name.c_str());
 }

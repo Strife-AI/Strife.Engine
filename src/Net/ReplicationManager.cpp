@@ -31,44 +31,6 @@ enum class MessageType : uint8
     EntitySnapshot
 };
 
-struct ReadWriteBitStream
-{
-    ReadWriteBitStream(SLNet::BitStream& stream_, bool isReading_)
-        : stream(stream_),
-        isReading(isReading_)
-    {
-        
-    }
-
-    template<typename T>
-    ReadWriteBitStream& Add(T& out)
-    {
-        if (isReading) stream.Read(out);
-        else stream.Write(out);
-
-        return *this;
-    }
-
-    ReadWriteBitStream& Add(Vector2& out)
-    {
-        if (isReading)
-        {
-            stream.Read(out.x);
-            stream.Read(out.y);
-        }
-        else
-        {
-            stream.Write(out.x);
-            stream.Write(out.y);
-        }
-
-        return *this;
-    }
-
-    SLNet::BitStream& stream;
-    bool isReading;
-};
-
 struct SpawnEntityMessage
 {
     void ReadWrite(ReadWriteBitStream& stream)
