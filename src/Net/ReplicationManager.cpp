@@ -797,3 +797,16 @@ WorldState* ReplicationManager::GetWorldSnapshot(uint32 snapshotId)
 
     return nullptr;
 }
+
+void ReplicationManager::Server_ClientDisconnected(int clientId)
+{
+    for(auto c : components)
+    {
+        if(c->ownerClientId == clientId)
+        {
+            c->owner->Destroy();
+        }
+
+        _clientStateByClientId.erase(clientId);
+    }
+}

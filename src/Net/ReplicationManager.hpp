@@ -115,6 +115,8 @@ public:
     void Server_ProcessUpdateRequest(SLNet::BitStream& message, SLNet::BitStream& response, int clientId);
     bool Server_SendWorldUpdate(int clientId, SLNet::BitStream &response);
 
+    void Server_ClientDisconnected(int clientId);
+
     WorldState GetCurrentWorldState();
 
     uint32 GetCurrentSnapshotId() const { return _currentSnapshotId; }

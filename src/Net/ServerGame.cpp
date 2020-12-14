@@ -228,6 +228,20 @@ void ServerGame::UpdateNetwork()
                 //networkInterface.SendReliable(packet->systemAddress, response);
                 break;
             }
+            case PacketType::Disconnected:
+            {
+                int clientId = GetClientId(packet->systemAddress);
+
+                Log("Client %d disconnected\n", clientId);
+
+                if (clientId == -1) continue;
+
+                GetScene()->replicationManager->Server_ClientDisconnected(clientId);
+
+                clients[clientId].status = ClientConnectionStatus::NotConnected;
+
+                break;
+            }
             case PacketType::Ping:
             {
                 Log("Got ping\n");
@@ -344,6 +358,13 @@ float ClientGame::GetServerClockOffset()
 
     std::sort(pingBuffer.begin(), pingBuffer.end());
     return pingBuffer[pingBuffer.size() / 2];
+}
+
+void ClientGame::Disconnect()
+{
+    SLNet::BitStream stream;
+    stream.Write(PacketType::Disconnected);
+    networkInterface.SendReliable(serverAddress, stream);
 }
 
 void PingCommand(ConsoleCommandBinder& binder)
