@@ -193,13 +193,12 @@ void Engine::ResumeGame()
 
 void ConnectCommand(ConsoleCommandBinder& binder)
 {
-    std::string address;
-    int port;
+    std::string address = "142.93.49.216";
+    int port = 60001;
 
-    binder
-        .Bind(address, "serverAddress")
-        .Bind(port, "port")
-        .Help("Connects to a server");
+    binder.TryBind(address, "serverAddress");
+    binder.TryBind(port, "port");
+    binder.Help("Connects to a server");
 
     binder.GetEngine()->ConnectToServer(address.c_str(), port);
 }
@@ -261,6 +260,7 @@ void Engine::ConnectToServer(const char* address, int port)
 
     _serverGame = nullptr;
     _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
+    _clientGame->serverAddress = SLNet::SystemAddress(address, port);
 }
 
 void Engine::StartLocalServer(int port, StringId mapName)

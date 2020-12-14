@@ -192,7 +192,7 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
         Vector2 points[4];
         client->owner->Bounds().GetPoints(points);
 
-        bool useBeeLine = true;
+        bool useBeeLine = false;
         for (auto p : points)
         {
             RaycastResult result;

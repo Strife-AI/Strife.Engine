@@ -250,6 +250,12 @@ void ServerGame::UpdateNetwork()
 
 void ClientGame::UpdateNetwork()
 {
+    auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+    if(peerInterface->GetConnectionState(serverAddress) != SLNet::IS_CONNECTED)
+    {
+        Log("Status: %d\n", peerInterface->GetConnectionState(serverAddress));
+    }
+
     SLNet::Packet* packet;
     while (networkInterface.TryGetPacket(packet))
     {

@@ -310,7 +310,7 @@ private:
 
     virtual void OnSyncVarsUpdated() { }
 
-    SyncVar<Vector2> _position{ { 0, 0}, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent, SyncVarDeltaMode::Full };
+    SyncVar<Vector2> _position{ { 0, 0}, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent, SyncVarDeltaMode::SmallIntegerOffset };
 
     Vector2 _dimensions;
     float _rotation;

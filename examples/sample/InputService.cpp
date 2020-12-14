@@ -277,7 +277,7 @@ void InputService::Render(Renderer* renderer)
     PlayerEntity* currentPlayer;
     if (activePlayer.TryGetValue(currentPlayer))
     {
-        renderer->RenderRectangleOutline(currentPlayer->Bounds(), Color::White(), -1);
+        //renderer->RenderRectangleOutline(currentPlayer->Bounds(), Color::White(), -1);
     }
 
     renderer->RenderString(FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid), 1),

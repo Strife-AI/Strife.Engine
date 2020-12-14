@@ -386,6 +386,8 @@ void ReadVarGroup(VarGroup* group, uint32 fromSnapshotId, uint32 toSnapshotId, f
             bool wasChanged;
             stream.Read(wasChanged);
 
+            NetLog("   - Changed: %d (%s)\n", wasChanged, typeid(*group->vars[i]).name());
+
             if (wasChanged)
             {
                 group->vars[i]->ReadValueDeltaedFromSequence(fromSnapshotId, toSnapshotId,  time, stream);
@@ -393,6 +395,7 @@ void ReadVarGroup(VarGroup* group, uint32 fromSnapshotId, uint32 toSnapshotId, f
         }
         else
         {
+            NetLog("    - Read bool\n");
             group->vars[i]->ReadValueDeltaedFromSequence(fromSnapshotId, toSnapshotId, time, stream);
         }
     }
@@ -468,25 +471,33 @@ void ReadVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, float 
 
     bool anyChanged = stream.ReadBit();
 
+    NetLog("====Begin read vars====\n");
+    NetLog("Any changed: %d\n", anyChanged);
+
     if (!anyChanged)
     {
         return;
     }
     else
     {
+        NetLog("Reading frequent\n");
         ReadVarGroup(&frequent, fromSnapshotId, toSnapshotId, time, stream);
 
         if (infrequent.varCount == 0)
         {
-
+            NetLog("No infrequent vars\n");
         }
         else if (infrequent.varCount == 1)
         {
+            NetLog("One infrequent var\n");
             ReadVarGroup(&infrequent, fromSnapshotId, toSnapshotId, time, stream);
         }
         else
         {
+            NetLog("Multiple infrequent vars\n");
             bool anyInfrequentChanges = stream.ReadBit();
+
+            NetLog("Any infrequent changed: %d\n", anyInfrequentChanges);
 
             if (anyInfrequentChanges)
             {
@@ -567,7 +578,7 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
 
         if (lastClientState == nullptr)
         {
-            //Log("Have to send from %d -> %d\n", clientState.lastReceivedSnapshotId, _currentSnapshotId);
+            NetLog("Have to send from %d -> %d\n", clientState.lastReceivedSnapshotId, _currentSnapshotId);
             lastClientState = &g_emptyWorldState;
         }
 
@@ -697,9 +708,14 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
 
     if(_componentsByNetId.count(message.netId) != 0)
     {
+        NetLog("Spawn duplicate entity\n");
         // Duplicate entity
         return;
     }
+
+    NetLog("Spawn entity with netId %d\n", message.netId);
+
+    Log("Dimensions: %f %f\n", message.dimensions.x, message.dimensions.y);
 
     EntityProperty properties[] =
     {
@@ -722,6 +738,10 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
 
         entity->SendEvent(SpawnedOnClientEvent());
     }
+    else
+    {
+        Log("Tried to spawn entity that does not have net component\n");
+    }
 }
 
 void ReplicationManager::ProcessDestroyEntity(ReadWriteBitStream& stream)
@@ -737,6 +757,11 @@ void ReplicationManager::ProcessDestroyEntity(ReadWriteBitStream& stream)
         components.erase(net);
         _componentsByNetId.erase(component->second->netId);
         net->owner->Destroy();
+        NetLog("Destroyed entity %d\n", net->netId);
+    }
+    else
+    {
+        NetLog("Asked to destroy entity that didn't exist\n");
     }
 }
 
@@ -745,17 +770,14 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
     EntitySnapshotMessage message;
     message.ReadWrite(stream);
 
-    if(localClientId == -1)
-    {
-        return;
-    }
-
     auto& client = _clientStateByClientId[localClientId];
 
     client.lastServerSequenceNumber = message.lastServerSequence;
     client.lastServerExecuted = message.lastServerExecuted;
 
     float time = message.sentTime - scene->GetEngine()->GetClientGame()->GetServerClockOffset();
+
+    NetLog("Total client-side entities: %d\n", (int)_componentsByNetId.size());
 
     for (auto& c : _componentsByNetId)
     {
