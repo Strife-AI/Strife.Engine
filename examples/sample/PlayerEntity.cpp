@@ -116,11 +116,11 @@ void PlayerEntity::Render(Renderer* renderer)
         renderer->RenderLine(Center(), attackPosition.currentValue, Color::Red(), -1);
     }
 
-    for(auto p : PositionData().snapshots)
-    {
-        renderer->RenderCircle(p.
-        value, 2, Color::Red(), -1);
-    }
+//    for(auto p : PositionData().snapshots)
+//    {
+//        renderer->RenderCircle(p.
+//        value, 2, Color::Red(), -1);
+//    }
 
     //if(net->netId == )
 //    printf("========================================\n");
@@ -192,7 +192,7 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
         Vector2 points[4];
         client->owner->Bounds().GetPoints(points);
 
-        bool useBeeLine = false;
+        bool useBeeLine = true;
         for (auto p : points)
         {
             RaycastResult result;

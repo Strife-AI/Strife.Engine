@@ -127,8 +127,6 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 
                 scene->GetCameraFollower()->FollowEntity(player);
                 scene->GetCameraFollower()->CenterOn(player->Center());
-
-                break;
             }
         }
     }
