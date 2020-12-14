@@ -165,7 +165,7 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
                 PlayerEntity* player;
                 if (target->Is<PlayerEntity>(player))
                 {
-                    player->health.currentValue -= 100;
+                    player->health.currentValue -= 10;
 
                     if (player->health.currentValue <= 0)
                     {
