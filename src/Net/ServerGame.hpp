@@ -19,6 +19,7 @@ enum class PacketType : unsigned char
 {
     NewConnection = (unsigned char)ID_NEW_INCOMING_CONNECTION,
     ConnectionAttemptFailed = (unsigned char)ID_CONNECTION_ATTEMPT_FAILED,
+    Disconnected = (unsigned char)ID_DISCONNECTION_NOTIFICATION,
 
     NewConnectionResponse = (unsigned char)ID_USER_PACKET_ENUM + 1,
     UpdateRequest,
@@ -203,6 +204,8 @@ struct ClientGame : BaseGameInstance
         isHeadless = false;
         targetTickRate = 60;
     }
+
+    void Disconnect();
 
     void UpdateNetwork() override;
     void MeasureRoundTripTime();

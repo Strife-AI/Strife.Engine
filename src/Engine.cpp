@@ -97,11 +97,13 @@ Engine::~Engine()
             _console->SerializeVariables(_config.consoleVarsFile.value().c_str());
         }
 
-        auto peerInterface = SLNet::RakPeerInterface::GetInstance();
-        if(peerInterface->IsActive())
+        if(_clientGame != nullptr)
         {
-            peerInterface->Shutdown(500);
+            _clientGame->Disconnect();
         }
+
+        auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+        peerInterface->Shutdown(2000, 0, HIGH_PRIORITY);
     }
     catch(const std::exception& e)
     {
