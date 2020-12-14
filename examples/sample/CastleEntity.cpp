@@ -14,6 +14,7 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
     if(!scene->isServer && !properties.HasProperty("net"))
     {
         Destroy();
+        return;
     }
 
     spriteComponent->scale = Vector2(5.0f);

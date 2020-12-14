@@ -66,7 +66,7 @@ inline void WriteSyncVarDelta<bool>(const bool& before, const bool& after, bool 
 template<>
 inline void WriteSyncVarDelta<Vector2>(const Vector2& before, const Vector2& after, bool forceFullUpdate, SyncVarDeltaMode mode, SLNet::BitStream& stream)
 {
-    if (mode == SyncVarDeltaMode::SmallIntegerOffset && false)
+    if (mode == SyncVarDeltaMode::SmallIntegerOffset)
     {
         int beforeX = round(before.x);
         int beforeY = round(before.y);
@@ -79,8 +79,7 @@ inline void WriteSyncVarDelta<Vector2>(const Vector2& before, const Vector2& aft
 
         if (!forceFullUpdate
             && offsetX >= -11 && offsetX <= 10
-            && offsetY >= -11 && offsetY <= 10
-            && false)
+            && offsetY >= -11 && offsetY <= 10)
         {
             unsigned int encodedOffsetX = offsetX + 11;
             unsigned int encodedOffsetY = offsetY + 11;
@@ -106,7 +105,7 @@ inline void WriteSyncVarDelta<Vector2>(const Vector2& before, const Vector2& aft
 template<>
 inline void ReadSyncVarDelta<Vector2>(const Vector2& before, Vector2& result, SyncVarDeltaMode mode, SLNet::BitStream& stream)
 {
-    if (mode == SyncVarDeltaMode::SmallIntegerOffset && false)
+    if (mode == SyncVarDeltaMode::SmallIntegerOffset)
     {
         unsigned int encodedOffset = 0;
         stream.ReadBits(reinterpret_cast<unsigned char*>(&encodedOffset), 9);
