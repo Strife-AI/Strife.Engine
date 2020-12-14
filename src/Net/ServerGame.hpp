@@ -20,6 +20,7 @@ enum class PacketType : unsigned char
     NewConnection = (unsigned char)ID_NEW_INCOMING_CONNECTION,
     ConnectionAttemptFailed = (unsigned char)ID_CONNECTION_ATTEMPT_FAILED,
     Disconnected = (unsigned char)ID_DISCONNECTION_NOTIFICATION,
+    ConnectionLost = (unsigned char)ID_CONNECTION_LOST,
 
     NewConnectionResponse = (unsigned char)ID_USER_PACKET_ENUM + 1,
     UpdateRequest,
@@ -194,6 +195,8 @@ struct ServerGame : BaseGameInstance
     std::function<void(SLNet::BitStream& message, SLNet::BitStream& response, int clientId)> onUpdateRequest;
 
     ServerGameClient clients[MaxClients];
+
+    void DisconnectClient(int clientId);
 };
 
 struct ClientGame : BaseGameInstance
