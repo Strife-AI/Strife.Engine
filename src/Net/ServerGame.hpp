@@ -18,6 +18,7 @@ namespace SLNet {
 enum class PacketType : unsigned char
 {
     NewConnection = (unsigned char)ID_NEW_INCOMING_CONNECTION,
+    ConnectionAttemptFailed = (unsigned char)ID_CONNECTION_ATTEMPT_FAILED,
 
     NewConnectionResponse = (unsigned char)ID_USER_PACKET_ENUM + 1,
     UpdateRequest,

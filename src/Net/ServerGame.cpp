@@ -253,7 +253,7 @@ void ClientGame::UpdateNetwork()
     auto peerInterface = SLNet::RakPeerInterface::GetInstance();
     if(peerInterface->GetConnectionState(serverAddress) != SLNet::IS_CONNECTED)
     {
-        Log("Status: %d\n", peerInterface->GetConnectionState(serverAddress));
+        //Log("Status: %d\n", peerInterface->GetConnectionState(serverAddress));
     }
 
     SLNet::Packet* packet;
@@ -281,6 +281,16 @@ void ClientGame::UpdateNetwork()
                 sceneManager.GetNewScene()->SendEvent(JoinedServerEvent(clientId));
 
                 MeasureRoundTripTime();
+                break;
+            }
+            case PacketType::ConnectionAttemptFailed:
+            {
+                Log("Connection attempt failed\n");
+                break;
+            }
+            case (PacketType)ID_NO_FREE_INCOMING_CONNECTIONS:
+            {
+                Log("Connection failed: servere not accepting incoming connections\n");
                 break;
             }
             case PacketType::UpdateResponse:

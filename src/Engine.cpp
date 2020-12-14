@@ -9,6 +9,7 @@
 #include "Scene/Scene.hpp"
 #include "Memory/ResourceManager.hpp"
 #include <thread>
+#include "slikenet/PacketConsoleLogger.h"
 
 #include "../Strife.ML/NewStuff.hpp"
 #include "ML/ML.hpp"
@@ -215,7 +216,7 @@ void Engine::StartServer(int port, StringId mapName)
         peerInterface->Shutdown(500);
     }
 
-    auto result = peerInterface->Startup(1, &sd, 1);
+    auto result = peerInterface->Startup(ServerGame::MaxClients, &sd, 1);
 
     if (result != SLNet::RAKNET_STARTED)
     {
@@ -226,7 +227,7 @@ void Engine::StartServer(int port, StringId mapName)
 
     Log("Listening on %d...\n", port);
 
-    _serverGame = std::make_shared<ServerGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
+    _serverGame = std::make_shared<ServerGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("0.0.0.2", 1)));
     _clientGame = nullptr;
 
     _serverGame->sceneManager.TrySwitchScene(mapName);
@@ -259,9 +260,11 @@ void Engine::ConnectToServer(const char* address, int port)
     }
 
     _serverGame = nullptr;
-    _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
+    _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("0.0.0.2", 1)));
     _clientGame->serverAddress = SLNet::SystemAddress(address, port);
 }
+
+SLNet::PacketLogger logger;
 
 void Engine::StartLocalServer(int port, StringId mapName)
 {
@@ -275,7 +278,9 @@ void Engine::StartLocalServer(int port, StringId mapName)
 
     auto peerInterface = SLNet::RakPeerInterface::GetInstance();
 
-    _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.3", 1)));
+    peerInterface->AttachPlugin(&logger);
+
+    _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("0.0.0.3", 1)));
 
     _serverGame->networkInterface.SetLocalAddress(&_clientGame->networkInterface, _clientGame->localAddress);
     _clientGame->networkInterface.SetLocalAddress(&_serverGame->networkInterface, _serverGame->localAddress);
