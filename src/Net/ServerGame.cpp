@@ -231,14 +231,22 @@ void ServerGame::UpdateNetwork()
             case PacketType::Disconnected:
             {
                 int clientId = GetClientId(packet->systemAddress);
+                if (clientId == -1) continue;
 
                 Log("Client %d disconnected\n", clientId);
 
+                DisconnectClient(clientId);
+
+                break;
+            }
+            case PacketType::ConnectionLost:
+            {
+                int clientId = GetClientId(packet->systemAddress);
                 if (clientId == -1) continue;
 
-                GetScene()->replicationManager->Server_ClientDisconnected(clientId);
+                Log("Client %d lost connection\n", clientId);
 
-                clients[clientId].status = ClientConnectionStatus::NotConnected;
+                DisconnectClient(clientId);
 
                 break;
             }
@@ -260,6 +268,12 @@ void ServerGame::UpdateNetwork()
             }
         }
     }
+}
+
+void ServerGame::DisconnectClient(int clientId) {
+    GetScene()->replicationManager->Server_ClientDisconnected(clientId);
+
+    clients[clientId].status = ClientConnectionStatus::NotConnected;
 }
 
 void ClientGame::UpdateNetwork()
