@@ -313,7 +313,7 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, ClientGame* g
                 request.commands[commandCount].target = command.target;
                 request.commands[commandCount].moveToTarget = command.moveToTarget;
                 request.commands[commandCount].netId = command.netId;
-                request.commands[commandCount].moveToTarget = command.moveToTarget;
+                request.commands[commandCount].attackTarget = command.attackTarget;
                 request.commands[commandCount].attackNetId = command.attackNetId;
 
                 if (++commandCount == ClientUpdateRequestMessage::MaxCommands)

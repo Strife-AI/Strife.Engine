@@ -237,7 +237,6 @@ void InputService::HandleInput()
 
                 command.keys = keyBits;
                 command.fixedUpdateCount = fixedUpdateCount;
-                command.timeRecorded = currentFixedUpdateId * Scene::PhysicsDeltaTime - command.fixedUpdateCount * Scene::PhysicsDeltaTime;
                 command.netId = self->net->netId;
                 fixedUpdateCount = 0;
 
@@ -251,6 +250,7 @@ void InputService::HandleInput()
                             command.attackTarget = true;
                             command.attackNetId = player->net->netId;
                             attack = true;
+                            Log("Attack player %d\n", command.attackNetId);
                             break;
                         }
                     }
