@@ -1,3 +1,4 @@
+#include <Memory/Util.hpp>
 #include "PlayerEntity.hpp"
 #include "InputService.hpp"
 #include "Components/RigidBodyComponent.hpp"
@@ -89,7 +90,7 @@ void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
 
 void PlayerEntity::OnDestroyed()
 {
-    scene->SendEvent(PlayerRemovedFromGame(this));
+    RemoveFromVector(scene->GetService<InputService>()->players, this);
 }
 
 void PlayerEntity::Render(Renderer* renderer)

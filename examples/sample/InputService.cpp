@@ -13,6 +13,7 @@
 #include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
 #include "Tools/Console.hpp"
+#include "MessageHud.hpp"
 
 InputButton g_quit = InputButton(SDL_SCANCODE_ESCAPE);
 InputButton g_upButton(SDL_SCANCODE_W);
@@ -22,19 +23,6 @@ InputButton g_rightButton(SDL_SCANCODE_D);
 InputButton g_nextPlayer(SDL_SCANCODE_TAB);
 
 ConsoleVar<bool> autoConnect("auto-connect", false);
-
-/*
-
-[x] In every command, on the server, store where the player is at the end of that command
-[x] The server shouldn't delete a command when it's done. It should mark it as complete
-[x] When returning the snapshot to a client, rewind all the other players to the time of the snapshot (the time when the
-    current command started) by lerping between that position and the previous position
-
-[ ] Add a snapshot buffer to the players on the client that stores where they were given a command id
-[ ] Each snapshot should have a game time of when that took snapshot happened
-[ ] When rendering, use the current game time and snapshot buffer to determine where to draw the player
-
-*/
 
 void InputService::ReceiveEvent(const IEntityEvent& ev)
 {
@@ -61,6 +49,39 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     }
     if (ev.Is<UpdateEvent>())
     {
+        if(scene->isServer && !gameOver)
+        {
+            bool multipleClientsConnected = scene->replicationManager->GetClients().size() >= 2;
+
+            if(multipleClientsConnected)
+            {
+                if(players.size() == 0)
+                {
+                    scene->SendEvent(BroadcastToClientMessage("Draw!"));
+                    gameOver = true;
+                }
+                else
+                {
+                    bool onePlayerLeft = true;
+                    for(int i = 1; i < players.size(); ++i)
+                    {
+                        if(players[i]->net->ownerClientId != players[0]->net->ownerClientId)
+                        {
+                            onePlayerLeft = false;
+                            break;
+                        }
+                    }
+
+                    if(onePlayerLeft)
+                    {
+                        gameOver = true;
+                        auto& name = scene->replicationManager->GetClient(players[0]->net->ownerClientId).clientName;
+                        scene->SendEvent(BroadcastToClientMessage(name + " wins!"));
+                    }
+                }
+            }
+        }
+
         HandleInput();
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
@@ -250,7 +271,6 @@ void InputService::HandleInput()
                             command.attackTarget = true;
                             command.attackNetId = player->net->netId;
                             attack = true;
-                            Log("Attack player %d\n", command.attackNetId);
                             break;
                         }
                     }
@@ -275,11 +295,13 @@ void InputService::Render(Renderer* renderer)
     PlayerEntity* currentPlayer;
     if (activePlayer.TryGetValue(currentPlayer))
     {
-        //renderer->RenderRectangleOutline(currentPlayer->Bounds(), Color::White(), -1);
+        renderer->RenderRectangleOutline(currentPlayer->Bounds(), Color::White(), -1);
     }
 
+#if false
     renderer->RenderString(FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid), 1),
         status.c_str(),
         Vector2(0, 200) + scene->GetCamera()->TopLeft(),
         -1);
+#endif
 }
