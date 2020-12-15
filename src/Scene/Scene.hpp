@@ -122,7 +122,6 @@ public:
     float relativeTime = 0;
     float absoluteTime = 0;
     float lastFrameStart;
-    int levelId;
     bool isFirstFrame = true;
     bool inEditor = false;
     EntityReference<Entity> soundListener;

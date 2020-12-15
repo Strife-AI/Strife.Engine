@@ -108,7 +108,7 @@ public:
     }
 
     auto& GetClients() { return _clientStateByClientId; }
-    auto& GetClient(int clientId) { return _clientStateByClientId[clientId]; }
+    ClientState& GetClient(int clientId) { return _clientStateByClientId[clientId]; }
 
     void Client_ReceiveUpdateResponse(SLNet::BitStream& stream);
     void Client_SendUpdateRequest(float deltaTime, ClientGame* game);
