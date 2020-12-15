@@ -23,4 +23,5 @@ struct InputService : ISceneService
     int fixedUpdateCount = 0;
 
     int currentFixedUpdateId = 0;
+    bool gameOver = false;
 };

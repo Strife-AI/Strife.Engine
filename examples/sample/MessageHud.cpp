@@ -29,6 +29,10 @@ void MessageHud::ReceiveEvent(const IEntityEvent& ev)
         for (auto& message : _messages)
         {
             Vector2 messagePos(0, i * height);
+            renderEvent->renderer->RenderRectangle(
+                Rectangle(0, i * height, renderEvent->renderer->GetCamera()->ScreenSize().x, height),
+                Color(64, 0, 128, 128),
+                -0.99);
             renderEvent->renderer->RenderString(font, message.c_str(), messagePos, -1);
             ++i;
         }
