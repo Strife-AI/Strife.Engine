@@ -677,8 +677,6 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
 
     NetLog("Spawn entity with netId %d\n", message.netId);
 
-    Log("Dimensions: %f %f\n", message.dimensions.x, message.dimensions.y);
-
     EntityProperty properties[] =
     {
         { "type", message.type },
@@ -770,6 +768,5 @@ void ReplicationManager::Server_ClientDisconnected(int clientId)
         }
 
         _clientStateByClientId.erase(clientId);
-        Log("DISCONNECTED\n");
     }
 }

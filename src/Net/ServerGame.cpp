@@ -203,8 +203,12 @@ void ServerGame::HandleNewConnection(SLNet::Packet* packet)
 
     ForEachClient([=](auto& client)
     {
+        if (client.clientId == clientId)
+        {
+            return;
+        }
+
         auto& name = GetScene()->replicationManager->GetClient(client.clientId).clientName;
-        Log("Tell %d to set client %d to %s\n", clientId, client.clientId, name.c_str());
         rpcManager.Execute(packet->systemAddress, ClientSetPlayerInfoRpc(client.clientId, name));
     });
 }
@@ -258,7 +262,6 @@ void ServerGame::UpdateNetwork()
             }
             case PacketType::Ping:
             {
-                Log("Got ping\n");
                 SLNet::BitStream request(packet->data, packet->length, false);
                 request.IgnoreBytes(1);
 
@@ -356,7 +359,7 @@ void ClientGame::UpdateNetwork()
                 float pingTime = (sceneManager.GetScene()->relativeTime - sentTime);
                 float clockOffset = serverTime + pingTime / 2 - sentTime;
 
-                Log("Clock offset: %f ms\n", clockOffset);
+                //Log("Clock offset: %f ms\n", clockOffset);
                 pingBuffer.push_back(clockOffset);
                 break;
             }
@@ -488,18 +491,21 @@ ServerGame::ServerGame(Engine *engine, SLNet::RakPeerInterface *raknetInterface,
 
 void ServerGame::ForEachClient(const std::function<void(ServerGameClient&)>& handler)
 {
-    Log("==========\n");
     for(int i = 0; i < MaxClients; ++i)
     {
         if(clients[i].status == ClientConnectionStatus::Connected)
         {
-            Log("Match client %d\n", i);
             handler(clients[i]);
         }
     }
 }
 
-ReadWriteBitStream &ReadWriteBitStream::Add(Vector2 &out)
+void ServerGame::BroadcastRpc(const IRemoteProcedureCall& rpc)
+{
+    ForEachClient([=, &rpc](auto& client) { rpcManager.Execute(client.address, rpc); });
+}
+
+ReadWriteBitStream &ReadWriteBitStream::Add(Vector2& out)
 {
     if (isReading)
     {
@@ -531,7 +537,7 @@ ReadWriteBitStream &ReadWriteBitStream::Add(std::string& str)
     return *this;
 }
 
-void RpcManager::Execute(SLNet::AddressOrGUID address, const IRemoteProcedureCall &rpc)
+void RpcManager::Execute(SLNet::AddressOrGUID address, const IRemoteProcedureCall& rpc)
 {
     SLNet::BitStream stream;
     stream.Write(PacketType::RpcCall);
@@ -571,6 +577,7 @@ void ServerSetPlayerInfoRpc::Execute()
 
 void ClientSetPlayerInfoRpc::Execute()
 {
-    Log("CLIENT: set %d to %s\n", clientId, name.c_str());
-    engine->GetClientGame()->GetScene()->replicationManager->GetClient(clientId).clientName = name;
+    auto clientScene = engine->GetClientGame()->GetScene();
+    clientScene->replicationManager->GetClient(clientId).clientName = name;
+    clientScene->SendEvent(PlayerInfoUpdatedEvent(clientId));
 }
