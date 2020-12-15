@@ -178,7 +178,10 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
                 PlayerEntity* player;
                 if (target->Is<PlayerEntity>(player))
                 {
-                    player->health.currentValue -= 10;
+                    player->health.currentValue -= 5;
+                    player->net->flowField = nullptr;
+                    auto velocity = (target->Center() - Center()).Normalize() * 400;
+                    player->SetMoveDirection(velocity);
 
                     if (player->health.currentValue <= 0)
                     {
@@ -189,7 +192,7 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
                         scene->SendEvent(BroadcastToClientMessage(selfName + " killed " + otherName + "'s bot!"));
                     }
 
-                    attackCoolDown = 3;
+                    attackCoolDown = 1;
                     showAttack = true;
                     StartTimer(0.3, [=]
                     {
