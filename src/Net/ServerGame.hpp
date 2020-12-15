@@ -4,6 +4,7 @@
 #include <memory>
 #include <queue>
 #include <gsl/span>
+#include <unordered_map>
 #include <slikenet/BitStream.h>
 #include <slikenet/MessageIdentifiers.h>
 #include <slikenet/peerinterface.h>
@@ -316,7 +317,7 @@ DEFINE_RPC(ServerSetPlayerInfoRpc)
 
     }
 
-    void Serialize(ReadWriteBitStream& rw)
+    void Serialize(ReadWriteBitStream& rw) override
     {
         rw.Add(name);
     }
@@ -340,7 +341,7 @@ DEFINE_RPC(ClientSetPlayerInfoRpc)
 
     }
 
-    void Serialize(ReadWriteBitStream& rw)
+    void Serialize(ReadWriteBitStream& rw) override
     {
         rw.Add(clientId).Add(name);
     }
