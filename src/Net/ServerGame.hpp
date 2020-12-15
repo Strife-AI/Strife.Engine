@@ -82,12 +82,17 @@ struct RemoteProcedureCall : IRemoteProcedureCall
         return GetRpcName<T>();
     }
 
-    static void ExecuteInternal(ReadWriteBitStream& stream)
+    static void ExecuteInternal(ReadWriteBitStream& stream, Engine* engine, int fromClientId)
     {
         T rpc;
+        rpc.engine = engine;
+        rpc.fromClientId = fromClientId;
         rpc.Serialize(stream);
         rpc.Execute();
     }
+
+    Engine* engine;
+    int fromClientId;
 };
 
 #define DEFINE_RPC(structName_) struct structName_; \
@@ -215,10 +220,10 @@ public:
 
     void Execute(SLNet::AddressOrGUID address, const IRemoteProcedureCall& rpc);
 
-    void Receive(SLNet::BitStream& stream);
+    void Receive(SLNet::BitStream& stream, Engine* engine, int fromClientId);
 
 private:
-    std::unordered_map<unsigned int, void (*)(ReadWriteBitStream& stream)> _handlersByStringIdName;
+    std::unordered_map<unsigned int, void (*)(ReadWriteBitStream& stream, Engine* engine, int clientId)> _handlersByStringIdName;
     NetworkInterface* _networkInterface;
 };
 
@@ -271,6 +276,7 @@ struct ServerGame : BaseGameInstance
     void PostUpdateEntities() override;
     int AddClient(const SLNet::AddressOrGUID& address);
     int GetClientId(const SLNet::AddressOrGUID& address);
+    void ForEachClient(const std::function<void(ServerGameClient&)>& handler);
 
     std::function<void(SLNet::BitStream& message, SLNet::BitStream& response, int clientId)> onUpdateRequest;
 
@@ -281,12 +287,7 @@ struct ServerGame : BaseGameInstance
 
 struct ClientGame : BaseGameInstance
 {
-    ClientGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_)
-        : BaseGameInstance(engine, raknetInterface, localAddress_, false)
-    {
-        isHeadless = false;
-        targetTickRate = 60;
-    }
+    ClientGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_);
 
     void Disconnect();
 
@@ -309,18 +310,42 @@ DEFINE_RPC(ServerSetPlayerInfoRpc)
     }
 
     ServerSetPlayerInfoRpc(const std::string& name)
-            : name(name)
+        : name(name)
     {
 
     }
 
     void Serialize(ReadWriteBitStream& rw)
     {
-        printf("Begin serialize\n");
         rw.Add(name);
     }
 
     void Execute() override;
 
+    std::string name;
+};
+
+DEFINE_RPC(ClientSetPlayerInfoRpc)
+{
+    ClientSetPlayerInfoRpc()
+    {
+
+    }
+
+    ClientSetPlayerInfoRpc(int clientId, const std::string& name)
+        : clientId(clientId),
+        name(name)
+    {
+
+    }
+
+    void Serialize(ReadWriteBitStream& rw)
+    {
+        rw.Add(clientId).Add(name);
+    }
+
+    void Execute() override;
+
+    int clientId;
     std::string name;
 };

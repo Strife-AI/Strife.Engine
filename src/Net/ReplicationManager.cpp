@@ -770,5 +770,6 @@ void ReplicationManager::Server_ClientDisconnected(int clientId)
         }
 
         _clientStateByClientId.erase(clientId);
+        Log("DISCONNECTED\n");
     }
 }
