@@ -39,7 +39,7 @@ public:
     void AddStatus(const std::string& message);
 
 private:
-    static constexpr float ExpireTime = 5.0;
+    static constexpr float ExpireTime = 10.0;
 
     void ReceiveEvent(const IEntityEvent& ev) override;
 
