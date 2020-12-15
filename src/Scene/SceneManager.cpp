@@ -61,4 +61,6 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
 
     _engine->Game()->BuildScene(_scene.get());
     _scene->LoadMapSegment(*mapSegment);
+
+    _scene->SendEvent(SceneLoadedEvent());
 }

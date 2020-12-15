@@ -5,6 +5,7 @@
 #include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
 #include "torch/torch.h"
+#include "MessageHud.hpp"
 
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
@@ -181,6 +182,10 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
                     if (player->health.currentValue <= 0)
                     {
                         player->Destroy();
+                        auto& selfName = scene->replicationManager->GetClient(net->ownerClientId).clientName;
+                        auto& otherName = scene->replicationManager->GetClient(player->net->ownerClientId).clientName;
+
+                        scene->SendEvent(BroadcastToClientMessage(selfName + " killed " + otherName + "'s bot!"));
                     }
 
                     attackCoolDown = 3;

@@ -8,6 +8,7 @@
 #include "Scene/Scene.hpp"
 #include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
+#include "MessageHud.hpp"
 
 ConsoleVar<int> g_serverPort("port", 60001);
 extern ConsoleVar<bool> g_isServer;
@@ -36,6 +37,7 @@ struct Game : IGame
         {
             scene->AddService<InputService>();
             scene->AddService<NetworkPhysics>(scene->isServer);
+            scene->AddService<MessageHud>();
 
             scene->GetEngine()->GetConsole()->Execute("light 0");
         }

@@ -38,6 +38,17 @@ DEFINE_EVENT(PlayerConnectedEvent)
     std::optional<Vector2> position;
 };
 
+DEFINE_EVENT(PlayerInfoUpdatedEvent)
+{
+    PlayerInfoUpdatedEvent(int clientId)
+            : clientId(clientId)
+    {
+
+    }
+
+    int clientId;
+};
+
 DEFINE_EVENT(JoinedServerEvent)
 {
     JoinedServerEvent(int selfId_)
