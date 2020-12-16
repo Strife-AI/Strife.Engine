@@ -18,7 +18,7 @@ struct Game : IGame
     void ConfigureGame(GameConfig& config) override
     {
         config
-            .SetDefaultScene("isengard"_sid)
+            .SetDefaultScene("erebor"_sid)
             .SetWindowCaption("Breakout")
             .SetGameName("breakout")
             .ExecuteUserConfig("user.cfg")
@@ -45,7 +45,7 @@ struct Game : IGame
 
     void OnGameStart() override
     {
-        auto map = "isengard"_sid;
+        auto map = "erebor"_sid;
         auto engine = GetEngine();
 
         if(!g_isServer.Value())
