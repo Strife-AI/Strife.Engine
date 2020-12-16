@@ -74,6 +74,7 @@ void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
     if (auto flowFieldReady = ev.Is<FlowFieldReadyEvent>())
     {
         net->flowField = flowFieldReady->result;
+        net->acceleration = { 0, 0 };
     }
     else if (auto moveTo = ev.Is<MoveToEvent>())
     {
@@ -213,7 +214,7 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
         for (auto p : points)
         {
             RaycastResult result;
-            if (scene->Raycast(p, client->flowField->target, result)
+            if (scene->Raycast(p, client->flowField->target, result, false, [=](auto collider) { return collider.OwningEntity() != this; })
                 && (state != PlayerState::Attacking || result.handle.OwningEntity() != attackTarget.GetValueOrNull()))
             {
                 useBeeLine = false;
@@ -231,20 +232,29 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
 
         }
 
-        velocity = client->owner->GetComponent<RigidBodyComponent>()->GetVelocity().SmoothDamp(
-            velocity,
-            client->acceleration,
-            0.05,
-            Scene::PhysicsDeltaTime);
+        float dist = (client->flowField->target - client->owner->Center()).Length();
+        if(dist > 20)
+        {
+            velocity = client->owner->GetComponent<RigidBodyComponent>()->GetVelocity().SmoothDamp(
+                velocity,
+                client->acceleration,
+                0.05,
+                Scene::PhysicsDeltaTime);
+        }
 
-        if ((client->owner->Center() - client->flowField->target).Length() < 200 * Scene::PhysicsDeltaTime)
+        if(dist <= 1)
         {
             velocity = { 0, 0 };
+            client->acceleration = { 0, 0 };
             client->flowField = nullptr;
         }
 
         client->owner->GetComponent<RigidBodyComponent>()->SetVelocity(velocity);
-        //Renderer::DrawDebugLine({ client->owner->Center(), client->owner->Center() + velocity, Color::Red() });
+        //Renderer::DrawDebugLine({ client->owner->Center(), client->owner->Center() + velocity, useBeeLine ? Color::Red() : Color::Green() });
+    }
+    else
+    {
+        SetMoveDirection({ 0, 0 });
     }
 }
 
