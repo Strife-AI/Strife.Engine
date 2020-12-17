@@ -94,7 +94,8 @@ void CastleEntity::SpawnPlayer()
 
 void CastleEntity::OnDestroyed()
 {
-    scene->GetLightManager()->RemoveLight(&_light);
+    if(!scene->isServer)
+        scene->GetLightManager()->RemoveLight(&_light);
 
     if(scene->isServer && net != nullptr && net->ownerClientId >= 0)
     {
