@@ -28,6 +28,9 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
     scene->GetService<PathFinderService>()->AddObstacle(Rectangle(Center() - size / 2, size));
 
     AddComponent<NetComponent>();
+
+    auto health = AddComponent<HealthBarComponent>();
+    health->offsetFromCenter = -size.YVector() / 2 - Vector2(0, 5);
 }
 
 void CastleEntity::Update(float deltaTime)

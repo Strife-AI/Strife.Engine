@@ -4,8 +4,6 @@
 #include "Scene/Entity.hpp"
 #include "Scene/Scene.hpp"
 
-bool ISyncVar::isServer = false;
-
 Vector2 GetDirectionFromKeyBits(unsigned keyBits)
 {
     Vector2 moveDirection;

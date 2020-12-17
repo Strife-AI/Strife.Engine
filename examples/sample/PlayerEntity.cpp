@@ -10,6 +10,9 @@
 
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
+    health = AddComponent<HealthBarComponent>();
+    health->offsetFromCenter = Vector2(0, -20);
+
     rigidBody = AddComponent<RigidBodyComponent>(b2_dynamicBody);
 
     auto box = rigidBody->CreateBoxCollider(Dimensions());
@@ -108,13 +111,6 @@ void PlayerEntity::Render(Renderer* renderer)
 
     renderer->RenderRectangle(Rectangle(position - Dimensions() / 2, Dimensions()), color, -0.99);
 
-    Vector2 healthBarSize(32, 4);
-    renderer->RenderRectangle(Rectangle(
-        Center() - Vector2(0, 20) - healthBarSize / 2,
-        Vector2(healthBarSize.x * health.currentValue / 100, healthBarSize.y)),
-        Color::White(),
-        -1);
-
     if (showAttack.currentValue)
     {
         renderer->RenderLine(Center(), attackPosition.currentValue, Color::Red(), -1);
@@ -179,9 +175,9 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
                 PlayerEntity* player;
                 if (target->Is<PlayerEntity>(player))
                 {
-                    player->health.currentValue -= 5;
+                    player->health->TakeDamage(5);
 
-                    if (player->health.currentValue <= 0)
+                    if (player->health->health.Value() <= 0)
                     {
                         player->Destroy();
                         auto& selfName = scene->replicationManager->GetClient(net->ownerClientId).clientName;

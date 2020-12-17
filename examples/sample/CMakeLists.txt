@@ -7,7 +7,7 @@ add_executable(Sample
 	"InputService.hpp"
 	"InputService.cpp"
 	"CastleEntity.cpp"
- "PuckEntity.hpp" "PuckEntity.cpp" "GameML.hpp" MessageHud.cpp MessageHud.hpp)
+ "PuckEntity.hpp" "PuckEntity.cpp" "GameML.hpp" MessageHud.cpp MessageHud.hpp HealthBarComponent.cpp HealthBarComponent.hpp)
 
 find_package(torch REQUIRED)
 
