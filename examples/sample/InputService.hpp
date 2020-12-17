@@ -18,6 +18,8 @@ struct InputService : ISceneService
     EntityReference<PlayerEntity> activePlayer;
     std::vector<PlayerEntity*> players;
     std::vector<CastleEntity*> spawns;
+    std::vector<Vector2> spawnPositions;
+
     float sendUpdateTimer = 0;
 
     FixedLengthString<1024> status;

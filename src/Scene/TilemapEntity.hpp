@@ -11,8 +11,10 @@ DEFINE_ENTITY(TilemapEntity, "tilemap"), IRenderable
 
 private:
     void OnAdded(const EntityDictionary& properties) override;
+    void OnDestroyed() override;
     void Render(Renderer* renderer) override;
     const MapSegment* _mapSegment = nullptr;
 
     TilemapRenderer _renderer;
+    AmbientLight light;
 };
