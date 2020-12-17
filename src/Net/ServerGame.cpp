@@ -465,12 +465,13 @@ int ServerGame::GetClientId(const SLNet::AddressOrGUID& address)
 
 void ServerGame::PostUpdateEntities()
 {
+    auto replicationManager = GetScene()->replicationManager;
+    replicationManager->TakeSnapshot();
+
     SLNet::BitStream worldUpdateStream;
     for(auto& client : clients)
     {
         if(client.status != ClientConnectionStatus::Connected) continue;
-
-        auto replicationManager = sceneManager.GetScene()->GetService<ReplicationManager>();
 
         worldUpdateStream.Reset();
         if(replicationManager->Server_SendWorldUpdate(client.clientId, worldUpdateStream))
