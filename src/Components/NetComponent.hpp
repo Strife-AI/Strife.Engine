@@ -61,8 +61,8 @@ DEFINE_COMPONENT(NetComponent)
     void OnAdded() override;
     void OnRemoved() override;
 
-    int netId;
-    int ownerClientId;
+    int netId = -2;
+    int ownerClientId = -2;
 
     std::shared_ptr<FlowField> flowField;   // TODO: shouldn't be here
     Vector2 acceleration;

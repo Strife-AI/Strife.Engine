@@ -221,6 +221,7 @@ struct Entity
     Vector2 TopLeft() const { return _position.Value() - _dimensions / 2; }
     Vector2 Center() const { return _position.Value(); }
     Vector2 Dimensions() const { return _dimensions; }
+    void SetDimensions(Vector2 dimensions) { _dimensions = dimensions; }
     Rectangle Bounds() const { return Rectangle(TopLeft(), Dimensions()); }
     float Rotation() const { return _rotation; }
     Engine* GetEngine() const;
@@ -274,7 +275,7 @@ struct Entity
     void UpdateSyncVars();
 
     template<typename TComponent, typename ...Args> TComponent* AddComponent(Args&& ...args);
-    template<typename TComponent> TComponent* GetComponent();
+    template<typename TComponent> TComponent* GetComponent(bool fatalIfMissing = true);
     void RemoveComponent(IEntityComponent* component);
 
     int id;
@@ -354,17 +355,24 @@ TComponent* Entity::AddComponent(Args&& ...args)
 }
 
 template <typename TComponent>
-TComponent* Entity::GetComponent()
+TComponent* Entity::GetComponent(bool fatalIfMissing)
 {
-    for(auto component = _componentList; component != nullptr; component = component->next)
+    for (auto component = _componentList; component != nullptr; component = component->next)
     {
-        if(auto c = component->Is<TComponent>())
+        if (auto c = component->Is<TComponent>())
         {
             return c;
         }
     }
 
-    FatalError("Missing component %s on type %s", typeid(TComponent).name(), typeid(*this).name());
+    if (fatalIfMissing)
+    {
+        FatalError("Missing component %s on type %s", typeid(TComponent).name(), typeid(*this).name());
+    }
+    else
+    {
+        return nullptr;
+    }
 }
 
 struct InvalidEntityHeader
@@ -456,4 +464,3 @@ private:
     const EntityHeader* _entityHeader;
     int _entityId;
 };
-

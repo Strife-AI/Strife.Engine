@@ -39,7 +39,7 @@ struct Game : IGame
             scene->AddService<NetworkPhysics>(scene->isServer);
             scene->AddService<MessageHud>();
 
-            scene->GetEngine()->GetConsole()->Execute("light 0");
+            //scene->GetEngine()->GetConsole()->Execute("light 0");
         }
     }
 

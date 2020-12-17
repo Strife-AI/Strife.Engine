@@ -8,8 +8,18 @@
 #include "torch/torch.h"
 #include "MessageHud.hpp"
 
+#include "CastleEntity.hpp"
+
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
+    if(!scene->isServer)
+        scene->GetLightManager()->AddLight(&light);
+
+    light.position = Center();
+    light.color = Color(255, 255, 255, 255);
+    light.maxDistance = 800;
+    light.intensity = 0.4;
+
     health = AddComponent<HealthBarComponent>();
     health->offsetFromCenter = Vector2(0, -20);
 
@@ -61,15 +71,7 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
 
 void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)
 {
-    if (ev.Is<SpawnedOnClientEvent>())
-    {
-        if (net->ownerClientId == scene->replicationManager->localClientId)
-        {
-            scene->GetCameraFollower()->FollowMouse();
-            scene->GetCameraFollower()->CenterOn(Center());
-            scene->GetService<InputService>()->activePlayer = this;
-        }
-    }
+
 }
 
 void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
@@ -95,10 +97,13 @@ void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
 void PlayerEntity::OnDestroyed()
 {
     RemoveFromVector(scene->GetService<InputService>()->players, this);
+    scene->GetLightManager()->RemoveLight(&light);
 }
 
 void PlayerEntity::Render(Renderer* renderer)
 {
+    light.position = Center();
+
     auto position = Center();
 
     Color c[3] = {
@@ -173,26 +178,41 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
             if (attackCoolDown <= 0)
             {
                 PlayerEntity* player;
-                if (target->Is<PlayerEntity>(player))
-                {
-                    player->health->TakeDamage(5);
 
-                    if (player->health->health.Value() <= 0)
+                auto otherHealth = target->GetComponent<HealthBarComponent>();
+                otherHealth->TakeDamage(5);
+
+                if (otherHealth->health.Value() == 0)
+                {
+                    otherHealth->owner->Destroy();
+
+                    if (target->Is<PlayerEntity>(player))
                     {
-                        player->Destroy();
                         auto& selfName = scene->replicationManager->GetClient(net->ownerClientId).clientName;
                         auto& otherName = scene->replicationManager->GetClient(player->net->ownerClientId).clientName;
 
                         scene->SendEvent(BroadcastToClientMessage(selfName + " killed " + otherName + "'s bot!"));
-                    }
 
-                    attackCoolDown = 1;
-                    showAttack = true;
-                    StartTimer(0.3, [=]
-                    {
-                        showAttack = false;
-                    });
+                        for(auto spawn : scene->GetService<InputService>()->spawns)
+                        {
+                            if(spawn->net->ownerClientId == player->net->ownerClientId)
+                            {
+                                spawn->StartTimer(2, [=]
+                                {
+                                    spawn->SpawnPlayer();
+                                    GetEngine()->GetServerGame()->ExecuteRpc(spawn->net->ownerClientId, MessageHudRpc("Your bot has respawned at your base"));
+                                });
+                            }
+                        }
+                    }
                 }
+
+                attackCoolDown = 1;
+                showAttack = true;
+                StartTimer(0.3, [=]
+                {
+                    showAttack = false;
+                });
             }
 
             return;
