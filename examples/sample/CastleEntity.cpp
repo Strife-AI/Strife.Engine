@@ -13,6 +13,11 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
     auto spriteName = StringId(properties.GetValueOrDefault("sprite", "castle"));
     spriteComponent = AddComponent<SpriteComponent>(spriteName);
 
+    Vector2 size{ 67 * 5, 55 * 5 };
+    SetDimensions(size);
+    scene->GetService<PathFinderService>()->AddObstacle(Bounds());
+
+
     if(!scene->isServer && !properties.HasProperty("net"))
     {
         Destroy();
@@ -22,22 +27,19 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
     spriteComponent->scale = Vector2(5.0f);
 
     auto rigidBody = AddComponent<RigidBodyComponent>(b2_staticBody);
-    Vector2 size{ 67 * 5, 55 * 5 };
-
-    SetDimensions(size);
 
     rigidBody->CreateBoxCollider(size);
 
     rigidBody->CreateBoxCollider({ 600, 600 }, true);
 
-    scene->GetService<PathFinderService>()->AddObstacle(Rectangle(Center() - size / 2, size));
+
 
     net = AddComponent<NetComponent>();
 
     auto health = AddComponent<HealthBarComponent>();
     health->offsetFromCenter = -size.YVector() / 2 - Vector2(0, 5);
-    health->maxHealth = 500;
-    health->health.SetValue(500);
+    health->maxHealth = 1000;
+    health->health.SetValue(1000);
 
     auto offset = size / 2 + Vector2(40, 40);
 
@@ -110,6 +112,8 @@ void CastleEntity::OnDestroyed()
         auto& selfName = scene->replicationManager->GetClient(net->ownerClientId).clientName;
         scene->SendEvent(BroadcastToClientMessage(selfName + " has been eliminated!"));
     }
+
+    scene->GetService<PathFinderService>()->RemoveObstacle(Bounds());
 }
 
 void CastleEntity::ReceiveEvent(const IEntityEvent& ev)

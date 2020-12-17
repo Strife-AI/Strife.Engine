@@ -83,6 +83,7 @@ public:
     PathFinderService(int rows, int cols, Vector2 tileSize);
 
     void AddObstacle(const Rectangle& bounds);
+    void RemoveObstacle(const Rectangle& bounds);
     void RequestFlowField(Vector2 start, Vector2 end, Entity* owner);
 
 private:
@@ -97,7 +98,7 @@ private:
 
     using WorkQueue = std::queue<Vector2>;
 
-    VariableSizedGrid<unsigned char> _obstacleGrid;
+    VariableSizedGrid<char> _obstacleGrid;
     Vector2 _tileSize;
     std::queue<PathRequest> _requestQueue;
 
