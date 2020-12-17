@@ -17,8 +17,8 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
 
     light.position = Center();
     light.color = Color(255, 255, 255, 255);
-    light.maxDistance = 800;
-    light.intensity = 0.4;
+    light.maxDistance = 400;
+    light.intensity = 0.6;
 
     health = AddComponent<HealthBarComponent>();
     health->offsetFromCenter = Vector2(0, -20);
@@ -108,10 +108,12 @@ void PlayerEntity::Render(Renderer* renderer)
 
     auto position = Center();
 
-    Color c[3] = {
+    Color c[5] = {
         Color::CornflowerBlue(),
         Color::Green(),
-        Color::Orange()
+        Color::Orange(),
+        Color::HotPink(),
+        Color::Yellow()
     };
 
     auto color = c[net->ownerClientId];

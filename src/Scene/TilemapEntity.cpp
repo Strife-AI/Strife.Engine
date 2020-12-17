@@ -12,7 +12,7 @@ void TilemapEntity::OnAdded(const EntityDictionary& properties)
     if(!scene->isServer)
         scene->GetLightManager()->AddLight(&light);
 
-    light.bounds = Rectangle(0, 0, 256 * 32, 256 * 32);
+    light.bounds = Rectangle(0, 0, 256 * 64, 256 * 64);
     light.color = Color(64, 64, 255);
     light.intensity = 0.25;
 }
@@ -21,6 +21,14 @@ void TilemapEntity::OnDestroyed()
 {
     if(!scene->isServer)
         scene->GetLightManager()->AddLight(&light);
+
+    auto pathFinder = scene->GetService<PathFinderService>();
+
+    for (auto& rectangle : _mapSegment->colliders)
+    {
+        auto bounds = rectangle.As<float>();
+        pathFinder->AddObstacle(bounds);
+    }
 }
 
 void TilemapEntity::Render(Renderer* renderer)
