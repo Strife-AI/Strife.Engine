@@ -8,7 +8,9 @@
 void TilemapEntity::OnAdded(const EntityDictionary& properties)
 {
     flags |= CastsShadows;
-    scene->GetLightManager()->AddLight(&light);
+
+    if(!scene->isServer)
+        scene->GetLightManager()->AddLight(&light);
 
     light.bounds = Rectangle(0, 0, 256 * 32, 256 * 32);
     light.color = Color(64, 64, 255);
@@ -17,7 +19,8 @@ void TilemapEntity::OnAdded(const EntityDictionary& properties)
 
 void TilemapEntity::OnDestroyed()
 {
-    scene->GetLightManager()->AddLight(&light);
+    if(!scene->isServer)
+        scene->GetLightManager()->AddLight(&light);
 }
 
 void TilemapEntity::Render(Renderer* renderer)

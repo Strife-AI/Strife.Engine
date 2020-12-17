@@ -97,7 +97,9 @@ void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
 void PlayerEntity::OnDestroyed()
 {
     RemoveFromVector(scene->GetService<InputService>()->players, this);
-    scene->GetLightManager()->RemoveLight(&light);
+
+    if(!scene->isServer)
+        scene->GetLightManager()->RemoveLight(&light);
 }
 
 void PlayerEntity::Render(Renderer* renderer)
