@@ -63,4 +63,6 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
 
     SyncVar<bool> showAttack{ false, SyncVarInterpolation::None, SyncVarUpdateFrequency::Infrequent };
     SyncVar<Vector2> attackPosition { { 0, 0}, SyncVarInterpolation::Linear };
+
+    PointLight light;
 };

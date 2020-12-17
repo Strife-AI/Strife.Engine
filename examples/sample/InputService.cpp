@@ -15,6 +15,8 @@
 #include "Tools/Console.hpp"
 #include "MessageHud.hpp"
 
+#include "CastleEntity.hpp"
+
 InputButton g_quit = InputButton(SDL_SCANCODE_ESCAPE);
 InputButton g_upButton(SDL_SCANCODE_W);
 InputButton g_downButton(SDL_SCANCODE_S);
@@ -26,9 +28,9 @@ ConsoleVar<bool> autoConnect("auto-connect", false);
 
 void InputService::ReceiveEvent(const IEntityEvent& ev)
 {
-    if(ev.Is<SceneLoadedEvent>())
+    if (ev.Is<SceneLoadedEvent>())
     {
-        if(!scene->isServer && autoConnect.Value())
+        if (!scene->isServer && autoConnect.Value())
         {
             scene->GetEngine()->GetConsole()->Execute("connect 127.0.0.1");
 
@@ -36,7 +38,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             //scene->GetCameraFollower()->CenterOn({ 800, 800});
         }
 
-        if(scene->isServer)
+        if (scene->isServer)
         {
             EntityProperty properties[] = {
                     EntityProperty::EntityType<PuckEntity>(),
@@ -45,17 +47,22 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             };
 
             scene->CreateEntity(EntityDictionary(properties));
+
+            for (auto spawn : scene->GetEntitiesOfType<CastleEntity>())
+            {
+                spawns.push_back(spawn);
+            }
         }
     }
     if (ev.Is<UpdateEvent>())
     {
-        if(scene->isServer && !gameOver)
+        if (scene->isServer && !gameOver)
         {
             bool multipleClientsConnected = scene->replicationManager->GetClients().size() >= 2;
 
-            if(multipleClientsConnected)
+            if (multipleClientsConnected)
             {
-                if(players.size() == 0)
+                if (players.size() == 0)
                 {
                     scene->SendEvent(BroadcastToClientMessage("Draw!"));
                     gameOver = true;
@@ -63,16 +70,16 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
                 else
                 {
                     bool onePlayerLeft = true;
-                    for(int i = 1; i < players.size(); ++i)
+                    for (int i = 1; i < players.size(); ++i)
                     {
-                        if(players[i]->net->ownerClientId != players[0]->net->ownerClientId)
+                        if (players[i]->net->ownerClientId != players[0]->net->ownerClientId)
                         {
                             onePlayerLeft = false;
                             break;
                         }
                     }
 
-                    if(onePlayerLeft)
+                    if (onePlayerLeft)
                     {
                         gameOver = true;
                         auto& name = scene->replicationManager->GetClient(players[0]->net->ownerClientId).clientName;
@@ -84,7 +91,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 
         HandleInput();
     }
-    else if(auto renderEvent = ev.Is<RenderEvent>())
+    else if (auto renderEvent = ev.Is<RenderEvent>())
     {
         if (scene->isServer)
         {
@@ -113,41 +120,28 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 
         ++currentFixedUpdateId;
     }
-    else if(auto joinedServerEvent = ev.Is<JoinedServerEvent>())
+    else if (auto joinedServerEvent = ev.Is<JoinedServerEvent>())
     {
         scene->replicationManager->localClientId = joinedServerEvent->selfId;
     }
-    else if(auto connectedEvent = ev.Is<PlayerConnectedEvent>())
+    else if (auto connectedEvent = ev.Is<PlayerConnectedEvent>())
     {
         if (scene->isServer)
         {
-            Vector2 positions[3] = {
-                Vector2(2048 - 1000, 2048 - 1000),
-                Vector2(2048 + 1000, 2048 + 1000),
-                Vector2(2048 + 1000, 2048 - 1000),
-            };
-
-            Vector2 offsets[4] =
+            // Assign spawn
+            for (auto spawn : spawns)
             {
-                Vector2(-1, -1), Vector2(-1, 1), Vector2(1, -1), Vector2(1, 1)
-            };
+                if (spawn->net->ownerClientId < 0)
+                {
+                    spawn->net->ownerClientId = connectedEvent->id;
 
-            for (auto offset : offsets)
-            {
-                auto position = positions[connectedEvent->id] + offset * 128;
+                    for (int i = 0; i < 4; ++i)
+                    {
+                        spawn->SpawnPlayer();
+                    }
 
-                EntityProperty properties[] = {
-                        EntityProperty::EntityType<PlayerEntity>(),
-                        { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : position },
-                        { "dimensions", { 30, 30 } },
-                };
-
-                auto player = static_cast<PlayerEntity*>(scene->CreateEntity(EntityDictionary(properties)));
-
-                player->GetComponent<NetComponent>()->ownerClientId = connectedEvent->id;
-
-                scene->GetCameraFollower()->FollowEntity(player);
-                scene->GetCameraFollower()->CenterOn(player->Center());
+                    break;
+                }
             }
         }
     }
@@ -264,12 +258,24 @@ void InputService::HandleInput()
                 if(mouse->RightPressed())
                 {
                     bool attack = false;
-                    for (auto player : players)
+                    for (auto entity : scene->GetEntities())
                     {
-                        if (player->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
+                        auto netComponent = entity->GetComponent<NetComponent>(false);
+
+                        if(netComponent == nullptr)
+                        {
+                            continue;
+                        }
+
+                        if(entity->GetComponent<HealthBarComponent>(false) == nullptr)
+                        {
+                            continue;
+                        }
+
+                        if (entity->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
                         {
                             command.attackTarget = true;
-                            command.attackNetId = player->net->netId;
+                            command.attackNetId = netComponent->netId;
                             attack = true;
                             break;
                         }

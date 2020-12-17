@@ -505,6 +505,16 @@ void ServerGame::BroadcastRpc(const IRemoteProcedureCall& rpc)
     ForEachClient([=, &rpc](auto& client) { rpcManager.Execute(client.address, rpc); });
 }
 
+void ServerGame::ExecuteRpc(int clientId, const IRemoteProcedureCall& rpc)
+{
+    if(clientId < 0 || clientId >= MaxClients || clients[clientId].status != ClientConnectionStatus::Connected)
+    {
+        return;
+    }
+
+    rpcManager.Execute(clients[clientId].address, rpc);
+}
+
 ReadWriteBitStream &ReadWriteBitStream::Add(Vector2& out)
 {
     if (isReading)

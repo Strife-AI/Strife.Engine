@@ -3,6 +3,7 @@
 #include "Scene/IEntityEvent.hpp"
 #include "Scene/Scene.hpp"
 
+struct CastleEntity;
 
 struct InputService : ISceneService
 {
@@ -16,6 +17,7 @@ struct InputService : ISceneService
 
     EntityReference<PlayerEntity> activePlayer;
     std::vector<PlayerEntity*> players;
+    std::vector<CastleEntity*> spawns;
     float sendUpdateTimer = 0;
 
     FixedLengthString<1024> status;
