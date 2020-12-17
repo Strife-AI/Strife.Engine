@@ -179,12 +179,12 @@ TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& 
 
     entityUnderConstruction = entity;
     new(entity) TEntity(std::forward<Args>(constructorArgs) ...);
-    entityUnderConstruction = oldEntityUnderConstruction;
 
     entity->_position = properties.GetValueOrDefault<Vector2>("position", Vector2(0, 0));
     entity->type = TEntity::Type;
 
     RegisterEntity(entity, properties);
+    entityUnderConstruction = oldEntityUnderConstruction;
 
     return entity;
 }

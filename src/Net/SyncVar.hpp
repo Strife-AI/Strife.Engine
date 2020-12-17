@@ -151,8 +151,6 @@ struct ISyncVar
 
     virtual bool IsBool() = 0;
 
-    static bool isServer;
-
     ISyncVar* next = nullptr;
     SyncVarUpdateFrequency frequency;
 };
@@ -264,11 +262,6 @@ struct SyncVar final : ISyncVar
 
     void SetValue(const T& value)
     {
-        if (!isServer)
-        {
-            FatalError("Trying to set syncvar from client");
-        }
-
         currentValue = value;
     }
 
