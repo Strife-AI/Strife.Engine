@@ -9,6 +9,7 @@
 #include "MessageHud.hpp"
 
 #include "CastleEntity.hpp"
+#include "FireballEntity.hpp"
 
 void PlayerEntity::OnAdded(const EntityDictionary& properties)
 {
@@ -92,6 +93,31 @@ void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
         updateTargetTimer = 0;
         state = PlayerState::Attacking;
     }
+    else if (auto outOfHealth = ev.Is<OutOfHealthEvent>())
+    {
+        Destroy();
+
+        auto& selfName = scene->replicationManager->GetClient(outOfHealth->killer->GetComponent<NetComponent>()->ownerClientId).clientName;
+        auto& otherName = scene->replicationManager->GetClient(net->ownerClientId).clientName;
+
+        scene->SendEvent(BroadcastToClientMessage(selfName + " killed " + otherName + "'s bot!"));
+
+        for(auto spawn : scene->GetService<InputService>()->spawns)
+        {
+            if(spawn->net->ownerClientId == net->ownerClientId)
+            {
+                auto server = GetEngine()->GetServerGame();
+
+                spawn->StartTimer(10, [=]
+                {
+                    spawn->SpawnPlayer();
+                    server->ExecuteRpc(spawn->net->ownerClientId, MessageHudRpc("Your bot has respawned at your base"));
+                });
+
+                break;
+            }
+        }
+    }
 }
 
 void PlayerEntity::OnDestroyed()
@@ -119,11 +145,6 @@ void PlayerEntity::Render(Renderer* renderer)
     auto color = c[net->ownerClientId];
 
     renderer->RenderRectangle(Rectangle(position - Dimensions() / 2, Dimensions()), color, -0.99);
-
-    if (showAttack.currentValue)
-    {
-        renderer->RenderLine(Center(), attackPosition.currentValue, Color::Red(), -1);
-    }
 
     FontSettings font;
     font.spriteFont = ResourceManager::GetResource<SpriteFont>("console-font"_sid);
@@ -178,49 +199,21 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
             && hitResult.handle.OwningEntity() == target)
         {
             rigidBody->SetVelocity({ 0, 0 });
+            auto dir = (target->Center() - Center()).Normalize();
 
             if (attackCoolDown <= 0)
             {
-                PlayerEntity* player;
+                EntityProperty properties[] = {
+                    EntityProperty::EntityType<FireballEntity>(),
+                    { "velocity", dir * 400 },
+                    { "position", Center()  }
+                };
+                auto fireball = scene->CreateEntity({ properties });
+                fireball->GetComponent<NetComponent>()->ownerClientId = net->ownerClientId;
 
-                auto otherHealth = target->GetComponent<HealthBarComponent>();
-                otherHealth->TakeDamage(5);
-
-                if (otherHealth->health.Value() == 0)
-                {
-                    otherHealth->owner->Destroy();
-
-                    if (target->Is<PlayerEntity>(player))
-                    {
-                        auto& selfName = scene->replicationManager->GetClient(net->ownerClientId).clientName;
-                        auto& otherName = scene->replicationManager->GetClient(player->net->ownerClientId).clientName;
-
-                        scene->SendEvent(BroadcastToClientMessage(selfName + " killed " + otherName + "'s bot!"));
-
-                        for(auto spawn : scene->GetService<InputService>()->spawns)
-                        {
-                            if(spawn->net->ownerClientId == player->net->ownerClientId)
-                            {
-                                auto server = GetEngine()->GetServerGame();
-
-                                spawn->StartTimer(10, [=]
-                                {
-                                    spawn->SpawnPlayer();
-                                    server->ExecuteRpc(spawn->net->ownerClientId, MessageHudRpc("Your bot has respawned at your base"));
-                                });
-
-                                break;
-                            }
-                        }
-                    }
-                }
+                static_cast<FireballEntity*>(fireball)->ownerId = id;
 
                 attackCoolDown = 1;
-                showAttack = true;
-                StartTimer(0.3, [=]
-                {
-                    showAttack = false;
-                });
             }
 
             return;
@@ -289,7 +282,6 @@ void PlayerEntity::ServerUpdate(float deltaTime)
         Entity* target;
         if (attackTarget.TryGetValue(target))
         {
-            attackPosition = target->Center();
             updateTargetTimer -= deltaTime;
             if (updateTargetTimer <= 0)
             {

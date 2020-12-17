@@ -14,13 +14,13 @@ void TilemapEntity::OnAdded(const EntityDictionary& properties)
 
     light.bounds = Rectangle(0, 0, 256 * 64, 256 * 64);
     light.color = Color(64, 64, 255);
-    light.intensity = 0.25;
+    light.intensity = 0.5;
 }
 
 void TilemapEntity::OnDestroyed()
 {
     if(!scene->isServer)
-        scene->GetLightManager()->AddLight(&light);
+        scene->GetLightManager()->RemoveLight(&light);
 
     auto pathFinder = scene->GetService<PathFinderService>();
 
