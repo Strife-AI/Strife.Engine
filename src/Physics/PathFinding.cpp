@@ -100,6 +100,12 @@ void PathFinderService::RequestFlowField(Vector2 start, Vector2 end, Entity* own
     request.endCell = PixelToCellCoordinate(end);
     request.owner = owner;
 
+    // FIXME: workaround for when ending in a solid cell
+    while(_obstacleGrid[request.endCell] != 0)
+    {
+        ++request.endCell.x;
+    }
+
     _requestQueue.push(request);
 }
 
