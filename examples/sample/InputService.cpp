@@ -24,20 +24,10 @@ InputButton g_leftButton(SDL_SCANCODE_A);
 InputButton g_rightButton(SDL_SCANCODE_D);
 InputButton g_nextPlayer(SDL_SCANCODE_TAB);
 
-ConsoleVar<bool> autoConnect("auto-connect", false);
-
 void InputService::ReceiveEvent(const IEntityEvent& ev)
 {
     if (ev.Is<SceneLoadedEvent>())
     {
-        if (!scene->isServer && autoConnect.Value())
-        {
-            scene->GetEngine()->GetConsole()->Execute("connect 127.0.0.1");
-
-            //scene->GetCameraFollower()->FollowMouse();
-            //scene->GetCameraFollower()->CenterOn({ 800, 800});
-        }
-
         if (scene->isServer)
         {
             EntityProperty properties[] = {
@@ -50,7 +40,8 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 
             for (auto spawn : scene->GetEntitiesOfType<CastleEntity>())
             {
-                spawns.push_back(spawn);
+                spawnPositions.push_back(spawn->Center());
+                spawn->Destroy();
             }
         }
     }
@@ -58,28 +49,20 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if (scene->isServer && !gameOver)
         {
-            bool multipleClientsConnected = scene->replicationManager->GetClients().size() >= 2;
+            bool multipleClientsConnected = scene->GetEngine()->GetServerGame()->TotalConnectedClients() >= 2;
 
             if (multipleClientsConnected)
             {
-                if (players.size() == 0)
+                auto spawnsLeft = scene->GetEntitiesOfType<CastleEntity>();
+
+                if (spawnsLeft.size() == 0)
                 {
                     scene->SendEvent(BroadcastToClientMessage("Draw!"));
                     gameOver = true;
                 }
                 else
                 {
-                    bool onePlayerLeft = true;
-                    for (int i = 1; i < players.size(); ++i)
-                    {
-                        if (players[i]->net->ownerClientId != players[0]->net->ownerClientId)
-                        {
-                            onePlayerLeft = false;
-                            break;
-                        }
-                    }
-
-                    if (onePlayerLeft)
+                    if (spawnsLeft.size() == 1)
                     {
                         gameOver = true;
                         auto& name = scene->replicationManager->GetClient(players[0]->net->ownerClientId).clientName;
@@ -128,21 +111,25 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if (scene->isServer)
         {
-            // Assign spawn
-            for (auto spawn : spawns)
+            auto spawnPoint = spawnPositions[spawnPositions.size() - 1];
+            spawnPositions.pop_back();
+
+            EntityProperty properties[] = {
+                    EntityProperty::EntityType<CastleEntity>(),
+                    { "position", spawnPoint },
+                    { "dimensions", { 32, 32} },
+            };
+
+            auto spawn = static_cast<CastleEntity*>(scene->CreateEntity({ properties }));
+
+            spawn->net->ownerClientId = connectedEvent->id;
+
+            for (int i = 0; i < 4; ++i)
             {
-                if (spawn->net->ownerClientId < 0)
-                {
-                    spawn->net->ownerClientId = connectedEvent->id;
-
-                    for (int i = 0; i < 4; ++i)
-                    {
-                        spawn->SpawnPlayer();
-                    }
-
-                    break;
-                }
+                spawn->SpawnPlayer();
             }
+
+            spawns.push_back(spawn);
         }
     }
 }

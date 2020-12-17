@@ -8,17 +8,21 @@
 void TilemapEntity::OnAdded(const EntityDictionary& properties)
 {
     flags |= CastsShadows;
+    scene->GetLightManager()->AddLight(&light);
+
+    light.bounds = Rectangle(0, 0, 256 * 32, 256 * 32);
+    light.color = Color(64, 64, 255);
+    light.intensity = 0.25;
+}
+
+void TilemapEntity::OnDestroyed()
+{
+    scene->GetLightManager()->AddLight(&light);
 }
 
 void TilemapEntity::Render(Renderer* renderer)
 {
     _renderer.Render(renderer);
-}
-
-template<typename T>
-b2Vec2 ToB2Vec2(const Vector2Template<T>& v)
-{
-    return b2Vec2(v.x, v.y);
 }
 
 void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)

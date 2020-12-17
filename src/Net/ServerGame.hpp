@@ -280,6 +280,7 @@ struct ServerGame : BaseGameInstance
     void ForEachClient(const std::function<void(ServerGameClient&)>& handler);
     void BroadcastRpc(const IRemoteProcedureCall& rpc);
     void ExecuteRpc(int clientId, const IRemoteProcedureCall& rpc);
+    int TotalConnectedClients();
 
     std::function<void(SLNet::BitStream& message, SLNet::BitStream& response, int clientId)> onUpdateRequest;
 

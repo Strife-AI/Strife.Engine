@@ -515,6 +515,20 @@ void ServerGame::ExecuteRpc(int clientId, const IRemoteProcedureCall& rpc)
     rpcManager.Execute(clients[clientId].address, rpc);
 }
 
+int ServerGame::TotalConnectedClients()
+{
+    int count = 0;
+    for(int i = 0; i < MaxClients; ++i)
+    {
+        if(clients[i].status == ClientConnectionStatus::Connected)
+        {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
 ReadWriteBitStream &ReadWriteBitStream::Add(Vector2& out)
 {
     if (isReading)

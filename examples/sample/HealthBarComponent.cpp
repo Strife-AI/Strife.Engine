@@ -6,7 +6,7 @@ void HealthBarComponent::Render(Renderer* renderer)
     Vector2 healthBarSize(32, 4);
     renderer->RenderRectangle(Rectangle(
         owner->Center() + offsetFromCenter - healthBarSize / 2,
-        Vector2(healthBarSize.x * health.currentValue / 100, healthBarSize.y)),Color::White(), -1);
+        Vector2(healthBarSize.x * health.currentValue / maxHealth, healthBarSize.y)),Color::White(), -1);
 }
 
 void HealthBarComponent::TakeDamage(int amount)

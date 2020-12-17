@@ -197,11 +197,15 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
                         {
                             if(spawn->net->ownerClientId == player->net->ownerClientId)
                             {
-                                spawn->StartTimer(2, [=]
+                                auto server = GetEngine()->GetServerGame();
+
+                                spawn->StartTimer(10, [=]
                                 {
                                     spawn->SpawnPlayer();
-                                    GetEngine()->GetServerGame()->ExecuteRpc(spawn->net->ownerClientId, MessageHudRpc("Your bot has respawned at your base"));
+                                    server->ExecuteRpc(spawn->net->ownerClientId, MessageHudRpc("Your bot has respawned at your base"));
                                 });
+
+                                break;
                             }
                         }
                     }
