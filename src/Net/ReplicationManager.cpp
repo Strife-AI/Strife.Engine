@@ -18,7 +18,7 @@ namespace SLNet
 //#define NET_DEBUG
 
 #ifdef NET_DEBUG
-    #define NetLog Log
+    #define NetLog printf
 #else
     #define NetLog(...)
 #endif
@@ -544,7 +544,28 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
             lastClientState = &g_emptyWorldState;
         }
 
+        NetLog("Entities believed to be on client: %d\n", (int)lastClientState->entities.size());
+
+        NetLog("On client: ");
+        for(int i = 0; i < lastClientState->entities.size(); ++i)
+        {
+            NetLog("%d \n", lastClientState->entities[i]);
+        }
+
+        NetLog("\n");
+
+        NetLog("On server: ");
+        for(int i = 0; i < currentState->entities.size(); ++i)
+        {
+            NetLog("%d \n", currentState->entities[i]);
+        }
+
+        NetLog("\n");
+
         WorldDiff diff(*lastClientState, *currentState);
+
+        NetLog("Entities added: %d\n", (int)diff.addedEntities.size());
+        NetLog("Entities destroyed: %d\n", (int)diff.destroyedEntities.size());
 
         // Send destroy messages for entities that the client doesn't know were destroyed
         for (auto destroyedEntity : diff.destroyedEntities)
@@ -576,6 +597,8 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
 
     // Send the current state of the world
     {
+        NetLog("Total entities on server: %d\n", (int)_componentsByNetId.size());
+
         response.Write(MessageType::EntitySnapshot);
 
         EntitySnapshotMessage responseMessage;
@@ -624,10 +647,7 @@ WorldState ReplicationManager::GetCurrentWorldState()
 
     for (auto& component : _componentsByNetId)
     {
-        if (!component.second->owner->isDestroyed)
-        {
-            state.entities.push_back(component.first);
-        }
+        state.entities.push_back(component.first);
     }
 
     return state;
@@ -635,32 +655,7 @@ WorldState ReplicationManager::GetCurrentWorldState()
 
 void ReplicationManager::ReceiveEvent(const IEntityEvent& ev)
 {
-    if (ev.Is<EndOfUpdateEvent>())
-    {
-        if(scene->deltaTime == 0)
-        {
-            return;
-        }
 
-        ++_currentSnapshotId;
-        if (_isServer)
-        {
-            for (auto c : components)
-            {
-                for (auto var = c->owner->syncVarHead; var != nullptr; var = var->next)
-                {
-                    var->AddCurrentValueToSnapshots(_currentSnapshotId, scene->relativeTime);
-                }
-            }
-        }
-
-        if(_worldSnapshots.IsFull())
-        {
-            _worldSnapshots.Dequeue();
-        }
-
-        _worldSnapshots.Enqueue(GetCurrentWorldState());
-    }
 }
 
 void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
@@ -714,6 +709,7 @@ void ReplicationManager::ProcessDestroyEntity(ReadWriteBitStream& stream)
     if (component != _componentsByNetId.end())
     {
         auto net = component->second;
+        net->isMarkedForDestructionOnClient = true;
         components.erase(net);
         _componentsByNetId.erase(component->second->netId);
         net->owner->Destroy();
@@ -769,4 +765,31 @@ void ReplicationManager::Server_ClientDisconnected(int clientId)
 
         _clientStateByClientId.erase(clientId);
     }
+}
+
+void ReplicationManager::TakeSnapshot()
+{
+    if(scene->deltaTime == 0)
+    {
+        return;
+    }
+
+    ++_currentSnapshotId;
+    if (_isServer)
+    {
+        for (auto c : components)
+        {
+            for (auto var = c->owner->syncVarHead; var != nullptr; var = var->next)
+            {
+                var->AddCurrentValueToSnapshots(_currentSnapshotId, scene->relativeTime);
+            }
+        }
+    }
+
+    if(_worldSnapshots.IsFull())
+    {
+        _worldSnapshots.Dequeue();
+    }
+
+    _worldSnapshots.Enqueue(GetCurrentWorldState());
 }

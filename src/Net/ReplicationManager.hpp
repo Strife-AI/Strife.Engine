@@ -106,6 +106,12 @@ public:
 
     void RemoveNetComponent(NetComponent* component)
     {
+        if(!_isServer && !component->isMarkedForDestructionOnClient)
+        {
+            // FIXME: this doesn't work when destroying the scene
+            //FatalError("Tried to remove net component from %s on client\n", typeid(*component->owner).name());
+        }
+
         _componentsByNetId.erase(component->netId);
         components.erase(component);
     }
@@ -129,6 +135,8 @@ public:
     bool Server_SendWorldUpdate(int clientId, SLNet::BitStream &response);
 
     void Server_ClientDisconnected(int clientId);
+
+    void TakeSnapshot();
 
     WorldState GetCurrentWorldState();
 
