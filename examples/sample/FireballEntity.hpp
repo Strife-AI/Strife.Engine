@@ -13,4 +13,5 @@ DEFINE_ENTITY(FireballEntity, "fireball"), IUpdatable
 
     PointLight light;
     int ownerId;
+    SyncVar<bool> visible { true };
 };

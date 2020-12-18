@@ -30,13 +30,13 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if (scene->isServer)
         {
-            EntityProperty properties[] = {
-                    EntityProperty::EntityType<PuckEntity>(),
-                    { "position", { 1800, 1800} },
-                    { "dimensions", { 32, 32} },
-            };
+//            EntityProperty properties[] = {
+//                    EntityProperty::EntityType<PuckEntity>(),
+//                    { "position", { 1800, 1800} },
+//                    { "dimensions", { 32, 32} },
+//            };
 
-            scene->CreateEntity(EntityDictionary(properties));
+//            scene->CreateEntity(EntityDictionary(properties));
 
             for (auto spawn : scene->GetEntitiesOfType<CastleEntity>())
             {

@@ -75,7 +75,10 @@ void CastleEntity::Update(float deltaTime)
 
 void CastleEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
-
+    if(ev.Is<OutOfHealthEvent>())
+    {
+        Destroy();
+    }
 }
 
 void CastleEntity::SpawnPlayer()
