@@ -28,6 +28,11 @@ void FireballEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
     if(auto contactBegin = ev.Is<ContactBeginEvent>())
     {
+        if(!visible.Value())
+        {
+            return;
+        }
+
         auto other = contactBegin->other.OwningEntity();
         if(other->id == ownerId) return;
         if(contactBegin->other.IsTrigger()) return;
@@ -37,13 +42,21 @@ void FireballEntity::ReceiveServerEvent(const IEntityEvent& ev)
         if(healthBar != nullptr)
         {
             healthBar->TakeDamage(5, this);
-
-            StartTimer(0.2, [=] { Destroy(); });
+            StartTimer(0, [=] { visible.SetValue(false); });
+            StartTimer(1, [=] { Destroy(); });
         }
     }
 }
 
 void FireballEntity::Update(float deltaTime)
 {
+    if(!scene->isServer)
+    {
+        if(!visible.Value())
+        {
+            scene->GetLightManager()->RemoveLight(&light);
+        }
+    }
+
     light.position = Center();
 }

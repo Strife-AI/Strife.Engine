@@ -43,7 +43,7 @@ struct SpawnEntityMessage
             .Add(ownerClientId);
     }
 
-    uint8 netId;
+    int netId;
     uint8 ownerClientId;
     StringId type;
     Vector2 position;
@@ -57,7 +57,7 @@ struct DestroyEntityMessage
         stream.Add(netId);
     }
 
-    uint8 netId;
+    int netId;
 };
 
 struct UpdateResponseMessage
@@ -80,12 +80,14 @@ struct EntitySnapshotMessage
         stream
             .Add(sentTime)
             .Add(lastServerSequence)
-            .Add(lastServerExecuted);
+            .Add(lastServerExecuted)
+            .Add(totalEntities);
     }
 
     float sentTime;
     int lastServerSequence;
     int lastServerExecuted;
+    int totalEntities;
 };
 
 struct PlayerCommandMessage
@@ -198,6 +200,7 @@ void ReplicationManager::Client_ReceiveUpdateResponse(SLNet::BitStream& stream)
     auto& client = _clientStateByClientId[localClientId];
     if(responseMessage.snapshotTo <= client.lastReceivedSnapshotId)
     {
+        NetLog("Receive out of order message\n");
         return;
     }
 
@@ -530,10 +533,10 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
     responseMessage.snapshotTo = _currentSnapshotId;
     responseMessage.ReadWrite(responseStream);
 
-    {
-        auto currentState = GetWorldSnapshot(_currentSnapshotId);
-        if (currentState == nullptr) FatalError("Missing current snapshot");
+    auto currentState = GetWorldSnapshot(_currentSnapshotId);
+    if (currentState == nullptr) FatalError("Missing current snapshot");
 
+    {
         auto& clientState = _clientStateByClientId[clientId];
 
         auto lastClientState = GetWorldSnapshot(clientState.lastReceivedSnapshotId);
@@ -567,16 +570,6 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
         NetLog("Entities added: %d\n", (int)diff.addedEntities.size());
         NetLog("Entities destroyed: %d\n", (int)diff.destroyedEntities.size());
 
-        // Send destroy messages for entities that the client doesn't know were destroyed
-        for (auto destroyedEntity : diff.destroyedEntities)
-        {
-            DestroyEntityMessage destroyMessage;
-            destroyMessage.netId = destroyedEntity;
-
-            response.Write(MessageType::RemoveEntity);
-            destroyMessage.ReadWrite(responseStream);
-        }
-
         // Send new entities that don't exist on the client
         for (auto addedEntity : diff.addedEntities)
         {
@@ -593,6 +586,16 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
             response.Write(MessageType::SpawnEntity);
             spawnMessage.ReadWrite(responseStream);
         }
+
+        // Send destroy messages for entities that the client doesn't know were destroyed
+        for (auto destroyedEntity : diff.destroyedEntities)
+        {
+            DestroyEntityMessage destroyMessage;
+            destroyMessage.netId = destroyedEntity;
+
+            response.Write(MessageType::RemoveEntity);
+            destroyMessage.ReadWrite(responseStream);
+        }
     }
 
     // Send the current state of the world
@@ -605,6 +608,7 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
         responseMessage.lastServerSequence = client.lastServerSequenceNumber;
         responseMessage.lastServerExecuted = client.lastServerExecuted;
         responseMessage.sentTime = scene->absoluteTime;
+        responseMessage.totalEntities = currentState->entities.size();
 
         responseMessage.ReadWrite(responseStream);
 
@@ -647,7 +651,8 @@ WorldState ReplicationManager::GetCurrentWorldState()
 
     for (auto& component : _componentsByNetId)
     {
-        state.entities.push_back(component.first);
+        if(!component.second->owner->isDestroyed)
+            state.entities.push_back(component.first);
     }
 
     return state;
@@ -665,7 +670,7 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
 
     if(_componentsByNetId.count(message.netId) != 0)
     {
-        NetLog("Spawn duplicate entity\n");
+        NetLog("Spawn duplicate entity: %d\n", message.netId);
         // Duplicate entity
         return;
     }
@@ -717,7 +722,7 @@ void ReplicationManager::ProcessDestroyEntity(ReadWriteBitStream& stream)
     }
     else
     {
-        NetLog("Asked to destroy entity that didn't exist\n");
+        NetLog("Asked to destroy entity that didn't exist: %d\n", message.netId);
     }
 }
 
@@ -725,6 +730,12 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
 {
     EntitySnapshotMessage message;
     message.ReadWrite(stream);
+
+    if(message.totalEntities != components.size())
+    {
+        fflush(stdout);
+        FatalError("Client and server disagree on number of entities (server: %d, client: %d)\n", message.totalEntities, (int)components.size());
+    }
 
     auto& client = _clientStateByClientId[localClientId];
 

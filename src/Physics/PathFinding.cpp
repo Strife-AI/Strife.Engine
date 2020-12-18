@@ -104,7 +104,6 @@ void PathFinderService::RequestFlowField(Vector2 start, Vector2 end, Entity* own
     while(_obstacleGrid[request.endCell] != 0)
     {
         ++request.endCell.x;
-        Log("Adjust position\n");
     }
 
     _requestQueue.push(request);
@@ -118,7 +117,7 @@ void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        Visualize(renderEvent->renderer);
+        //Visualize(renderEvent->renderer);
     }
 }
 
