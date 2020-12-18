@@ -42,9 +42,10 @@ void FireballEntity::ReceiveServerEvent(const IEntityEvent& ev)
         if(healthBar != nullptr)
         {
             healthBar->TakeDamage(5, this);
-            StartTimer(0, [=] { visible.SetValue(false); });
-            StartTimer(1, [=] { Destroy(); });
         }
+
+        visible.SetValue(false);
+        StartTimer(1, [=] { Destroy(); });
     }
 }
 
