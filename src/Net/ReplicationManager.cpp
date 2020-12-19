@@ -15,7 +15,7 @@ namespace SLNet
 }
 #endif
 
-#define NET_DEBUG
+//#define NET_DEBUG
 
 #ifdef NET_DEBUG
     #define NetLog printf
@@ -504,10 +504,34 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
 
         auto lastClientState = GetWorldSnapshot(clientState.lastReceivedSnapshotId);
 
+        WorldDiff diff;
         if (lastClientState == nullptr)
         {
             NetLog("Have to send from %d -> %d\n", clientState.lastReceivedSnapshotId, _currentSnapshotId);
             lastClientState = &g_emptyWorldState;
+
+            diff.addedEntities = currentState->entities;
+        }
+        else
+        {
+            bool includeDiff = false;
+            for(auto& snapshot : _worldSnapshots)
+            {
+                if(snapshot.snapshotId == clientState.lastReceivedSnapshotId)
+                {
+                    includeDiff = true;
+                }
+
+                if (includeDiff)
+                {
+                    diff.Merge(snapshot.diffFromLastSnapshot);
+                }
+
+                if(snapshot.snapshotId == _currentSnapshotId)
+                {
+                    break;
+                }
+            }
         }
 
         NetLog("Entities believed to be on client: %d\n", (int)lastClientState->entities.size());
@@ -528,16 +552,20 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
 
         NetLog("\n");
 
-        WorldDiff diff;
-        WorldState::Diff(*lastClientState, *currentState, diff);
-
         NetLog("Entities added: %d\n", (int)diff.addedEntities.size());
         NetLog("Entities destroyed: %d\n", (int)diff.destroyedEntities.size());
 
         // Send new entities that don't exist on the client
         for (auto addedEntity : diff.addedEntities)
         {
+            if(_componentsByNetId.count(addedEntity) == 0 || _componentsByNetId[addedEntity]->owner->isDestroyed)
+            {
+                // Never need to send created events if the entity was destroyed in this packet
+                continue;
+            }
+
             auto net = _componentsByNetId[addedEntity];
+
             auto entity = net->owner;
 
             if(entity->isDestroyed)
