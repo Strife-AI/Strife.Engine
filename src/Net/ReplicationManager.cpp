@@ -20,7 +20,7 @@ namespace SLNet
 #ifdef NET_DEBUG
     #define NetLog printf
 #else
-    #define NetLog(...)
+    void NetLog(...) { }
 #endif
 
 
@@ -586,6 +586,15 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
 
         response.Write(false);
 
+        // Send message
+        EntitySnapshotMessage responseMessage;
+        responseMessage.lastServerSequence = client.lastServerSequenceNumber;
+        responseMessage.lastServerExecuted = client.lastServerExecuted;
+        responseMessage.sentTime = scene->absoluteTime;
+        responseMessage.totalEntities = currentState->entities.size();
+
+        responseMessage.ReadWrite(responseStream);
+
         // Send destroy messages for entities that the client doesn't know were destroyed
         for (auto destroyedEntity : diff.destroyedEntities)
         {
@@ -602,14 +611,6 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
     // Send the current state of the world
     {
         NetLog("Total entities on server: %d\n", (int)_componentsByNetId.size());
-
-        EntitySnapshotMessage responseMessage;
-        responseMessage.lastServerSequence = client.lastServerSequenceNumber;
-        responseMessage.lastServerExecuted = client.lastServerExecuted;
-        responseMessage.sentTime = scene->absoluteTime;
-        responseMessage.totalEntities = currentState->entities.size();
-
-        responseMessage.ReadWrite(responseStream);
 
         for (auto& c : _componentsByNetId)
         {
@@ -700,7 +701,7 @@ void ReplicationManager::ProcessSpawnEntity(SpawnEntityMessage& message)
     }
 }
 
-void ReplicationManager::ProcessDestroyEntity(DestroyEntityMessage& message)
+void ReplicationManager::ProcessDestroyEntity(DestroyEntityMessage& message, float destroyTime)
 {
     auto component = _componentsByNetId.find(message.netId);
 
@@ -708,9 +709,8 @@ void ReplicationManager::ProcessDestroyEntity(DestroyEntityMessage& message)
     {
         auto net = component->second;
         net->isMarkedForDestructionOnClient = true;
-        components.erase(net);
-        _componentsByNetId.erase(component->second->netId);
-        net->owner->Destroy();
+        net->destroyTime = destroyTime;
+        net->markedForDestruction = true;
         NetLog("Destroyed entity %d\n", net->netId);
     }
     else
@@ -735,6 +735,10 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
         ProcessSpawnEntity(spawnEntityMessage);
     } while(true);
 
+    EntitySnapshotMessage message;
+    message.ReadWrite(stream);
+    float time = message.sentTime - scene->GetEngine()->GetClientGame()->GetServerClockOffset();
+
     // Read deleted entities
     DestroyEntityMessage destroyEntityMessage;
     do
@@ -743,29 +747,29 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
         if(!hasDeletedEntity) break;
 
         destroyEntityMessage.ReadWrite(stream);
-        ProcessDestroyEntity(destroyEntityMessage);
+        ProcessDestroyEntity(destroyEntityMessage, time);
     } while(true);
 
-    EntitySnapshotMessage message;
-    message.ReadWrite(stream);
-
-    if(message.totalEntities != components.size())
-    {
-        fflush(stdout);
-        FatalError("Client and server disagree on number of entities (server: %d, client: %d)\n", message.totalEntities, (int)components.size());
-    }
+//    if(message.totalEntities != components.size())
+//    {
+//        fflush(stdout);
+//        FatalError("Client and server disagree on number of entities (server: %d, client: %d)\n", message.totalEntities, (int)components.size());
+//    }
 
     auto& client = _clientStateByClientId[localClientId];
 
     client.lastServerSequenceNumber = message.lastServerSequence;
     client.lastServerExecuted = message.lastServerExecuted;
 
-    float time = message.sentTime - scene->GetEngine()->GetClientGame()->GetServerClockOffset();
-
     NetLog("Total client-side entities: %d\n", (int)_componentsByNetId.size());
 
     for (auto& c : _componentsByNetId)
     {
+        if(c.second->markedForDestruction)
+        {
+            continue;
+        }
+
         ReadVars(c.second->owner->syncVarHead, snapshotFromId, client.lastReceivedSnapshotId, time, stream.stream);
     }
 }

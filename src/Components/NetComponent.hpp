@@ -67,4 +67,6 @@ DEFINE_COMPONENT(NetComponent)
 
     std::shared_ptr<FlowField> flowField;   // TODO: shouldn't be here
     Vector2 acceleration;
+    float destroyTime = INFINITY;
+    bool markedForDestruction = false;
 };
