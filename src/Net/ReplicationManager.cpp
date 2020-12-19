@@ -137,37 +137,10 @@ struct ClientUpdateRequestMessage
     uint32 lastReceivedSnapshotId;
 };
 
-WorldDiff::WorldDiff(const WorldState& before, const WorldState& after)
+void WorldDiff::Merge(const WorldDiff& rhs)
 {
-    int beforeIndex = 0;
-    int afterIndex = 0;
-
-    while (beforeIndex < before.entities.size() && afterIndex < after.entities.size())
-    {
-        if (before.entities[beforeIndex] < after.entities[afterIndex])
-        {
-            destroyedEntities.push_back(before.entities[beforeIndex++]);
-        }
-        else if(before.entities[beforeIndex] > after.entities[afterIndex])
-        {
-            addedEntities.push_back(after.entities[afterIndex++]);
-        }
-        else
-        {
-            ++beforeIndex;
-            ++afterIndex;
-        }
-    }
-
-    while(beforeIndex < before.entities.size())
-    {
-        destroyedEntities.push_back(before.entities[beforeIndex++]);
-    }
-
-    while(afterIndex < after.entities.size())
-    {
-        addedEntities.push_back(after.entities[afterIndex++]);
-    }
+    addedEntities.insert(addedEntities.end(), rhs.addedEntities.begin(), rhs.addedEntities.end());
+    destroyedEntities.insert(destroyedEntities.end(), rhs.destroyedEntities.begin(), rhs.destroyedEntities.end());
 }
 
 PlayerCommand* ClientState::GetCommandById(int id)
@@ -555,7 +528,8 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
 
         NetLog("\n");
 
-        WorldDiff diff(*lastClientState, *currentState);
+        WorldDiff diff;
+        WorldState::Diff(*lastClientState, *currentState, diff);
 
         NetLog("Entities added: %d\n", (int)diff.addedEntities.size());
         NetLog("Entities destroyed: %d\n", (int)diff.destroyedEntities.size());
@@ -818,5 +792,48 @@ void ReplicationManager::TakeSnapshot()
         _worldSnapshots.Dequeue();
     }
 
-    _worldSnapshots.Enqueue(GetCurrentWorldState());
+    auto state = GetCurrentWorldState();
+    WorldState::Diff(_worldSnapshots.Last(), state, state.diffFromLastSnapshot);
+
+    _worldSnapshots.Enqueue(std::move(state));
+}
+
+ReplicationManager::ReplicationManager(Scene *scene, bool isServer)
+    : _isServer(isServer),
+      _scene(scene)
+{
+    _worldSnapshots.Enqueue(g_emptyWorldState);
+}
+
+void WorldState::Diff(const WorldState& before, const WorldState& after, WorldDiff& outDiff)
+{
+    int beforeIndex = 0;
+    int afterIndex = 0;
+
+    while (beforeIndex < before.entities.size() && afterIndex < after.entities.size())
+    {
+        if (before.entities[beforeIndex] < after.entities[afterIndex])
+        {
+            outDiff.destroyedEntities.push_back(before.entities[beforeIndex++]);
+        }
+        else if(before.entities[beforeIndex] > after.entities[afterIndex])
+        {
+            outDiff.addedEntities.push_back(after.entities[afterIndex++]);
+        }
+        else
+        {
+            ++beforeIndex;
+            ++afterIndex;
+        }
+    }
+
+    while(beforeIndex < before.entities.size())
+    {
+        outDiff.destroyedEntities.push_back(before.entities[beforeIndex++]);
+    }
+
+    while(afterIndex < after.entities.size())
+    {
+        outDiff.addedEntities.push_back(after.entities[afterIndex++]);
+    }
 }

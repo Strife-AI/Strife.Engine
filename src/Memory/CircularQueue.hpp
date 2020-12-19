@@ -76,6 +76,12 @@ public:
         ++count;
     }
 
+    void Enqueue(T&& item)
+    {
+        *Allocate() = item;
+        ++count;
+    }
+
     T* Allocate()
     {
         if (IsFull())
@@ -126,6 +132,11 @@ public:
     void Clear()
     {
         head = tail = items;
+    }
+
+    T& Last()
+    {
+        return *(--end());
     }
 
 private:

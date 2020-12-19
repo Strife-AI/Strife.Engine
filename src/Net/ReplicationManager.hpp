@@ -19,11 +19,23 @@ namespace SLNet {
 
 enum class MessageType : uint8;
 struct ReadWriteBitStream;
+class WorldState;
+
+struct WorldDiff
+{
+    void Merge(const WorldDiff& rhs);
+
+    std::vector<int> addedEntities;
+    std::vector<int> destroyedEntities;
+};
 
 struct WorldState
 {
+    static void Diff(const WorldState& before, const WorldState& after, WorldDiff& outDiff);
+
     std::vector<int> entities;
     unsigned int snapshotId;
+    WorldDiff diffFromLastSnapshot;
 };
 
 DEFINE_EVENT(PlayerConnectedEvent)
@@ -60,14 +72,6 @@ DEFINE_EVENT(JoinedServerEvent)
     int selfId;
 };
 
-struct WorldDiff
-{
-    WorldDiff(const WorldState& before, const WorldState& after);
-
-    std::vector<int> addedEntities;
-    std::vector<int> destroyedEntities;
-};
-
 struct ClientState
 {
     PlayerCommand* GetCommandById(int id);
@@ -87,12 +91,7 @@ struct ClientState
 class ReplicationManager : public ISceneService
 {
 public:
-    ReplicationManager(Scene* scene, bool isServer)
-        : _isServer(isServer),
-        _scene(scene)
-    {
-        
-    }
+    ReplicationManager(Scene* scene, bool isServer);
 
     void AddNetComponent(NetComponent* component)
     {
