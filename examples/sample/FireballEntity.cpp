@@ -5,6 +5,7 @@
 
 void FireballEntity::OnAdded(const EntityDictionary& properties)
 {
+    printf("Spawn on: %f\n", scene->relativeTime);
     auto rb = AddComponent<RigidBodyComponent>(b2_dynamicBody);
     rb->CreateCircleCollider(Radius, true);
 
@@ -21,6 +22,7 @@ void FireballEntity::OnAdded(const EntityDictionary& properties)
 
 void FireballEntity::OnDestroyed()
 {
+    printf("Destroyed on: %f\n", scene->relativeTime);
     if(!scene->isServer) scene->GetLightManager()->RemoveLight(&light);
 }
 
@@ -45,7 +47,8 @@ void FireballEntity::ReceiveServerEvent(const IEntityEvent& ev)
         }
 
         visible.SetValue(false);
-        StartTimer(1, [=] { Destroy(); });
+        Destroy();
+        //StartTimer(1, [=] { Destroy(); });
     }
 }
 

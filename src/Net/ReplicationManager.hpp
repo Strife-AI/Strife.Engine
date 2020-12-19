@@ -148,8 +148,8 @@ public:
 private:
     void ReceiveEvent(const IEntityEvent& ev) override;
 
-    void ProcessSpawnEntity(ReadWriteBitStream& stream);
-    void ProcessDestroyEntity(ReadWriteBitStream& stream);
+    void ProcessSpawnEntity(class SpawnEntityMessage& message);
+    void ProcessDestroyEntity(class DestroyEntityMessage& message);
     void ProcessEntitySnapshotMessage(ReadWriteBitStream& stream, uint32 snapshotFromId);
 
     WorldState* GetWorldSnapshot(uint32 snapshotId);

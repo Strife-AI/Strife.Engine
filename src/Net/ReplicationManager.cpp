@@ -15,7 +15,7 @@ namespace SLNet
 }
 #endif
 
-//#define NET_DEBUG
+#define NET_DEBUG
 
 #ifdef NET_DEBUG
     #define NetLog printf
@@ -26,8 +26,6 @@ namespace SLNet
 
 enum class MessageType : uint8
 {
-    SpawnEntity,
-    RemoveEntity,
     EntitySnapshot
 };
 
@@ -215,19 +213,9 @@ void ReplicationManager::Client_ReceiveUpdateResponse(SLNet::BitStream& stream)
 
         switch ((MessageType)messageType)
         {
-        case MessageType::SpawnEntity:
-            NetLog("    Receive spawn entity\n");
-            ProcessSpawnEntity(rw);
-            break;
-
         case MessageType::EntitySnapshot:
             NetLog("    Receive entity snapshot\n");
             ProcessEntitySnapshotMessage(rw, responseMessage.snapshotFrom);
-            break;
-
-        case MessageType::RemoveEntity:
-            NetLog("    Receive destroy entity\n");
-            ProcessDestroyEntity(rw);
             break;
 
         default:
@@ -533,6 +521,8 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
     responseMessage.snapshotTo = _currentSnapshotId;
     responseMessage.ReadWrite(responseStream);
 
+    response.Write(MessageType::EntitySnapshot);
+
     auto currentState = GetWorldSnapshot(_currentSnapshotId);
     if (currentState == nullptr) FatalError("Missing current snapshot");
 
@@ -576,6 +566,11 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
             auto net = _componentsByNetId[addedEntity];
             auto entity = net->owner;
 
+            if(entity->isDestroyed)
+            {
+                FatalError("Entity was destroyed");
+            }
+
             SpawnEntityMessage spawnMessage;
             spawnMessage.position = entity->Center();
             spawnMessage.netId = net->netId;
@@ -583,9 +578,11 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
             spawnMessage.dimensions = entity->Dimensions();
             spawnMessage.ownerClientId = net->ownerClientId;
 
-            response.Write(MessageType::SpawnEntity);
+            response.Write(true);
             spawnMessage.ReadWrite(responseStream);
         }
+
+        response.Write(false);
 
         // Send destroy messages for entities that the client doesn't know were destroyed
         for (auto destroyedEntity : diff.destroyedEntities)
@@ -593,16 +590,16 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
             DestroyEntityMessage destroyMessage;
             destroyMessage.netId = destroyedEntity;
 
-            response.Write(MessageType::RemoveEntity);
+            response.Write(true);
             destroyMessage.ReadWrite(responseStream);
         }
+
+        response.Write(false);
     }
 
     // Send the current state of the world
     {
         NetLog("Total entities on server: %d\n", (int)_componentsByNetId.size());
-
-        response.Write(MessageType::EntitySnapshot);
 
         EntitySnapshotMessage responseMessage;
         responseMessage.lastServerSequence = client.lastServerSequenceNumber;
@@ -663,11 +660,8 @@ void ReplicationManager::ReceiveEvent(const IEntityEvent& ev)
 
 }
 
-void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
+void ReplicationManager::ProcessSpawnEntity(SpawnEntityMessage& message)
 {
-    SpawnEntityMessage message;
-    message.ReadWrite(stream);
-
     if(_componentsByNetId.count(message.netId) != 0)
     {
         NetLog("Spawn duplicate entity: %d\n", message.netId);
@@ -704,11 +698,8 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
     }
 }
 
-void ReplicationManager::ProcessDestroyEntity(ReadWriteBitStream& stream)
+void ReplicationManager::ProcessDestroyEntity(DestroyEntityMessage& message)
 {
-    DestroyEntityMessage message;
-    message.ReadWrite(stream);
-
     auto component = _componentsByNetId.find(message.netId);
 
     if (component != _componentsByNetId.end())
@@ -726,8 +717,33 @@ void ReplicationManager::ProcessDestroyEntity(ReadWriteBitStream& stream)
     }
 }
 
+static const int MaxNewEntities = 1024;
+static const int MaxDeletedEntities = 1024;
+
 void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream, uint32 snapshotFromId)
 {
+    // Read new entities
+    SpawnEntityMessage spawnEntityMessage;
+    do
+    {
+        bool hasNewEntity = stream.stream.ReadBit();
+        if(!hasNewEntity) break;
+
+        spawnEntityMessage.ReadWrite(stream);
+        ProcessSpawnEntity(spawnEntityMessage);
+    } while(true);
+
+    // Read deleted entities
+    DestroyEntityMessage destroyEntityMessage;
+    do
+    {
+        bool hasDeletedEntity = stream.stream.ReadBit();
+        if(!hasDeletedEntity) break;
+
+        destroyEntityMessage.ReadWrite(stream);
+        ProcessDestroyEntity(destroyEntityMessage);
+    } while(true);
+
     EntitySnapshotMessage message;
     message.ReadWrite(stream);
 
