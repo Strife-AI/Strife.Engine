@@ -27,9 +27,15 @@ void NetworkPhysics::ReceiveEvent(const IEntityEvent& ev)
     {
         if (!_isServer)
         {
+            float nowInPast = scene->relativeTime - g_jitterTime.Value();
             for (auto net : scene->replicationManager->components)
             {
-                UpdateVarsToTime(net->owner->syncVarHead, scene->relativeTime - g_jitterTime.Value());
+                if (net->markedForDestruction && nowInPast >= net->destroyTime)
+                {
+                    net->owner->Destroy();
+                }
+
+                UpdateVarsToTime(net->owner->syncVarHead, nowInPast);
                 net->owner->UpdateSyncVars();
             }
         }

@@ -148,7 +148,7 @@ private:
     void ReceiveEvent(const IEntityEvent& ev) override;
 
     void ProcessSpawnEntity(class SpawnEntityMessage& message);
-    void ProcessDestroyEntity(class DestroyEntityMessage& message);
+    void ProcessDestroyEntity(class DestroyEntityMessage& message, float destroyTime);
     void ProcessEntitySnapshotMessage(ReadWriteBitStream& stream, uint32 snapshotFromId);
 
     WorldState* GetWorldSnapshot(uint32 snapshotId);

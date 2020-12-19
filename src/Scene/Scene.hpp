@@ -118,6 +118,8 @@ public:
     void* AllocateMemory(int size) const;
     void FreeMemory(void* mem, int size) const;
 
+    EntityManager& GetEntityManager() { return _entityManager; }
+
     float deltaTime = 0;
     float relativeTime = 0;
     float absoluteTime = 0;
