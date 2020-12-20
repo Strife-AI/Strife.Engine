@@ -5,7 +5,7 @@
 #include "Scene/BaseEntity.hpp"
 #include "Scene/IEntityEvent.hpp"
 
-DEFINE_ENTITY(CastleEntity, "castle"), IUpdatable
+DEFINE_ENTITY(CastleEntity, "castle")
 {
     void OnAdded(const EntityDictionary & properties) override;
     void OnDestroyed() override;

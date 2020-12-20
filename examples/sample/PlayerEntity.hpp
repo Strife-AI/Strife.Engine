@@ -38,7 +38,7 @@ enum class PlayerState
     Attacking
 };
 
-DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable
+DEFINE_ENTITY(PlayerEntity, "player")
 {
     using NeuralNetwork = NeuralNetworkComponent<PlayerNetwork>;
 

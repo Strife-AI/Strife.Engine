@@ -59,6 +59,7 @@ void Scene::RegisterEntity(Entity* entity, const EntityDictionary& properties)
     _engine->GetSoundManager()->AddSoundEmitter(&entity->_soundEmitter, entity);
 
     entity->OnAdded(properties);
+    _entityManager.AddInterfaces(entity);
 }
 
 void Scene::RemoveEntity(Entity* entity)
@@ -327,6 +328,7 @@ void Scene::UpdateEntities(float deltaTime)
 
     _cameraFollower.Update(deltaTime);
 
+    _entityManager.UpdateInterfaces();
     DestroyScheduledEntities();
 }
 

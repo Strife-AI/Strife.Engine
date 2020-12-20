@@ -172,7 +172,7 @@ void Entity::SetCenter(const Vector2& newPosition)
 void Entity::DoTeleport()
 {
     NotifyMovement();
-    flags |= WasTeleported;
+    flags.SetFlag(EntityFlags::WasTeleported);
 }
 
 
@@ -269,4 +269,58 @@ void Entity::NotifyMovement()
     {
         component->OnOwnerMoved();
     }
+}
+
+Entity::Entity()
+	: flags {
+		EntityFlags::EnableUpdate,
+		EntityFlags::EnableFixedUpdate,
+		EntityFlags::EnableServerUpdate,
+		EntityFlags::EnableServerFixedUpdate,
+		EntityFlags::EnableRender,
+		EntityFlags::EnableRenderHud
+	}
+{
+
+}
+
+void Entity::Update(float deltaTime)
+{
+	flags.ResetFlag(EntityFlags::EnableUpdate);
+	FlagsChanged();
+}
+
+void Entity::ServerUpdate(float deltaTime)
+{
+	flags.ResetFlag(EntityFlags::EnableServerUpdate);
+	FlagsChanged();
+}
+
+void Entity::FixedUpdate(float deltaTime)
+{
+	flags.ResetFlag(EntityFlags::EnableFixedUpdate);
+	FlagsChanged();
+}
+
+void Entity::ServerFixedUpdate(float deltaTime)
+{
+	flags.ResetFlag(EntityFlags::EnableServerUpdate);
+	FlagsChanged();
+}
+
+void Entity::Render(Renderer* renderer)
+{
+	flags.ResetFlag(EntityFlags::EnableRender);
+	FlagsChanged();
+}
+
+void Entity::RenderHud(Renderer* renderer)
+{
+	flags.ResetFlag(EntityFlags::EnableRenderHud);
+	FlagsChanged();
+}
+
+void Entity::FlagsChanged()
+{
+	scene->GetEntityManager().ScheduleUpdateInterfaces(this);
 }

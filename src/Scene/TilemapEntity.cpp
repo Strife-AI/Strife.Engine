@@ -7,7 +7,7 @@
 
 void TilemapEntity::OnAdded(const EntityDictionary& properties)
 {
-    flags |= CastsShadows;
+    flags.SetFlag(EntityFlags::CastsShadows);
 
     if(!scene->isServer)
         scene->GetLightManager()->AddLight(&light);

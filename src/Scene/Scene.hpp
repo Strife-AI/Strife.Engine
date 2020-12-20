@@ -170,6 +170,8 @@ private:
     EntityManager _entityManager;
 };
 
+#define CHECK_OVERRIDE(name_, flag_) if (&TEntity::name_ != &Entity::name_) entity->flags.SetFlag(flag_)
+
 template <typename TEntity, typename ... Args>
 TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& ... constructorArgs)
 {
@@ -185,11 +187,25 @@ TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& 
     entity->_position = properties.GetValueOrDefault<Vector2>("position", Vector2(0, 0));
     entity->type = TEntity::Type;
 
+    CHECK_OVERRIDE(Update, EntityFlags::EnableUpdate);
+    CHECK_OVERRIDE(FixedUpdate, EntityFlags::EnableFixedUpdate);
+    CHECK_OVERRIDE(ServerUpdate, EntityFlags::EnableServerUpdate);
+    CHECK_OVERRIDE(ServerFixedUpdate, EntityFlags::EnableServerFixedUpdate);
+    CHECK_OVERRIDE(Render, EntityFlags::EnableRender);
+    CHECK_OVERRIDE(RenderHud, EntityFlags::EnableRenderHud);
+
+    if(&TEntity::Update != &Entity::Update)
+	{
+    	Log("Different functions\n");
+	}
+
     RegisterEntity(entity, properties);
     entityUnderConstruction = oldEntityUnderConstruction;
 
     return entity;
 }
+
+#undef CHECK_OVERRIDE
 
 template <typename TService, typename ... Args>
 TService* Scene::AddService(Args&&... args)
