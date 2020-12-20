@@ -2,7 +2,7 @@
 
 #include "Scene/BaseEntity.hpp"
 
-DEFINE_ENTITY(FireballEntity, "fireball"), IUpdatable
+DEFINE_ENTITY(FireballEntity, "fireball")
 {
     static constexpr float Radius = 5;
 

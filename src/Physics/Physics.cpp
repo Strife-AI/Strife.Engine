@@ -42,7 +42,7 @@ void CollisionManager::UpdateEntityPositions()
 
             auto oldPosition = entity->Center();
 
-            if (entity->flags & WasTeleported)
+            if (entity->flags.HasFlag(EntityFlags::WasTeleported))
             {
                 auto newPosition = entity->TopLeft();
                 auto scaled = (newPosition + entity->Dimensions() / 2) * Scene::PixelsToBox2DRatio;
@@ -50,7 +50,7 @@ void CollisionManager::UpdateEntityPositions()
 
                 body->SetTransform(b2Vec2(scaled.x, scaled.y), angle);
 
-                entity->flags &= ~WasTeleported;
+                entity->flags.ResetFlag(EntityFlags::WasTeleported);
 
                 entity->SendEvent(EntityTeleportedEvent());
             }

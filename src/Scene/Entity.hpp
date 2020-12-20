@@ -21,7 +21,6 @@
 #include "Renderer/Color.hpp"
 #include "Sound/SoundManager.hpp"
 
-struct NetSerializer;
 class b2Body;
 struct IEntityEvent;
 struct MoveResult;
@@ -30,14 +29,6 @@ class Scene;
 struct Entity;
 class Engine;
 struct EntityInstance;
-
-struct IRenderable { virtual void Render(Renderer* renderer) = 0; };
-struct IHudRenderable { virtual void RenderHud(Renderer* renderer) = 0; };
-struct IUpdatable { virtual void Update(float deltaTime) = 0; };
-struct IFixedUpdatable { virtual void FixedUpdate(float deltaTime) = 0; };
-
-struct IServerFixedUpdatable { virtual void ServerFixedUpdate(float deltaTime) = 0; };
-struct IServerUpdatable { virtual void ServerUpdate(float deltaTime) = 0; };
 
 struct EntityHeader
 {
@@ -50,11 +41,18 @@ struct EntityHeader
     int id;
 };
 
-enum EntityFlags
+enum class EntityFlags
 {
     EnableBuoyancy = 1,
     WasTeleported = 2,
-    CastsShadows = 4
+    CastsShadows = 4,
+
+    EnableUpdate = 8,
+    EnableServerUpdate = 16,
+    EnableFixedUpdate = 32,
+    EnableServerFixedUpdate = 64,
+    EnableRender = 128,
+    EnableRenderHud = 256
 };
 
 struct EntityProperty
@@ -202,7 +200,7 @@ struct Entity
     static const int InvalidEntityId = -1;
 
     Entity(const Entity&) = delete;
-    Entity() = default;
+    Entity();
     virtual ~Entity();
 
     /// <summary>
@@ -226,6 +224,15 @@ struct Entity
     float Rotation() const { return _rotation; }
     Engine* GetEngine() const;
     const char* DebugName() const { return typeid(*this).name(); }
+
+    virtual void Update(float deltaTime);
+    virtual void ServerUpdate(float deltaTime);
+
+    virtual void FixedUpdate(float deltaTime);
+    virtual void ServerFixedUpdate(float deltaTime);
+
+    virtual void Render(Renderer* renderer);
+    virtual void RenderHud(Renderer* renderer);
 
     /// <summary>
     /// Called when an entity has been added to the scene.
@@ -285,14 +292,12 @@ struct Entity
     bool isDestroyed = false;
     Scene* scene;
 
-    unsigned int flags = 0;
+    Flags<EntityFlags> flags;
     Entity* parent = nullptr;
     Entity* nextSibling = nullptr;
     Entity* children = nullptr;
 
     ISyncVar* syncVarHead = nullptr;
-
-    auto& PositionData() { return _position; }
 
 protected:
     void NotifyMovement();
@@ -304,6 +309,7 @@ private:
     virtual void ReceiveEvent(const IEntityEvent& ev) { }
     virtual void ReceiveServerEvent(const IEntityEvent& ev) { }
     void DoTeleport();
+    void FlagsChanged();
 
     virtual void DoSerialize(EntityDictionaryBuilder& writer) { }
 
