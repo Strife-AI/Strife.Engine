@@ -45,7 +45,7 @@ struct ConsoleExecuteResult
 class Console
 {
 public:
-    Console();
+    Console(Engine* engine);
 
     void SetFont(const FontSettings& fontSettings);
 
@@ -66,6 +66,8 @@ public:
     void Open();
     void Close();
     void Update();
+
+    Engine* GetEngine() const { return _engine; }
 
     ConcurrentQueue<std::string> logItems;
     float renderLayer = -0.99;
@@ -116,4 +118,5 @@ private:
     int _inputHistoryIndex = 0;
 
     float _autoCompleteResultsTimer = 0;
+    Engine* _engine;
 };

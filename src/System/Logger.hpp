@@ -8,10 +8,12 @@ enum class LogType
     Error
 };
 
+class Console;
+
 void Log(const char* format, ...);
 void Log(LogType type, const char* format, ...);
 
-void InitializeLogging(const char* fileName);
+void InitializeLogging(const char* fileName, Console* console);
 void ShutdownLogging();
 
 

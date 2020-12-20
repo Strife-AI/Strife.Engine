@@ -13,10 +13,9 @@ public:
     SceneManager(Engine* engine, bool isServer);
     virtual ~SceneManager() = default;
 
-    Scene* GetScene() const { return _scene; }
-    Scene* GetNewScene() const { return _newScene; }
+    Scene* GetScene() const { return _scene.get(); }
+    std::shared_ptr<Scene> GetSceneShared() const { return _scene; }
     bool TrySwitchScene(StringId name);
-    void DoSceneTransition();
 
 protected:
 
@@ -26,9 +25,7 @@ private:
     friend struct BaseGameInstance;
 
     void BuildNewScene(const MapSegment* map);
-    void DestroyScene();
 
-    Scene* _scene = nullptr;
-    Scene* _newScene = nullptr;
+    std::shared_ptr<Scene> _scene = nullptr;
     bool _isServer = false;
 };

@@ -22,7 +22,7 @@ void MapCmd(ConsoleCommandBinder& binder)
     binder.Help("Change scene to specified map.");
 
     // TODO: map command for server mode
-    Engine::GetInstance()->StartLocalServer(port, StringId(mapName));
+    binder.GetEngine()->StartLocalServer(port, StringId(mapName));
 }
 ConsoleCmd mapCmd("map", MapCmd);
 
@@ -34,20 +34,6 @@ SceneManager::SceneManager(Engine* engine, bool isServer)
     auto emptyMapSegment = new MapSegment;
     emptyMapSegment->name = "empty-map"_sid;
     ResourceManager::AddResource("empty-map"_sid, emptyMapSegment);
-}
-
-void SceneManager::DoSceneTransition()
-{
-    if (_newScene != nullptr)
-    {
-        _scene->SendEvent(SceneDestroyedEvent());
-        DestroyScene();
-
-        _scene = _newScene;
-        _newScene = nullptr;
-
-        _scene->SendEvent(SceneLoadedEvent());
-    }
 }
 
 bool SceneManager::TrySwitchScene(StringId name)
@@ -67,30 +53,14 @@ bool SceneManager::TrySwitchScene(StringId name)
 
 void SceneManager::BuildNewScene(const MapSegment* mapSegment)
 {
-    delete _newScene;
-
-    _newScene = new Scene(_engine, mapSegment->name, _isServer);
+    _scene = std::make_shared<Scene>(_engine, mapSegment->name, _isServer);
 
     auto screenSize = (_engine->GetSdlManager() != nullptr ? _engine->GetSdlManager()->WindowSize().AsVectorOfType<float>() : Vector2(0, 0));
-    _newScene->GetCamera()->SetScreenSize(screenSize);
-    _newScene->GetCamera()->SetZoom(screenSize.y / (1080.0f / 2));
+    _scene->GetCamera()->SetScreenSize(screenSize);
+    _scene->GetCamera()->SetZoom(screenSize.y / (1080.0f / 2));
 
-    _engine->Game()->BuildScene(_newScene);
-    _newScene->LoadMapSegment(*mapSegment);
+    _engine->Game()->BuildScene(_scene.get());
+    _scene->LoadMapSegment(*mapSegment);
 
-
-    int levelId;
-    if (mapSegment->properties.TryGetProperty("levelId", levelId))
-    {
-        _newScene->levelId = levelId;
-    }
-}
-
-void SceneManager::DestroyScene()
-{
-    if(_scene != nullptr)
-    {
-        delete _scene;
-        _scene = nullptr;
-    }
+    _scene->SendEvent(SceneLoadedEvent());
 }

@@ -7,18 +7,33 @@
 
 void TilemapEntity::OnAdded(const EntityDictionary& properties)
 {
-    flags |= CastsShadows;
+    flags.SetFlag(EntityFlags::CastsShadows);
+
+    if(!scene->isServer)
+        scene->GetLightManager()->AddLight(&light);
+
+    light.bounds = Rectangle(0, 0, 256 * 64, 256 * 64);
+    light.color = Color(64, 64, 255);
+    light.intensity = 0.5;
+}
+
+void TilemapEntity::OnDestroyed()
+{
+    if(!scene->isServer)
+        scene->GetLightManager()->RemoveLight(&light);
+
+    auto pathFinder = scene->GetService<PathFinderService>();
+
+    for (auto& rectangle : _mapSegment->colliders)
+    {
+        auto bounds = rectangle.As<float>();
+        pathFinder->AddObstacle(bounds);
+    }
 }
 
 void TilemapEntity::Render(Renderer* renderer)
 {
     _renderer.Render(renderer);
-}
-
-template<typename T>
-b2Vec2 ToB2Vec2(const Vector2Template<T>& v)
-{
-    return b2Vec2(v.x, v.y);
 }
 
 void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)

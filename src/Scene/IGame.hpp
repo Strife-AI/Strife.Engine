@@ -80,10 +80,10 @@ public:
 
     virtual void OnGameStart() { }
 
-    Engine* GetEngine() const { return _engine; }
+    Engine* GetEngine() { return _engine.get(); }
     void Run();
 
 private:
-    Engine* _engine = nullptr;
+    std::unique_ptr<Engine> _engine = nullptr;
     GameConfig _config;
 };

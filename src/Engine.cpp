@@ -9,6 +9,7 @@
 #include "Scene/Scene.hpp"
 #include "Memory/ResourceManager.hpp"
 #include <thread>
+#include "slikenet/PacketConsoleLogger.h"
 
 #include "../Strife.ML/NewStuff.hpp"
 #include "ML/ML.hpp"
@@ -24,9 +25,6 @@
 
 using namespace std::chrono;
 
-
-Engine Engine::_instance;
-
 #ifdef RELEASE_BUILD
 extern ConsoleVar<bool> g_developerMode("developer-mode", false, false);
 #else
@@ -35,113 +33,86 @@ extern ConsoleVar<bool> g_developerMode("developer-mode", true, true);
 
 ConsoleVar<bool> g_isServer("server", false);
 
-Engine* Engine::Initialize(const EngineConfig& config)
+Engine::Engine(const EngineConfig& config)
 {
-    InitializeLogging("log.txt");
+    _config = config;
+    _defaultBlockAllocator = std::make_unique<BlockAllocator>(config.blockAllocatorSizeBytes);
 
-    Engine* engine = &_instance;
-
-    if (engine->isInitialized)
-    {
-        FatalError("Engine::Initialize() called more than once");
-    }
-
-    engine->_config = config;
-    engine->_defaultBlockAllocator = new BlockAllocator(config.blockAllocatorSizeBytes);
-
-    BlockAllocator::SetDefaultAllocator(engine->GetDefaultBlockAllocator());
+    BlockAllocator::SetDefaultAllocator(GetDefaultBlockAllocator());
 
     // Needs to be initialized first for logging
-    engine->_console = new Console;
+    _console = std::make_unique<Console>(this);
+    InitializeLogging("log.txt", _console.get());
 
     // Load variables from vars.cfg
     // This is needed to be done here for loading up configurations for resolution and fullscreen
     if (config.consoleVarsFile.has_value())
     {
-        engine->_console->LoadVariables(config.consoleVarsFile.value().c_str());
+        _console->LoadVariables(config.consoleVarsFile.value().c_str());
     }
 
-    engine->_console->Execute(config.initialConsoleCmd);
+    _console->Execute(config.initialConsoleCmd);
 
     Log("==============================================================\n");
     Log("Initializing engine\n");
 
     Log("Running as %s\n", g_isServer.Value() ? "server" : "client");
 
-    engine->isInitialized = true;
-
     Log("Initializing resource manager\n");
-    ResourceManager::Initialize(engine);
+    ResourceManager::Initialize(this);
 
-    engine->_input = new Input;
+    _input = Input::GetInstance();
 
     if(!g_isServer.Value())
     {
         Log("Initializing SDL2\n");
-        engine->_sdlManager = new SdlManager(engine->_input, false);
+        _sdlManager = std::make_unique<SdlManager>(_input, false);
+        _plotManager = std::make_unique<PlotManager>(_sdlManager.get());
     }
 
-    engine->_plotManager = new PlotManager;
-    engine->_metricsManager = new MetricsManager;
+    _metricsManager = std::make_unique<MetricsManager>();
 
     if(!g_isServer.Value())
     {
         Log("Initializing renderer\n");
-        engine->_renderer = new Renderer;
-        WindowSizeChangedEvent(engine->_sdlManager->WindowSize().x, engine->_sdlManager->WindowSize().y).Send();
+        _renderer = std::make_unique<Renderer>();
+        WindowSizeChangedEvent(_sdlManager->WindowSize().x, _sdlManager->WindowSize().y).Send();
     }
 
     Log("Initializing sound\n");
-    engine->_soundManager = new SoundManager(g_isServer.Value());
+    _soundManager = std::make_unique<SoundManager>(g_isServer.Value());
 
-    engine->_neuralNetworkManager = std::make_unique<NeuralNetworkManager>();
+    _neuralNetworkManager = std::make_unique<NeuralNetworkManager>();
 
-    UiCanvas::Initialize(engine->_soundManager);
-
-    return &_instance;
+    UiCanvas::Initialize(_soundManager.get());
 }
 
 Engine::~Engine()
 {
-    if (isInitialized)
+    Log("Shutting down engine...\n");
+    try
     {
-        Log("Shutting down engine...\n");
-        try
+        if (_config.consoleVarsFile.has_value())
         {
-            if (_config.consoleVarsFile.has_value())
-            {
-                _console->SerializeVariables(_config.consoleVarsFile.value().c_str());
-            }
-
-            delete _renderer;
-            delete _metricsManager;
-            delete _plotManager;
-            delete _sdlManager;
-            delete _input;
-
-            _serverGame = nullptr;
-            _clientGame = nullptr;
-            _neuralNetworkManager = nullptr;
-
-            auto peerInterface = SLNet::RakPeerInterface::GetInstance();
-            if(peerInterface->IsActive())
-            {
-                peerInterface->Shutdown(500);
-            }
-        }
-        catch(const std::exception& e)
-        {
-            Log("Failed to shutdown engine: %s\n", e.what());
+            _console->SerializeVariables(_config.consoleVarsFile.value().c_str());
         }
 
-        Log("Shutdown complete\n");
+        if(_clientGame != nullptr)
+        {
+            _clientGame->Disconnect();
+        }
 
-        ShutdownLogging();
-        delete _console;
-        _console = nullptr;
-
-        isInitialized = false;
+        auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+        peerInterface->Shutdown(2000, 0, HIGH_PRIORITY);
     }
+    catch(const std::exception& e)
+    {
+        Log("Failed to shutdown engine: %s\n", e.what());
+    }
+
+    Log("Shutdown complete\n");
+
+    ShutdownLogging();
 }
 
 void SleepMicroseconds(unsigned int microseconds)
@@ -225,15 +196,14 @@ void Engine::ResumeGame()
 
 void ConnectCommand(ConsoleCommandBinder& binder)
 {
-    std::string address;
-    int port;
+    std::string address = "142.93.49.216";
+    int port = 60001;
 
-    binder
-        .Bind(address, "serverAddress")
-        .Bind(port, "port")
-        .Help("Connects to a server");
+    binder.TryBind(address, "serverAddress");
+    binder.TryBind(port, "port");
+    binder.Help("Connects to a server");
 
-    Engine::GetInstance()->ConnectToServer(address.c_str(), port);
+    binder.GetEngine()->ConnectToServer(address.c_str(), port);
 }
 
 ConsoleCmd connectCmd("connect", ConnectCommand);
@@ -248,7 +218,7 @@ void Engine::StartServer(int port, StringId mapName)
         peerInterface->Shutdown(500);
     }
 
-    auto result = peerInterface->Startup(1, &sd, 1);
+    auto result = peerInterface->Startup(ServerGame::MaxClients, &sd, 1);
 
     if (result != SLNet::RAKNET_STARTED)
     {
@@ -259,7 +229,7 @@ void Engine::StartServer(int port, StringId mapName)
 
     Log("Listening on %d...\n", port);
 
-    _serverGame = std::make_shared<ServerGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
+    _serverGame = std::make_shared<ServerGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("0.0.0.2", 1)));
     _clientGame = nullptr;
 
     _serverGame->sceneManager.TrySwitchScene(mapName);
@@ -292,8 +262,11 @@ void Engine::ConnectToServer(const char* address, int port)
     }
 
     _serverGame = nullptr;
-    _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.2", 1)));
+    _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("0.0.0.2", 1)));
+    _clientGame->serverAddress = SLNet::SystemAddress(address, port);
 }
+
+SLNet::PacketLogger logger;
 
 void Engine::StartLocalServer(int port, StringId mapName)
 {
@@ -307,7 +280,9 @@ void Engine::StartLocalServer(int port, StringId mapName)
 
     auto peerInterface = SLNet::RakPeerInterface::GetInstance();
 
-    _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("127.0.0.3", 1)));
+    peerInterface->AttachPlugin(&logger);
+
+    _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("0.0.0.3", 1)));
 
     _serverGame->networkInterface.SetLocalAddress(&_clientGame->networkInterface, _clientGame->localAddress);
     _clientGame->networkInterface.SetLocalAddress(&_serverGame->networkInterface, _serverGame->localAddress);
@@ -323,7 +298,7 @@ static void ReloadResources(ConsoleCommandBinder& binder)
 {
     binder.Help("Reloads the resource files");
 
-    Engine::GetInstance()->ReloadResources();
+    binder.GetEngine()->ReloadResources();
 }
 
 ConsoleCmd _reloadCmd("reload", ReloadResources);

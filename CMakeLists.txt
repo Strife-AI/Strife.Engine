@@ -13,7 +13,7 @@ if(MSVC)
 
 	set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -DNOGDI -DWIN32")
 elseif(LINUX)
-	#set(CMAKE_CXX_FLAGS "-lasan -fsanitize=address")
+	set(CMAKE_CXX_FLAGS "-lasan -fsanitize=address")
 elseif(APPLE)
 	set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0")
 endif()

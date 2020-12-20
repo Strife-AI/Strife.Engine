@@ -13,6 +13,7 @@ struct InvalidConsoleCommandCall : std::exception
 
 class Console;
 class Scene;
+class Engine;
 
 class ConsoleCommandBinder
 {
@@ -25,6 +26,8 @@ public:
     {
 
     }
+
+    Engine* GetEngine();
 
     template<typename TParameter>
     ConsoleCommandBinder& Bind(TParameter& outValue, const std::string& name);

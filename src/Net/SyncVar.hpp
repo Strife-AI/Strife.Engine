@@ -26,7 +26,7 @@ enum class SyncVarInterpolation
 template<typename T>
 bool TryLerp(const T& start, const T& end, float t, T& outValue)
 {
-    if constexpr (std::is_integral_v<T>)
+    if constexpr (std::is_arithmetic_v<T>)
     {
         outValue = Lerp(start, end, t);
         return true;
@@ -79,8 +79,7 @@ inline void WriteSyncVarDelta<Vector2>(const Vector2& before, const Vector2& aft
 
         if (!forceFullUpdate
             && offsetX >= -11 && offsetX <= 10
-            && offsetY >= -11 && offsetY <= 10
-            && false)
+            && offsetY >= -11 && offsetY <= 10)
         {
             unsigned int encodedOffsetX = offsetX + 11;
             unsigned int encodedOffsetY = offsetY + 11;
@@ -151,8 +150,6 @@ struct ISyncVar
     virtual void AddCurrentValueToSnapshots(uint32 currentSnapshotId, float currentTime) = 0;
 
     virtual bool IsBool() = 0;
-
-    static bool isServer;
 
     ISyncVar* next = nullptr;
     SyncVarUpdateFrequency frequency;
@@ -265,11 +262,6 @@ struct SyncVar final : ISyncVar
 
     void SetValue(const T& value)
     {
-        if (!isServer)
-        {
-            FatalError("Trying to set syncvar from client");
-        }
-
         currentValue = value;
     }
 
@@ -285,9 +277,13 @@ struct SyncVar final : ISyncVar
 
     void AddValue(const T& value, float time, uint32 snapshotId)
     {
-        if (!snapshots.IsEmpty() && time <= (*(--snapshots.end())).time)
+        if (!snapshots.IsEmpty())
         {
-            return;
+            auto& lastSnapshot = *(--snapshots.end());
+            float lastTime = lastSnapshot.time;
+
+            if(time <= lastTime)
+                return;
         }
 
         if (snapshots.IsFull())
@@ -316,6 +312,8 @@ struct SyncVar final : ISyncVar
     {
         auto it = snapshots.begin();
 
+        auto& last = *(--snapshots.end());
+
         if (snapshots.IsEmpty())
         {
             return currentValue;
@@ -339,7 +337,7 @@ struct SyncVar final : ISyncVar
             auto& currentSnapshot = *it;
             auto& nextSnapshot = *next;
 
-            if (nextSnapshot.time > time)
+            if (nextSnapshot.time >= time)
             {
                 if (interpolation == SyncVarInterpolation::Linear)
                 {

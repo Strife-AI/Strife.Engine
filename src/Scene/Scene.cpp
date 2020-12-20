@@ -59,6 +59,7 @@ void Scene::RegisterEntity(Entity* entity, const EntityDictionary& properties)
     _engine->GetSoundManager()->AddSoundEmitter(&entity->_soundEmitter, entity);
 
     entity->OnAdded(properties);
+    _entityManager.AddInterfaces(entity);
 }
 
 void Scene::RemoveEntity(Entity* entity)
@@ -70,6 +71,7 @@ void Scene::RemoveEntity(Entity* entity)
     {
         for (auto component = entity->_componentList; component != nullptr;)
         {
+        	_componentManager.Unregister(component);
             auto next = component->next;
             component->OnRemoved();
             auto block = component->GetMemoryBlock();
@@ -148,14 +150,10 @@ void Scene::RenderEntities(Renderer* renderer)
         renderable->Render(renderer);
     }
 
-    // TODO: more efficient way of rendering components
-    for(auto entity : _entityManager.entities)
-    {
-        for(IEntityComponent* component = entity->_componentList; component != nullptr; component = component->next)
-        {
-            component->Render(renderer);
-        }
-    }
+	for (auto component : _componentManager.renderables)
+	{
+		component->Render(renderer);
+	}
 
     if (g_drawColliders.Value())
     {
@@ -327,6 +325,8 @@ void Scene::UpdateEntities(float deltaTime)
 
     _cameraFollower.Update(deltaTime);
 
+    _entityManager.UpdateInterfaces();
+    _componentManager.UpdateScheduledComponents();
     DestroyScheduledEntities();
 }
 
@@ -338,6 +338,11 @@ void Scene::NotifyFixedUpdate()
     {
         fixedUpdatable->FixedUpdate(PhysicsDeltaTime);
     }
+
+	for (auto component : _componentManager.fixedUpdatables)
+	{
+		component->Update(deltaTime);
+	}
 }
 
 void Scene::NotifyServerFixedUpdate()
@@ -358,13 +363,9 @@ void Scene::NotifyUpdate(float deltaTime)
         updatable->Update(deltaTime);
     }
 
-    // TODO: more efficient way of updating components
-    for (auto entity : _entityManager.entities)
+    for (auto component : _componentManager.updatables)
     {
-        for (IEntityComponent* component = entity->_componentList; component != nullptr; component = component->next)
-        {
-            component->Update(deltaTime);
-        }
+    	component->Update(deltaTime);
     }
 }
 

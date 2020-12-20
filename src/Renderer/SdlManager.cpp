@@ -35,7 +35,7 @@ void ResolutionCommand(ConsoleCommandBinder& binder)
         .Bind(h, "height")
         .Help("Changes the screen resolution");
 
-    Engine::GetInstance()->GetSdlManager()->SetScreenSize(w, h);
+    binder.GetEngine()->GetSdlManager()->SetScreenSize(w, h);
     g_Resolution.SetValue(Vector2(w, h));
 }
 ConsoleCmd g_resolutionCmd("resolution", ResolutionCommand);
@@ -169,9 +169,9 @@ void SdlManager::SetupOpenGl(bool isHeadless)
 
     _dpiRatio = dpi / defaultDpi;
 
-    auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL);
+    auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
         //| SDL_WINDOW_INPUT_FOCUS
-        //| ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS : 0));
+        | ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS : 0));
 
     if(!isHeadless)
     {

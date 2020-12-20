@@ -118,10 +118,13 @@ public:
     void* AllocateMemory(int size) const;
     void FreeMemory(void* mem, int size) const;
 
+    EntityManager& GetEntityManager() { return _entityManager; }
+    EntityComponentManager& GetComponentManager() { return _componentManager; }
+
     float deltaTime = 0;
     float relativeTime = 0;
+    float absoluteTime = 0;
     float lastFrameStart;
-    int levelId;
     bool isFirstFrame = true;
     bool inEditor = false;
     EntityReference<Entity> soundListener;
@@ -166,7 +169,10 @@ private:
 
     TimerManager _timerManager;
     EntityManager _entityManager;
+    EntityComponentManager _componentManager;
 };
+
+#define CHECK_OVERRIDE(name_, flag_) if (&TEntity::name_ != &Entity::name_) entity->flags.SetFlag(flag_)
 
 template <typename TEntity, typename ... Args>
 TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& ... constructorArgs)
@@ -179,15 +185,29 @@ TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& 
 
     entityUnderConstruction = entity;
     new(entity) TEntity(std::forward<Args>(constructorArgs) ...);
-    entityUnderConstruction = oldEntityUnderConstruction;
 
     entity->_position = properties.GetValueOrDefault<Vector2>("position", Vector2(0, 0));
     entity->type = TEntity::Type;
 
+    CHECK_OVERRIDE(Update, EntityFlags::EnableUpdate);
+    CHECK_OVERRIDE(FixedUpdate, EntityFlags::EnableFixedUpdate);
+    CHECK_OVERRIDE(ServerUpdate, EntityFlags::EnableServerUpdate);
+    CHECK_OVERRIDE(ServerFixedUpdate, EntityFlags::EnableServerFixedUpdate);
+    CHECK_OVERRIDE(Render, EntityFlags::EnableRender);
+    CHECK_OVERRIDE(RenderHud, EntityFlags::EnableRenderHud);
+
+    if(&TEntity::Update != &Entity::Update)
+	{
+    	Log("Different functions\n");
+	}
+
     RegisterEntity(entity, properties);
+    entityUnderConstruction = oldEntityUnderConstruction;
 
     return entity;
 }
+
+#undef CHECK_OVERRIDE
 
 template <typename TService, typename ... Args>
 TService* Scene::AddService(Args&&... args)

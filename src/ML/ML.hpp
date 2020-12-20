@@ -262,8 +262,8 @@ private:
 template<typename TNeuralNetwork>
 void NeuralNetworkComponent<TNeuralNetwork>::SetNetwork(const char* name)
 {
-    auto nnManager = Engine::GetInstance()->GetNeuralNetworkManager();
-    networkContext = nnManager->GetNetwork<TNeuralNetwork>(name);
+    auto nnManager = this->owner->scene->GetEngine()->GetNeuralNetworkManager();
+    networkContext = nnManager->template GetNetwork<TNeuralNetwork>(name);
 }
 
 gsl::span<uint64_t> ReadGridSensorRectangles(

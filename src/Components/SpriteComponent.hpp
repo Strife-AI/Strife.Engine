@@ -16,7 +16,6 @@ DEFINE_COMPONENT(SpriteComponent)
     SpriteComponent() = default;
     SpriteComponent(StringId spriteName);
 
-    void OnAdded() override;
     void Render(Renderer* renderer) override;
 
     void SetSprite(StringId name);
