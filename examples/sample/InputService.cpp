@@ -13,6 +13,9 @@
 #include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
 #include "Tools/Console.hpp"
+#include "MessageHud.hpp"
+
+#include "CastleEntity.hpp"
 
 InputButton g_quit = InputButton(SDL_SCANCODE_ESCAPE);
 InputButton g_upButton(SDL_SCANCODE_W);
@@ -21,49 +24,57 @@ InputButton g_leftButton(SDL_SCANCODE_A);
 InputButton g_rightButton(SDL_SCANCODE_D);
 InputButton g_nextPlayer(SDL_SCANCODE_TAB);
 
-ConsoleVar<bool> autoConnect("auto-connect", false);
-
-/*
-
-[x] In every command, on the server, store where the player is at the end of that command
-[x] The server shouldn't delete a command when it's done. It should mark it as complete
-[x] When returning the snapshot to a client, rewind all the other players to the time of the snapshot (the time when the
-    current command started) by lerping between that position and the previous position
-
-[ ] Add a snapshot buffer to the players on the client that stores where they were given a command id
-[ ] Each snapshot should have a game time of when that took snapshot happened
-[ ] When rendering, use the current game time and snapshot buffer to determine where to draw the player
-
-*/
-
 void InputService::ReceiveEvent(const IEntityEvent& ev)
 {
-    if(ev.Is<SceneLoadedEvent>())
+    if (ev.Is<SceneLoadedEvent>())
     {
-        if(!scene->isServer && autoConnect.Value())
+        if (scene->isServer)
         {
-            scene->GetEngine()->GetConsole()->Execute("connect 127.0.0.1");
+//            EntityProperty properties[] = {
+//                    EntityProperty::EntityType<PuckEntity>(),
+//                    { "position", { 1800, 1800} },
+//                    { "dimensions", { 32, 32} },
+//            };
 
-            //scene->GetCameraFollower()->FollowMouse();
-            //scene->GetCameraFollower()->CenterOn({ 800, 800});
-        }
+//            scene->CreateEntity(EntityDictionary(properties));
 
-        if(scene->isServer)
-        {
-            EntityProperty properties[] = {
-                    EntityProperty::EntityType<PuckEntity>(),
-                    { "position", { 1800, 1800} },
-                    { "dimensions", { 32, 32} },
-            };
-
-            scene->CreateEntity(EntityDictionary(properties));
+            for (auto spawn : scene->GetEntitiesOfType<CastleEntity>())
+            {
+                spawnPositions.push_back(spawn->Center());
+                spawn->Destroy();
+            }
         }
     }
     if (ev.Is<UpdateEvent>())
     {
+        if (scene->isServer && !gameOver)
+        {
+            bool multipleClientsConnected = scene->GetEngine()->GetServerGame()->TotalConnectedClients() >= 2;
+
+            if (multipleClientsConnected)
+            {
+                auto spawnsLeft = scene->GetEntitiesOfType<CastleEntity>();
+
+                if (spawnsLeft.size() == 0)
+                {
+                    scene->SendEvent(BroadcastToClientMessage("Draw!"));
+                    gameOver = true;
+                }
+                else
+                {
+                    if (spawnsLeft.size() == 1)
+                    {
+                        gameOver = true;
+                        auto& name = scene->replicationManager->GetClient(players[0]->net->ownerClientId).clientName;
+                        scene->SendEvent(BroadcastToClientMessage(name + " wins!"));
+                    }
+                }
+            }
+        }
+
         HandleInput();
     }
-    else if(auto renderEvent = ev.Is<RenderEvent>())
+    else if (auto renderEvent = ev.Is<RenderEvent>())
     {
         if (scene->isServer)
         {
@@ -92,42 +103,33 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
 
         ++currentFixedUpdateId;
     }
-    else if(auto joinedServerEvent = ev.Is<JoinedServerEvent>())
+    else if (auto joinedServerEvent = ev.Is<JoinedServerEvent>())
     {
         scene->replicationManager->localClientId = joinedServerEvent->selfId;
     }
-    else if(auto connectedEvent = ev.Is<PlayerConnectedEvent>())
+    else if (auto connectedEvent = ev.Is<PlayerConnectedEvent>())
     {
         if (scene->isServer)
         {
-            Vector2 positions[3] = {
-                Vector2(2048 - 1000, 2048 - 1000),
-                Vector2(2048 + 1000, 2048 + 1000),
-                Vector2(2048 + 1000, 2048 - 1000),
+            auto spawnPoint = spawnPositions[spawnPositions.size() - 1];
+            spawnPositions.pop_back();
+
+            EntityProperty properties[] = {
+                    EntityProperty::EntityType<CastleEntity>(),
+                    { "position", spawnPoint },
+                    { "dimensions", { 32, 32} },
             };
 
-            Vector2 offsets[4] =
+            auto spawn = static_cast<CastleEntity*>(scene->CreateEntity({ properties }));
+
+            spawn->net->ownerClientId = connectedEvent->id;
+
+            for (int i = 0; i < 4; ++i)
             {
-                Vector2(-1, -1), Vector2(-1, 1), Vector2(1, -1), Vector2(1, 1)
-            };
-
-            for (auto offset : offsets)
-            {
-                auto position = positions[connectedEvent->id] + offset * 128;
-
-                EntityProperty properties[] = {
-                        EntityProperty::EntityType<PlayerEntity>(),
-                        { "position",connectedEvent->position.has_value() ? connectedEvent->position.value() : position },
-                        { "dimensions", { 30, 30 } },
-                };
-
-                auto player = static_cast<PlayerEntity*>(scene->CreateEntity(EntityDictionary(properties)));
-
-                player->GetComponent<NetComponent>()->ownerClientId = connectedEvent->id;
-
-                scene->GetCameraFollower()->FollowEntity(player);
-                scene->GetCameraFollower()->CenterOn(player->Center());
+                spawn->SpawnPlayer();
             }
+
+            spawns.push_back(spawn);
         }
     }
 }
@@ -237,19 +239,30 @@ void InputService::HandleInput()
 
                 command.keys = keyBits;
                 command.fixedUpdateCount = fixedUpdateCount;
-                command.timeRecorded = scene->relativeTime - command.fixedUpdateCount * Scene::PhysicsDeltaTime;
                 command.netId = self->net->netId;
                 fixedUpdateCount = 0;
 
                 if(mouse->RightPressed())
                 {
                     bool attack = false;
-                    for (auto player : players)
+                    for (auto entity : scene->GetEntities())
                     {
-                        if (player->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
+                        auto netComponent = entity->GetComponent<NetComponent>(false);
+
+                        if(netComponent == nullptr)
+                        {
+                            continue;
+                        }
+
+                        if(entity->GetComponent<HealthBarComponent>(false) == nullptr)
+                        {
+                            continue;
+                        }
+
+                        if (entity->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
                         {
                             command.attackTarget = true;
-                            command.attackNetId = player->net->netId;
+                            command.attackNetId = netComponent->netId;
                             attack = true;
                             break;
                         }
@@ -278,8 +291,10 @@ void InputService::Render(Renderer* renderer)
         renderer->RenderRectangleOutline(currentPlayer->Bounds(), Color::White(), -1);
     }
 
+#if false
     renderer->RenderString(FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid), 1),
         status.c_str(),
         Vector2(0, 200) + scene->GetCamera()->TopLeft(),
         -1);
+#endif
 }

@@ -8,6 +8,7 @@
 #include "Scene/Scene.hpp"
 #include "Scene/TilemapEntity.hpp"
 #include "Tools/Console.hpp"
+#include "MessageHud.hpp"
 
 ConsoleVar<int> g_serverPort("port", 60001);
 extern ConsoleVar<bool> g_isServer;
@@ -17,7 +18,7 @@ struct Game : IGame
     void ConfigureGame(GameConfig& config) override
     {
         config
-            .SetDefaultScene("isengard"_sid)
+            .SetDefaultScene("erebor"_sid)
             .SetWindowCaption("Breakout")
             .SetGameName("breakout")
             .ExecuteUserConfig("user.cfg")
@@ -36,14 +37,15 @@ struct Game : IGame
         {
             scene->AddService<InputService>();
             scene->AddService<NetworkPhysics>(scene->isServer);
+            scene->AddService<MessageHud>();
 
-            scene->GetEngine()->GetConsole()->Execute("light 0");
+            //scene->GetEngine()->GetConsole()->Execute("light 0");
         }
     }
 
     void OnGameStart() override
     {
-        auto map = "isengard"_sid;
+        auto map = "erebor"_sid;
         auto engine = GetEngine();
 
         if(!g_isServer.Value())

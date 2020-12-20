@@ -4,6 +4,8 @@
 
 #include "Net/ServerGame.hpp"
 #include "Scene/Scene.hpp"
+#include "Engine.hpp"
+
 
 #ifdef _WIN32
 namespace SLNet
@@ -13,49 +15,18 @@ namespace SLNet
 }
 #endif
 
+//#define NET_DEBUG
+
+#ifdef NET_DEBUG
+    #define NetLog printf
+#else
+    void NetLog(...) { }
+#endif
+
+
 enum class MessageType : uint8
 {
-    SpawnEntity,
-    RemoveEntity,
     EntitySnapshot
-};
-
-struct ReadWriteBitStream
-{
-    ReadWriteBitStream(SLNet::BitStream& stream_, bool isReading_)
-        : stream(stream_),
-        isReading(isReading_)
-    {
-        
-    }
-
-    template<typename T>
-    ReadWriteBitStream& Add(T& out)
-    {
-        if (isReading) stream.Read(out);
-        else stream.Write(out);
-
-        return *this;
-    }
-
-    ReadWriteBitStream& Add(Vector2& out)
-    {
-        if (isReading)
-        {
-            stream.Read(out.x);
-            stream.Read(out.y);
-        }
-        else
-        {
-            stream.Write(out.x);
-            stream.Write(out.y);
-        }
-
-        return *this;
-    }
-
-    SLNet::BitStream& stream;
-    bool isReading;
 };
 
 struct SpawnEntityMessage
@@ -70,7 +41,7 @@ struct SpawnEntityMessage
             .Add(ownerClientId);
     }
 
-    uint8 netId;
+    int netId;
     uint8 ownerClientId;
     StringId type;
     Vector2 position;
@@ -84,7 +55,7 @@ struct DestroyEntityMessage
         stream.Add(netId);
     }
 
-    uint8 netId;
+    int netId;
 };
 
 struct UpdateResponseMessage
@@ -105,12 +76,16 @@ struct EntitySnapshotMessage
     void ReadWrite(ReadWriteBitStream& stream)
     {
         stream
+            .Add(sentTime)
             .Add(lastServerSequence)
-            .Add(lastServerExecuted);
+            .Add(lastServerExecuted)
+            .Add(totalEntities);
     }
 
+    float sentTime;
     int lastServerSequence;
     int lastServerExecuted;
+    int totalEntities;
 };
 
 struct PlayerCommandMessage
@@ -162,37 +137,10 @@ struct ClientUpdateRequestMessage
     uint32 lastReceivedSnapshotId;
 };
 
-WorldDiff::WorldDiff(const WorldState& before, const WorldState& after)
+void WorldDiff::Merge(const WorldDiff& rhs)
 {
-    int beforeIndex = 0;
-    int afterIndex = 0;
-
-    while (beforeIndex < before.entities.size() && afterIndex < after.entities.size())
-    {
-        if (before.entities[beforeIndex] < after.entities[afterIndex])
-        {
-            destroyedEntities.push_back(before.entities[beforeIndex++]);
-        }
-        else if(before.entities[beforeIndex] > after.entities[afterIndex])
-        {
-            addedEntities.push_back(after.entities[afterIndex++]);
-        }
-        else
-        {
-            ++beforeIndex;
-            ++afterIndex;
-        }
-    }
-
-    while(beforeIndex < before.entities.size())
-    {
-        destroyedEntities.push_back(before.entities[beforeIndex++]);
-    }
-
-    while(afterIndex < after.entities.size())
-    {
-        addedEntities.push_back(after.entities[afterIndex++]);
-    }
+    addedEntities.insert(addedEntities.end(), rhs.addedEntities.begin(), rhs.addedEntities.end());
+    destroyedEntities.insert(destroyedEntities.end(), rhs.destroyedEntities.begin(), rhs.destroyedEntities.end());
 }
 
 PlayerCommand* ClientState::GetCommandById(int id)
@@ -223,10 +171,13 @@ void ReplicationManager::Client_ReceiveUpdateResponse(SLNet::BitStream& stream)
     auto& client = _clientStateByClientId[localClientId];
     if(responseMessage.snapshotTo <= client.lastReceivedSnapshotId)
     {
+        NetLog("Receive out of order message\n");
         return;
     }
 
     client.lastReceivedSnapshotId = responseMessage.snapshotTo;
+
+    NetLog("=========================Receive Update Response=========================\n");
 
     while (stream.GetNumberOfUnreadBits() >= 8)
     {
@@ -235,19 +186,13 @@ void ReplicationManager::Client_ReceiveUpdateResponse(SLNet::BitStream& stream)
 
         switch ((MessageType)messageType)
         {
-        case MessageType::SpawnEntity:
-            ProcessSpawnEntity(rw);
-            break;
-
         case MessageType::EntitySnapshot:
+            NetLog("    Receive entity snapshot\n");
             ProcessEntitySnapshotMessage(rw, responseMessage.snapshotFrom);
             break;
 
-        case MessageType::RemoveEntity:
-            ProcessDestroyEntity(rw);
-            break;
-
         default:
+            NetLog("Unknown message type: %d\n", messageType);
             break;
         }
     }
@@ -294,7 +239,7 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, ClientGame* g
                 request.commands[commandCount].target = command.target;
                 request.commands[commandCount].moveToTarget = command.moveToTarget;
                 request.commands[commandCount].netId = command.netId;
-                request.commands[commandCount].moveToTarget = command.moveToTarget;
+                request.commands[commandCount].attackTarget = command.attackTarget;
                 request.commands[commandCount].attackNetId = command.attackNetId;
 
                 if (++commandCount == ClientUpdateRequestMessage::MaxCommands)
@@ -312,7 +257,7 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, ClientGame* g
         ReadWriteBitStream stream(message, false);
         request.ReadWrite(stream);
 
-        game->networkInterface.SendUnreliable(game->serverAddress, message);
+        game->networkInterface.SendReliable(game->serverAddress, message);
     }
 }
 
@@ -367,6 +312,8 @@ void ReadVarGroup(VarGroup* group, uint32 fromSnapshotId, uint32 toSnapshotId, f
             bool wasChanged;
             stream.Read(wasChanged);
 
+            NetLog("   - Changed: %d (%s)\n", wasChanged, typeid(*group->vars[i]).name());
+
             if (wasChanged)
             {
                 group->vars[i]->ReadValueDeltaedFromSequence(fromSnapshotId, toSnapshotId,  time, stream);
@@ -374,6 +321,7 @@ void ReadVarGroup(VarGroup* group, uint32 fromSnapshotId, uint32 toSnapshotId, f
         }
         else
         {
+            NetLog("    - Read bool\n");
             group->vars[i]->ReadValueDeltaedFromSequence(fromSnapshotId, toSnapshotId, time, stream);
         }
     }
@@ -449,7 +397,8 @@ void ReadVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, float 
 
     bool anyChanged = stream.ReadBit();
 
-
+    NetLog("====Begin read vars====\n");
+    NetLog("Any changed: %d\n", anyChanged);
 
     if (!anyChanged)
     {
@@ -457,19 +406,24 @@ void ReadVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, float 
     }
     else
     {
+        NetLog("Reading frequent\n");
         ReadVarGroup(&frequent, fromSnapshotId, toSnapshotId, time, stream);
 
         if (infrequent.varCount == 0)
         {
-
+            NetLog("No infrequent vars\n");
         }
         else if (infrequent.varCount == 1)
         {
+            NetLog("One infrequent var\n");
             ReadVarGroup(&infrequent, fromSnapshotId, toSnapshotId, time, stream);
         }
         else
         {
+            NetLog("Multiple infrequent vars\n");
             bool anyInfrequentChanges = stream.ReadBit();
+
+            NetLog("Any infrequent changed: %d\n", anyInfrequentChanges);
 
             if (anyInfrequentChanges)
             {
@@ -521,14 +475,18 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
             }
         }
     }
+}
 
+bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& response)
+{
+    auto& client = _clientStateByClientId[clientId];
     ReadWriteBitStream responseStream(response, false);
 
     response.Write(PacketType::UpdateResponse);
 
     if(client.lastReceivedSnapshotId == _currentSnapshotId)
     {
-        return;
+        return false;
     }
 
     UpdateResponseMessage responseMessage;
@@ -536,37 +494,84 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
     responseMessage.snapshotTo = _currentSnapshotId;
     responseMessage.ReadWrite(responseStream);
 
-    {
-        auto currentState = GetWorldSnapshot(_currentSnapshotId);
-        if (currentState == nullptr) FatalError("Missing current snapshot");
+    response.Write(MessageType::EntitySnapshot);
 
+    auto currentState = GetWorldSnapshot(_currentSnapshotId);
+    if (currentState == nullptr) FatalError("Missing current snapshot");
+
+    {
         auto& clientState = _clientStateByClientId[clientId];
 
         auto lastClientState = GetWorldSnapshot(clientState.lastReceivedSnapshotId);
 
+        WorldDiff diff;
         if (lastClientState == nullptr)
         {
-            Log("Have to send from %d -> %d\n", clientState.lastReceivedSnapshotId, _currentSnapshotId);
+            NetLog("Have to send from %d -> %d\n", clientState.lastReceivedSnapshotId, _currentSnapshotId);
             lastClientState = &g_emptyWorldState;
+
+            diff.addedEntities = currentState->entities;
         }
-
-        WorldDiff diff(*lastClientState, *currentState);
-
-        // Send destroy messages for entities that the client doesn't know were destroyed
-        for (auto destroyedEntity : diff.destroyedEntities)
+        else
         {
-            DestroyEntityMessage destroyMessage;
-            destroyMessage.netId = destroyedEntity;
+            bool includeDiff = false;
+            for(auto& snapshot : _worldSnapshots)
+            {
+                if(snapshot.snapshotId == clientState.lastReceivedSnapshotId)
+                {
+                    includeDiff = true;
+                }
 
-            response.Write(MessageType::RemoveEntity);
-            destroyMessage.ReadWrite(responseStream);
+                if (includeDiff)
+                {
+                    diff.Merge(snapshot.diffFromLastSnapshot);
+                }
+
+                if(snapshot.snapshotId == _currentSnapshotId)
+                {
+                    break;
+                }
+            }
         }
+
+        NetLog("Entities believed to be on client: %d\n", (int)lastClientState->entities.size());
+
+        NetLog("On client: ");
+        for(int i = 0; i < lastClientState->entities.size(); ++i)
+        {
+            NetLog("%d \n", lastClientState->entities[i]);
+        }
+
+        NetLog("\n");
+
+        NetLog("On server: ");
+        for(int i = 0; i < currentState->entities.size(); ++i)
+        {
+            NetLog("%d \n", currentState->entities[i]);
+        }
+
+        NetLog("\n");
+
+        NetLog("Entities added: %d\n", (int)diff.addedEntities.size());
+        NetLog("Entities destroyed: %d\n", (int)diff.destroyedEntities.size());
 
         // Send new entities that don't exist on the client
         for (auto addedEntity : diff.addedEntities)
-        {   
+        {
+            if(_componentsByNetId.count(addedEntity) == 0 || _componentsByNetId[addedEntity]->owner->isDestroyed)
+            {
+                // Never need to send created events if the entity was destroyed in this packet
+                continue;
+            }
+
             auto net = _componentsByNetId[addedEntity];
+
             auto entity = net->owner;
+
+            if(entity->isDestroyed)
+            {
+                FatalError("Entity was destroyed");
+            }
 
             SpawnEntityMessage spawnMessage;
             spawnMessage.position = entity->Center();
@@ -575,20 +580,37 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
             spawnMessage.dimensions = entity->Dimensions();
             spawnMessage.ownerClientId = net->ownerClientId;
 
-            response.Write(MessageType::SpawnEntity);
+            response.Write(true);
             spawnMessage.ReadWrite(responseStream);
         }
+
+        response.Write(false);
+
+        // Send message
+        EntitySnapshotMessage responseMessage;
+        responseMessage.lastServerSequence = client.lastServerSequenceNumber;
+        responseMessage.lastServerExecuted = client.lastServerExecuted;
+        responseMessage.sentTime = scene->absoluteTime;
+        responseMessage.totalEntities = currentState->entities.size();
+
+        responseMessage.ReadWrite(responseStream);
+
+        // Send destroy messages for entities that the client doesn't know were destroyed
+        for (auto destroyedEntity : diff.destroyedEntities)
+        {
+            DestroyEntityMessage destroyMessage;
+            destroyMessage.netId = destroyedEntity;
+
+            response.Write(true);
+            destroyMessage.ReadWrite(responseStream);
+        }
+
+        response.Write(false);
     }
 
     // Send the current state of the world
     {
-        response.Write(MessageType::EntitySnapshot);
-
-        EntitySnapshotMessage responseMessage;
-        responseMessage.lastServerSequence = client.lastServerSequenceNumber;
-        responseMessage.lastServerExecuted = client.lastServerExecuted;
-
-        responseMessage.ReadWrite(responseStream);
+        NetLog("Total entities on server: %d\n", (int)_componentsByNetId.size());
 
         for (auto& c : _componentsByNetId)
         {
@@ -598,6 +620,8 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
             WriteVars(c.second->owner->syncVarHead, fromSnapshotId, toSnapshotId, response);
         }
     }
+
+    return true;
 }
 
 void ReplicationManager::Client_AddPlayerCommand(const PlayerCommand& command)
@@ -627,10 +651,8 @@ WorldState ReplicationManager::GetCurrentWorldState()
 
     for (auto& component : _componentsByNetId)
     {
-        if (!component.second->owner->isDestroyed)
-        {
+        if(!component.second->owner->isDestroyed)
             state.entities.push_back(component.first);
-        }
     }
 
     return state;
@@ -638,44 +660,19 @@ WorldState ReplicationManager::GetCurrentWorldState()
 
 void ReplicationManager::ReceiveEvent(const IEntityEvent& ev)
 {
-    if (ev.Is<EndOfUpdateEvent>())
-    {
-        if(scene->deltaTime == 0)
-        {
-            return;
-        }
 
-        ++_currentSnapshotId;
-        if (_isServer)
-        {
-            for (auto c : components)
-            {
-                for (auto var = c->owner->syncVarHead; var != nullptr; var = var->next)
-                {
-                    var->AddCurrentValueToSnapshots(_currentSnapshotId, scene->relativeTime);
-                }
-            }
-        }
-
-        if(_worldSnapshots.IsFull())
-        {
-            _worldSnapshots.Dequeue();
-        }
-
-        _worldSnapshots.Enqueue(GetCurrentWorldState());
-    }
 }
 
-void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
+void ReplicationManager::ProcessSpawnEntity(SpawnEntityMessage& message)
 {
-    SpawnEntityMessage message;
-    message.ReadWrite(stream);
-
     if(_componentsByNetId.count(message.netId) != 0)
     {
+        NetLog("Spawn duplicate entity: %d\n", message.netId);
         // Duplicate entity
         return;
     }
+
+    NetLog("Spawn entity with netId %d\n", message.netId);
 
     EntityProperty properties[] =
     {
@@ -698,46 +695,80 @@ void ReplicationManager::ProcessSpawnEntity(ReadWriteBitStream& stream)
 
         entity->SendEvent(SpawnedOnClientEvent());
     }
+    else
+    {
+        Log("Tried to spawn entity that does not have net component\n");
+    }
 }
 
-void ReplicationManager::ProcessDestroyEntity(ReadWriteBitStream& stream)
+void ReplicationManager::ProcessDestroyEntity(DestroyEntityMessage& message, float destroyTime)
 {
-    DestroyEntityMessage message;
-    message.ReadWrite(stream);
-
     auto component = _componentsByNetId.find(message.netId);
 
     if (component != _componentsByNetId.end())
     {
         auto net = component->second;
-        components.erase(net);
-        _componentsByNetId.erase(component->second->netId);
-        net->owner->Destroy();
+        net->isMarkedForDestructionOnClient = true;
+        net->destroyTime = destroyTime;
+        net->markedForDestruction = true;
+        NetLog("Destroyed entity %d\n", net->netId);
+    }
+    else
+    {
+        NetLog("Asked to destroy entity that didn't exist: %d\n", message.netId);
     }
 }
 
+static const int MaxNewEntities = 1024;
+static const int MaxDeletedEntities = 1024;
+
 void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream, uint32 snapshotFromId)
 {
+    // Read new entities
+    SpawnEntityMessage spawnEntityMessage;
+    do
+    {
+        bool hasNewEntity = stream.stream.ReadBit();
+        if(!hasNewEntity) break;
+
+        spawnEntityMessage.ReadWrite(stream);
+        ProcessSpawnEntity(spawnEntityMessage);
+    } while(true);
+
     EntitySnapshotMessage message;
     message.ReadWrite(stream);
+    float time = message.sentTime - scene->GetEngine()->GetClientGame()->GetServerClockOffset();
 
-    if(localClientId == -1)
+    // Read deleted entities
+    DestroyEntityMessage destroyEntityMessage;
+    do
     {
-        return;
-    }
+        bool hasDeletedEntity = stream.stream.ReadBit();
+        if(!hasDeletedEntity) break;
+
+        destroyEntityMessage.ReadWrite(stream);
+        ProcessDestroyEntity(destroyEntityMessage, time);
+    } while(true);
+
+//    if(message.totalEntities != components.size())
+//    {
+//        fflush(stdout);
+//        FatalError("Client and server disagree on number of entities (server: %d, client: %d)\n", message.totalEntities, (int)components.size());
+//    }
 
     auto& client = _clientStateByClientId[localClientId];
 
     client.lastServerSequenceNumber = message.lastServerSequence;
     client.lastServerExecuted = message.lastServerExecuted;
 
+    NetLog("Total client-side entities: %d\n", (int)_componentsByNetId.size());
+
     for (auto& c : _componentsByNetId)
     {
-        auto cmd = client.GetCommandById(client.lastServerExecuted);
-
-        float time = cmd == nullptr
-            ? -1
-            : cmd->timeRecorded;
+        if(c.second->markedForDestruction)
+        {
+            continue;
+        }
 
         ReadVars(c.second->owner->syncVarHead, snapshotFromId, client.lastReceivedSnapshotId, time, stream.stream);
     }
@@ -754,4 +785,87 @@ WorldState* ReplicationManager::GetWorldSnapshot(uint32 snapshotId)
     }
 
     return nullptr;
+}
+
+void ReplicationManager::Server_ClientDisconnected(int clientId)
+{
+    for(auto c : components)
+    {
+        if(c->ownerClientId == clientId)
+        {
+            c->owner->Destroy();
+        }
+
+        _clientStateByClientId.erase(clientId);
+    }
+}
+
+void ReplicationManager::TakeSnapshot()
+{
+    if(scene->deltaTime == 0)
+    {
+        return;
+    }
+
+    ++_currentSnapshotId;
+    if (_isServer)
+    {
+        for (auto c : components)
+        {
+            for (auto var = c->owner->syncVarHead; var != nullptr; var = var->next)
+            {
+                var->AddCurrentValueToSnapshots(_currentSnapshotId, scene->relativeTime);
+            }
+        }
+    }
+
+    if(_worldSnapshots.IsFull())
+    {
+        _worldSnapshots.Dequeue();
+    }
+
+    auto state = GetCurrentWorldState();
+    WorldState::Diff(_worldSnapshots.Last(), state, state.diffFromLastSnapshot);
+
+    _worldSnapshots.Enqueue(std::move(state));
+}
+
+ReplicationManager::ReplicationManager(Scene *scene, bool isServer)
+    : _isServer(isServer),
+      _scene(scene)
+{
+    _worldSnapshots.Enqueue(g_emptyWorldState);
+}
+
+void WorldState::Diff(const WorldState& before, const WorldState& after, WorldDiff& outDiff)
+{
+    int beforeIndex = 0;
+    int afterIndex = 0;
+
+    while (beforeIndex < before.entities.size() && afterIndex < after.entities.size())
+    {
+        if (before.entities[beforeIndex] < after.entities[afterIndex])
+        {
+            outDiff.destroyedEntities.push_back(before.entities[beforeIndex++]);
+        }
+        else if(before.entities[beforeIndex] > after.entities[afterIndex])
+        {
+            outDiff.addedEntities.push_back(after.entities[afterIndex++]);
+        }
+        else
+        {
+            ++beforeIndex;
+            ++afterIndex;
+        }
+    }
+
+    while(beforeIndex < before.entities.size())
+    {
+        outDiff.destroyedEntities.push_back(before.entities[beforeIndex++]);
+    }
+
+    while(afterIndex < after.entities.size())
+    {
+        outDiff.addedEntities.push_back(after.entities[afterIndex++]);
+    }
 }

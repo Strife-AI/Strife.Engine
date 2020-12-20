@@ -190,7 +190,6 @@ DEFINE_EMPTY_EVENT(FixedUpdateEvent)
 /// </summary>
 DEFINE_EMPTY_EVENT(SceneLoadedEvent)
 
-DEFINE_EMPTY_EVENT(SceneDestroyedEvent)
 DEFINE_EMPTY_EVENT(EntityMovedEvent)
 DEFINE_EMPTY_EVENT(EntityTeleportedEvent)
 

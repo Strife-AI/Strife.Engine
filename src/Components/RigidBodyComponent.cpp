@@ -185,5 +185,9 @@ b2Fixture* RigidBodyComponent::CreateFixture(b2FixtureDef& fixtureDef)
         FatalError("Shape is not supported; bother Michael to add it");
     }
 
-    return body->CreateFixture(&fixtureDef);
+    auto fixture = body->CreateFixture(&fixtureDef);
+    fixture->SetDensity(1);
+    body->ResetMassData();
+
+    return fixture;
 }

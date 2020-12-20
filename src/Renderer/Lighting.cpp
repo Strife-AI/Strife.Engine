@@ -595,7 +595,7 @@ bool LightManager::RenderShadows(Scene* scene, SpotLight* spotLight, Camera* cam
 
     for (auto collider : colliders)
     {
-        if (!(collider.OwningEntity()->flags & CastsShadows))
+        if (!collider.OwningEntity()->flags.HasFlag(EntityFlags::CastsShadows))
         {
             continue;
         }

@@ -14,15 +14,6 @@ void EntityManager::RegisterEntity(Entity* entity)
 {
     entities.insert(entity);
 
-    AddIfImplementsInterface(updatables, entity);
-    AddIfImplementsInterface(serverUpdatables, entity);
-
-    AddIfImplementsInterface(fixedUpdatables, entity);
-    AddIfImplementsInterface(serverFixedUpdatables, entity);
-
-    AddIfImplementsInterface(renderables, entity);
-    AddIfImplementsInterface(hudRenderables, entity);
-
     EntityHeader* header = freeEntityHeaders.Borrow();
 
     header->id = _nextEntityId++;
@@ -36,16 +27,45 @@ void EntityManager::UnregisterEntity(Entity* entity)
 {
     entities.erase(entity);
 
-    RemoveIfImplementsInterface(updatables, entity);
-    RemoveIfImplementsInterface(serverUpdatables, entity);
-
-    RemoveIfImplementsInterface(fixedUpdatables, entity);
-    RemoveIfImplementsInterface(serverFixedUpdatables, entity);
-
-    RemoveIfImplementsInterface(renderables, entity);
-    RemoveIfImplementsInterface(hudRenderables, entity);
+    updatables.erase(entity);
+    fixedUpdatables.erase(entity);
+    serverUpdatables.erase(entity);
+    serverFixedUpdatables.erase(entity);
+    renderables.erase(entity);
+    hudRenderables.erase(entity);
 
     EntityHeader* header = entity->header;
     header->id = InvalidEntityHeaderId;
     freeEntityHeaders.Return(header);
+}
+
+static void SetOwnershipBasedOnFlag(std::unordered_set<Entity*>& set, Entity* entity, EntityFlags flag)
+{
+	if(entity->flags.HasFlag(flag)) set.insert(entity);
+	else set.erase(entity);
+}
+
+void EntityManager::AddInterfaces(Entity* entity)
+{
+	SetOwnershipBasedOnFlag(updatables, entity, EntityFlags::EnableUpdate);
+	SetOwnershipBasedOnFlag(fixedUpdatables, entity, EntityFlags::EnableFixedUpdate);
+	SetOwnershipBasedOnFlag(serverUpdatables, entity, EntityFlags::EnableServerUpdate);
+	SetOwnershipBasedOnFlag(serverFixedUpdatables, entity, EntityFlags::EnableServerFixedUpdate);
+	SetOwnershipBasedOnFlag(renderables, entity, EntityFlags::EnableRender);
+	SetOwnershipBasedOnFlag(hudRenderables, entity, EntityFlags::EnableRenderHud);
+}
+
+void EntityManager::ScheduleUpdateInterfaces(Entity* entity)
+{
+	needsUpdatedInterfaces.insert(entity);
+}
+
+void EntityManager::UpdateInterfaces()
+{
+	for (auto entity : needsUpdatedInterfaces)
+	{
+		AddInterfaces(entity);
+	}
+
+	needsUpdatedInterfaces.clear();
 }

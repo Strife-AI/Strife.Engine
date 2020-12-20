@@ -5,6 +5,7 @@
 #include "ML/ML.hpp"
 #include "Scene/BaseEntity.hpp"
 #include "Scene/IEntityEvent.hpp"
+#include "HealthBarComponent.hpp"
 
 struct PlayerEntity;
 
@@ -37,7 +38,7 @@ enum class PlayerState
     Attacking
 };
 
-DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServerUpdatable
+DEFINE_ENTITY(PlayerEntity, "player")
 {
     using NeuralNetwork = NeuralNetworkComponent<PlayerNetwork>;
 
@@ -53,13 +54,12 @@ DEFINE_ENTITY(PlayerEntity, "player"), IRenderable, IServerFixedUpdatable, IServ
 
     RigidBodyComponent* rigidBody;
     NetComponent* net;
+    HealthBarComponent* health;
 
     EntityReference<Entity> attackTarget;
     PlayerState state = PlayerState::None;
     float updateTargetTimer = 0;
     float attackCoolDown = 0;
 
-    SyncVar<float> health{ 100, SyncVarInterpolation::None, SyncVarUpdateFrequency::Infrequent };
-    SyncVar<bool> showAttack{ false, SyncVarInterpolation::None, SyncVarUpdateFrequency::Infrequent };
-    SyncVar<Vector2> attackPosition { { 0, 0}, SyncVarInterpolation::Linear };
+    PointLight light;
 };

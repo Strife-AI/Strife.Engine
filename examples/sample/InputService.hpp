@@ -3,6 +3,7 @@
 #include "Scene/IEntityEvent.hpp"
 #include "Scene/Scene.hpp"
 
+struct CastleEntity;
 
 struct InputService : ISceneService
 {
@@ -16,6 +17,9 @@ struct InputService : ISceneService
 
     EntityReference<PlayerEntity> activePlayer;
     std::vector<PlayerEntity*> players;
+    std::vector<CastleEntity*> spawns;
+    std::vector<Vector2> spawnPositions;
+
     float sendUpdateTimer = 0;
 
     FixedLengthString<1024> status;
@@ -23,4 +27,5 @@ struct InputService : ISceneService
     int fixedUpdateCount = 0;
 
     int currentFixedUpdateId = 0;
+    bool gameOver = false;
 };

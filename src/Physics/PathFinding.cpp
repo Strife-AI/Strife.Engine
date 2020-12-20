@@ -86,7 +86,7 @@ void PathFinderService::AddObstacle(const Rectangle& bounds)
     {
         for(int j = topLeft.x; j < bottomRight.x; ++j)
         {
-            _obstacleGrid[i][j] = 1;
+            ++_obstacleGrid[i][j];
         }
     }
 }
@@ -99,6 +99,12 @@ void PathFinderService::RequestFlowField(Vector2 start, Vector2 end, Entity* own
     request.end = end;
     request.endCell = PixelToCellCoordinate(end);
     request.owner = owner;
+
+    // FIXME: workaround for when ending in a solid cell
+    while(_obstacleGrid[request.endCell] != 0)
+    {
+        ++request.endCell.x;
+    }
 
     _requestQueue.push(request);
 }
@@ -210,5 +216,31 @@ void PathFinderService::EnqueueCellIfValid(Vector2 cell, FlowDirection fromDirec
     {
         _workQueue.push(cell);
         _fieldInProgress->grid[cell].direction = OppositeFlowDirection(fromDirection);
+    }
+}
+
+void PathFinderService::RemoveObstacle(const Rectangle &bounds)
+{
+    auto topLeft = PixelToCellCoordinate(bounds.TopLeft()).Max({ 0, 0 });
+    auto bottomRight = PixelToCellCoordinate(bounds.BottomRight());
+
+    if((int)bounds.BottomRight().x % (int)_tileSize.x != 0)
+    {
+        ++bottomRight.x;
+    }
+
+    if ((int)bounds.BottomRight().y % (int)_tileSize.y != 0)
+    {
+        ++bottomRight.y;
+    }
+
+    bottomRight = bottomRight.Min(Vector2(_obstacleGrid.Cols(), _obstacleGrid.Rows()));
+
+    for(int i = topLeft.y; i < bottomRight.y; ++i)
+    {
+        for(int j = topLeft.x; j < bottomRight.x; ++j)
+        {
+            --_obstacleGrid[i][j];
+        }
     }
 }

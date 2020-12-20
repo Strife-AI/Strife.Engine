@@ -10,7 +10,7 @@ void IGame::Run()
     {
         EngineConfig config;
         ConfigureEngine(config);
-        _engine = Engine::Initialize(config);
+        _engine = std::make_unique<Engine>(config);
         _engine->SetGame(this);
 
         ConfigureGame(_config);
@@ -46,7 +46,4 @@ void IGame::Run()
             _engine->RunFrame();
         }
     }
-
-    // FIXME
-    _engine->~Engine();
 }

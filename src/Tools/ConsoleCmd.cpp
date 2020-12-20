@@ -32,6 +32,11 @@ void ConsoleCommandBinder::Error(const std::string& message)
     _errorMessage = message;
 }
 
+Engine* ConsoleCommandBinder::GetEngine()
+{
+    return _console->GetEngine();
+}
+
 static std::map<std::string, ConsoleCmd*>& GetAllConsoleCmds()
 {
     static std::map<std::string, ConsoleCmd*> g_consoleCmdsByName;

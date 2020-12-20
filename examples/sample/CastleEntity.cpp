@@ -5,57 +5,128 @@
 #include "Components/RigidBodyComponent.hpp"
 #include "Components/SpriteComponent.hpp"
 #include "Physics/PathFinding.hpp"
+#include "Net/ReplicationManager.hpp"
+#include "MessageHud.hpp"
 
 void CastleEntity::OnAdded(const EntityDictionary& properties)
 {
     auto spriteName = StringId(properties.GetValueOrDefault("sprite", "castle"));
     spriteComponent = AddComponent<SpriteComponent>(spriteName);
 
+    Vector2 size{ 67 * 5, 55 * 5 };
+    SetDimensions(size);
+    scene->GetService<PathFinderService>()->AddObstacle(Bounds());
+
+
     if(!scene->isServer && !properties.HasProperty("net"))
     {
         Destroy();
+        return;
     }
 
     spriteComponent->scale = Vector2(5.0f);
 
     auto rigidBody = AddComponent<RigidBodyComponent>(b2_staticBody);
-    Vector2 size{ 67 * 5, 55 * 5 };
+
     rigidBody->CreateBoxCollider(size);
 
     rigidBody->CreateBoxCollider({ 600, 600 }, true);
 
-    scene->GetService<PathFinderService>()->AddObstacle(Rectangle(Center() - size / 2, size));
 
-    AddComponent<NetComponent>();
+
+    net = AddComponent<NetComponent>();
+
+    auto health = AddComponent<HealthBarComponent>();
+    health->offsetFromCenter = -size.YVector() / 2 - Vector2(0, 5);
+    health->maxHealth = 1000;
+    health->health.SetValue(1000);
+
+    auto offset = size / 2 + Vector2(40, 40);
+
+    _spawnSlots[0] = Center() + offset.XVector();
+    _spawnSlots[1] = Center() - offset.XVector();
+    _spawnSlots[2] = Center() + offset.YVector();
+    _spawnSlots[3] = Center() - offset.YVector();
+
+    if(!scene->isServer)
+        scene->GetLightManager()->AddLight(&_light);
+
+    _light.position = Center();
+    _light.intensity = 0;
+    _light.maxDistance = 500;
 }
 
 void CastleEntity::Update(float deltaTime)
 {
-    if(_drawRed.currentValue)
+    if(net == nullptr)
     {
-        spriteComponent->blendColor = Color(255, 0, 0, 128);
+        return;
     }
+
+    _light.color = scene->replicationManager->localClientId == net->ownerClientId
+        ? Color::Green()
+        : Color::White();
+
+    if(net->ownerClientId >= 0)
+        _light.intensity = 0.5;
     else
-    {
-        spriteComponent->blendColor = Color(0, 0, 0, 0);
-    }
+        _light.intensity = 0;
 }
 
 void CastleEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
-    if (auto contactBegin = ev.Is<ContactBeginEvent>())
+    if(ev.Is<OutOfHealthEvent>())
     {
-        ++_playerCount;
-        _colorChangeTime = 1;
-        _drawRed = true;
-        spriteComponent->blendColor = Color(255, 0, 0, 128);
+        Destroy();
     }
-    else if(ev.Is<ContactEndEvent>())
+}
+
+void CastleEntity::SpawnPlayer()
+{
+    auto position = _spawnSlots[_nextSpawnSlotId];
+    _nextSpawnSlotId = (_nextSpawnSlotId + 1) % 4;
+
+    EntityProperty properties[] = {
+            EntityProperty::EntityType<PlayerEntity>(),
+            { "position", position },
+            { "dimensions", { 30, 30 } },
+    };
+
+    auto player = static_cast<PlayerEntity*>(scene->CreateEntity(EntityDictionary(properties)));
+
+    player->GetComponent<NetComponent>()->ownerClientId = net->ownerClientId;
+}
+
+void CastleEntity::OnDestroyed()
+{
+    if(!scene->isServer)
+        scene->GetLightManager()->RemoveLight(&_light);
+
+    if(scene->isServer && net != nullptr && net->ownerClientId >= 0)
     {
-        if(--_playerCount == 0)
+        for(auto player : scene->GetEntitiesOfType<PlayerEntity>())
         {
-            _drawRed = false;
-            spriteComponent->blendColor = Color(0, 0, 0, 0);
+            if(player->net->ownerClientId == net->ownerClientId)
+            {
+                player->Destroy();
+            }
+        }
+
+        auto& selfName = scene->replicationManager->GetClient(net->ownerClientId).clientName;
+        scene->SendEvent(BroadcastToClientMessage(selfName + " has been eliminated!"));
+    }
+
+    scene->GetService<PathFinderService>()->RemoveObstacle(Bounds());
+}
+
+void CastleEntity::ReceiveEvent(const IEntityEvent& ev)
+{
+    if (ev.Is<SpawnedOnClientEvent>())
+    {
+        if (net->ownerClientId == scene->replicationManager->localClientId)
+        {
+            scene->GetCameraFollower()->FollowMouse();
+            scene->GetCameraFollower()->CenterOn(Center());
         }
     }
 }

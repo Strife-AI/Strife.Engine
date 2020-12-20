@@ -21,7 +21,6 @@
 #include "Renderer/Color.hpp"
 #include "Sound/SoundManager.hpp"
 
-struct NetSerializer;
 class b2Body;
 struct IEntityEvent;
 struct MoveResult;
@@ -30,14 +29,6 @@ class Scene;
 struct Entity;
 class Engine;
 struct EntityInstance;
-
-struct IRenderable { virtual void Render(Renderer* renderer) = 0; };
-struct IHudRenderable { virtual void RenderHud(Renderer* renderer) = 0; };
-struct IUpdatable { virtual void Update(float deltaTime) = 0; };
-struct IFixedUpdatable { virtual void FixedUpdate(float deltaTime) = 0; };
-
-struct IServerFixedUpdatable { virtual void ServerFixedUpdate(float deltaTime) = 0; };
-struct IServerUpdatable { virtual void ServerUpdate(float deltaTime) = 0; };
 
 struct EntityHeader
 {
@@ -50,11 +41,18 @@ struct EntityHeader
     int id;
 };
 
-enum EntityFlags
+enum class EntityFlags
 {
     EnableBuoyancy = 1,
     WasTeleported = 2,
-    CastsShadows = 4
+    CastsShadows = 4,
+
+    EnableUpdate = 8,
+    EnableServerUpdate = 16,
+    EnableFixedUpdate = 32,
+    EnableServerFixedUpdate = 64,
+    EnableRender = 128,
+    EnableRenderHud = 256
 };
 
 struct EntityProperty
@@ -202,7 +200,7 @@ struct Entity
     static const int InvalidEntityId = -1;
 
     Entity(const Entity&) = delete;
-    Entity() = default;
+    Entity();
     virtual ~Entity();
 
     /// <summary>
@@ -221,10 +219,20 @@ struct Entity
     Vector2 TopLeft() const { return _position.Value() - _dimensions / 2; }
     Vector2 Center() const { return _position.Value(); }
     Vector2 Dimensions() const { return _dimensions; }
+    void SetDimensions(Vector2 dimensions) { _dimensions = dimensions; }
     Rectangle Bounds() const { return Rectangle(TopLeft(), Dimensions()); }
     float Rotation() const { return _rotation; }
     Engine* GetEngine() const;
     const char* DebugName() const { return typeid(*this).name(); }
+
+    virtual void Update(float deltaTime);
+    virtual void ServerUpdate(float deltaTime);
+
+    virtual void FixedUpdate(float deltaTime);
+    virtual void ServerFixedUpdate(float deltaTime);
+
+    virtual void Render(Renderer* renderer);
+    virtual void RenderHud(Renderer* renderer);
 
     /// <summary>
     /// Called when an entity has been added to the scene.
@@ -274,7 +282,7 @@ struct Entity
     void UpdateSyncVars();
 
     template<typename TComponent, typename ...Args> TComponent* AddComponent(Args&& ...args);
-    template<typename TComponent> TComponent* GetComponent();
+    template<typename TComponent> TComponent* GetComponent(bool fatalIfMissing = true);
     void RemoveComponent(IEntityComponent* component);
 
     int id;
@@ -284,7 +292,7 @@ struct Entity
     bool isDestroyed = false;
     Scene* scene;
 
-    unsigned int flags = 0;
+    Flags<EntityFlags> flags;
     Entity* parent = nullptr;
     Entity* nextSibling = nullptr;
     Entity* children = nullptr;
@@ -301,6 +309,7 @@ private:
     virtual void ReceiveEvent(const IEntityEvent& ev) { }
     virtual void ReceiveServerEvent(const IEntityEvent& ev) { }
     void DoTeleport();
+    void FlagsChanged();
 
     virtual void DoSerialize(EntityDictionaryBuilder& writer) { }
 
@@ -308,7 +317,7 @@ private:
 
     virtual void OnSyncVarsUpdated() { }
 
-    SyncVar<Vector2> _position{ { 0, 0}, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent, SyncVarDeltaMode::SmallIntegerOffset };
+    SyncVar<Vector2> _position{ { 0, 0}, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent, SyncVarDeltaMode::Full };
 
     Vector2 _dimensions;
     float _rotation;
@@ -346,23 +355,31 @@ TComponent* Entity::AddComponent(Args&& ...args)
     newComponent->next = _componentList;
     _componentList = newComponent;
 
+    newComponent->Register();
     newComponent->OnAdded();
 
     return newComponent;
 }
 
 template <typename TComponent>
-TComponent* Entity::GetComponent()
+TComponent* Entity::GetComponent(bool fatalIfMissing)
 {
-    for(auto component = _componentList; component != nullptr; component = component->next)
+    for (auto component = _componentList; component != nullptr; component = component->next)
     {
-        if(auto c = component->Is<TComponent>())
+        if (auto c = component->Is<TComponent>())
         {
             return c;
         }
     }
 
-    FatalError("Missing component %s on type %s", typeid(TComponent).name(), typeid(*this).name());
+    if (fatalIfMissing)
+    {
+        FatalError("Missing component %s on type %s", typeid(TComponent).name(), typeid(*this).name());
+    }
+    else
+    {
+        return nullptr;
+    }
 }
 
 struct InvalidEntityHeader
@@ -454,4 +471,3 @@ private:
     const EntityHeader* _entityHeader;
     int _entityId;
 };
-
