@@ -7,11 +7,6 @@ SpriteComponent::SpriteComponent(StringId spriteName)
     SetSprite(spriteName);
 }
 
-void SpriteComponent::OnAdded()
-{
-    componentFlags.SetFlag(EntityComponentFlags::ReceivesRenderEvents);
-}
-
 void SpriteComponent::Render(Renderer* renderer)
 {
     renderer->RenderSprite(

@@ -119,6 +119,7 @@ public:
     void FreeMemory(void* mem, int size) const;
 
     EntityManager& GetEntityManager() { return _entityManager; }
+    EntityComponentManager& GetComponentManager() { return _componentManager; }
 
     float deltaTime = 0;
     float relativeTime = 0;
@@ -168,6 +169,7 @@ private:
 
     TimerManager _timerManager;
     EntityManager _entityManager;
+    EntityComponentManager _componentManager;
 };
 
 #define CHECK_OVERRIDE(name_, flag_) if (&TEntity::name_ != &Entity::name_) entity->flags.SetFlag(flag_)

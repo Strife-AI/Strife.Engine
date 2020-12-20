@@ -355,6 +355,7 @@ TComponent* Entity::AddComponent(Args&& ...args)
     newComponent->next = _componentList;
     _componentList = newComponent;
 
+    newComponent->Register();
     newComponent->OnAdded();
 
     return newComponent;
