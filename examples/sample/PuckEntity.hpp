@@ -4,7 +4,7 @@
 
 DEFINE_ENTITY(PuckEntity, "puck")
 {
-    void OnAdded(const EntityDictionary& properties) override;
+    void OnAdded() override;
     void Render(Renderer* renderer) override;
 
     void ChangeDirection();

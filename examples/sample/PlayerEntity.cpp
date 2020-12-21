@@ -11,7 +11,7 @@
 #include "CastleEntity.hpp"
 #include "FireballEntity.hpp"
 
-void PlayerEntity::OnAdded(const EntityDictionary& properties)
+void PlayerEntity::OnAdded()
 {
     if(!scene->isServer)
         scene->GetLightManager()->AddLight(&light);
@@ -26,6 +26,7 @@ void PlayerEntity::OnAdded(const EntityDictionary& properties)
 
     rigidBody = AddComponent<RigidBodyComponent>(b2_dynamicBody);
 
+    SetDimensions( { 30, 30 });
     auto box = rigidBody->CreateBoxCollider(Dimensions());
 
     box->SetDensity(1);
@@ -203,15 +204,9 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
 
             if (attackCoolDown <= 0)
             {
-                EntityProperty properties[] = {
-                    EntityProperty::EntityType<FireballEntity>(),
-                    { "velocity", dir * 400 },
-                    { "position", Center()  }
-                };
-                auto fireball = scene->CreateEntity({ properties });
+                auto fireball = scene->CreateEntity<FireballEntity>(Center(), dir * 400);
                 fireball->GetComponent<NetComponent>()->ownerClientId = net->ownerClientId;
-
-                static_cast<FireballEntity*>(fireball)->ownerId = id;
+                fireball->ownerId = id;
 
                 attackCoolDown = 1;
             }

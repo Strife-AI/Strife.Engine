@@ -8,21 +8,13 @@
 #include "Net/ReplicationManager.hpp"
 #include "MessageHud.hpp"
 
-void CastleEntity::OnAdded(const EntityDictionary& properties)
+void CastleEntity::OnAdded()
 {
-    auto spriteName = StringId(properties.GetValueOrDefault("sprite", "castle"));
-    spriteComponent = AddComponent<SpriteComponent>(spriteName);
+    spriteComponent = AddComponent<SpriteComponent>("castle"_sid);
 
     Vector2 size{ 67 * 5, 55 * 5 };
     SetDimensions(size);
     scene->GetService<PathFinderService>()->AddObstacle(Bounds());
-
-
-    if(!scene->isServer && !properties.HasProperty("net"))
-    {
-        Destroy();
-        return;
-    }
 
     spriteComponent->scale = Vector2(5.0f);
 
@@ -31,8 +23,6 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
     rigidBody->CreateBoxCollider(size);
 
     rigidBody->CreateBoxCollider({ 600, 600 }, true);
-
-
 
     net = AddComponent<NetComponent>();
 
@@ -86,14 +76,7 @@ void CastleEntity::SpawnPlayer()
     auto position = _spawnSlots[_nextSpawnSlotId];
     _nextSpawnSlotId = (_nextSpawnSlotId + 1) % 4;
 
-    EntityProperty properties[] = {
-            EntityProperty::EntityType<PlayerEntity>(),
-            { "position", position },
-            { "dimensions", { 30, 30 } },
-    };
-
-    auto player = static_cast<PlayerEntity*>(scene->CreateEntity(EntityDictionary(properties)));
-
+    auto player = scene->CreateEntity<PlayerEntity>({ position });
     player->GetComponent<NetComponent>()->ownerClientId = net->ownerClientId;
 }
 

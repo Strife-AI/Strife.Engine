@@ -42,7 +42,7 @@ DEFINE_ENTITY(PlayerEntity, "player")
 {
     using NeuralNetwork = NeuralNetworkComponent<PlayerNetwork>;
 
-    void OnAdded(const EntityDictionary& properties) override;
+    void OnAdded() override;
     void ReceiveEvent(const IEntityEvent& ev) override;
     void ReceiveServerEvent(const IEntityEvent& ev) override;
     void OnDestroyed() override;

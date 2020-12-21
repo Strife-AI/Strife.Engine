@@ -4,7 +4,7 @@
 
 DEFINE_ENTITY(AmbientLightEntity, "ambient-light")
 {
-    void OnAdded(const EntityDictionary & properties) override;
+    void OnAdded() override;
     void OnDestroyed() override;
 
     AmbientLight ambientLight;

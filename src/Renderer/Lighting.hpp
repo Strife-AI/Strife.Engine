@@ -12,19 +12,6 @@ class Scene;
 class Camera;
 struct Entity;
 
-struct IEditableEntity
-{
-    virtual void RenderEditorControls() { }
-    virtual const char* GetName() = 0;
-
-    void DeserializeEditable(const EntityDictionary& properties);
-
-    void SerializeEditable(EntityDictionaryBuilder& builder);
-
-    FixedLengthString<32> editorName;
-    FixedLengthString<32> initialEffect;
-};
-
 struct BaseLight
 {
     Vector2 position;

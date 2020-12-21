@@ -9,7 +9,6 @@
 #include <vcruntime_typeinfo.h>
 #endif
 
-
 #include "EntityComponent.hpp"
 #include "Math/Vector2.hpp"
 #include "Memory/Dictionary.hpp"
@@ -55,138 +54,9 @@ enum class EntityFlags
     EnableRenderHud = 256
 };
 
-struct EntityProperty
+struct EntitySerializer
 {
-    EntityProperty() = default;
 
-    constexpr EntityProperty(const char* key_, const char* value_)
-        : key(key_),
-        value(value_)
-    {
-
-    }
-
-    EntityProperty(const char* key_, float value_)
-        : key(key_)
-    {
-        value.VFormat("%f", value_);
-    }
-
-    EntityProperty(const char* key_, int value_)
-        : key(key_)
-    {
-        value.VFormat("%d", value_);
-    }
-
-    EntityProperty(const char* key_, StringId value_)
-        : key(key_)
-    {
-        value.VFormat("#%u", value_.key);
-    }
-
-    EntityProperty(const char* key_, Vector2 value_)
-        : key(key_)
-    {
-        value.VFormat("%f %f", value_.x, value_.y);
-    }
-
-    EntityProperty(const char* key_, Color color)
-        : key(key_)
-    {
-        value.VFormat("%d %d %d %d", color.r, color.g, color.b, color.a);
-    }
-
-    template<typename TEntity>
-    static constexpr EntityProperty EntityType()
-    {
-        return EntityProperty("type", TEntity::Type);
-    }
-
-    FixedLengthString<32> key;
-    FixedLengthString<128> value;
-};
-
-class EntityDictionary : public Dictionary<EntityDictionary>
-{
-public:
-    int TotalProperties() const { return _totalProperties; }
-    const EntityProperty* Properties() const { return _properties; }
-
-    constexpr EntityDictionary(EntityProperty* properties, int count)
-        : _totalProperties(count),
-        _properties(properties)
-    {
-
-    }
-
-    constexpr EntityDictionary()
-        : _totalProperties(0),
-        _properties(nullptr)
-    {
-
-    }
-
-    constexpr EntityDictionary(gsl::span<EntityProperty> properties)
-        : _totalProperties(properties.size()),
-        _properties(properties.data())
-    {
-
-    }
-
-    const EntityProperty* begin() const
-    {
-        return _properties;
-    }
-
-    const EntityProperty* end() const
-    {
-        return _properties + _totalProperties;
-    }
-
-    void Print() const;
-
-private:
-    template<typename T>
-    bool TryGetCustomProperty(const char* key, T& outResult) const
-    {
-        return false;
-    }
-
-    bool TryGetStringViewProperty(const char* key, std::string_view& result) const
-    {
-        for (int i = 0; i < _totalProperties; ++i)
-        {
-            if (_properties[i].key == key)
-            {
-                result = std::string_view(_properties[i].value.c_str(), _properties[i].value.Length());
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    int _totalProperties = 0;
-    const EntityProperty* _properties;
-    friend class Dictionary<EntityDictionary>;
-};
-
-class EntityDictionaryBuilder
-{
-public:
-    EntityDictionaryBuilder& AddProperty(const EntityProperty& property);
-    EntityDictionaryBuilder& AddMap(const std::map<std::string, std::string>& properties);
-
-    EntityDictionary Build()
-    {
-        return EntityDictionary(&_properties[0], _properties.size());
-    }
-
-    std::map<std::string, std::string> BuildMap();
-    std::vector<EntityProperty> BuildList() const { return _properties; }
-
-private:
-    std::vector<EntityProperty> _properties;
 };
 
 struct Entity;
@@ -237,8 +107,7 @@ struct Entity
     /// <summary>
     /// Called when an entity has been added to the scene.
     /// </summary>
-    /// <param name="properties">A dictionary of serialized entity properties</param>
-    virtual void OnAdded(const EntityDictionary& properties) { }
+    virtual void OnAdded() { }
 
     /// <summary>
     /// Called when an entity is about to be destroyed and removed from the scene.
@@ -251,7 +120,7 @@ struct Entity
     /// <param name="ev"></param>
     void SendEvent(const IEntityEvent& ev);
 
-    void Serialize(EntityDictionaryBuilder& builder);
+    void Serialize(EntitySerializer& serializer);
 
     /// <summary>
     /// Checks if an entity is a given type.
@@ -311,7 +180,7 @@ private:
     void DoTeleport();
     void FlagsChanged();
 
-    virtual void DoSerialize(EntityDictionaryBuilder& writer) { }
+    virtual void DoSerialize(EntitySerializer& serializer) { }
 
     virtual std::pair<int, void*> GetMemoryBlock() = 0;
 

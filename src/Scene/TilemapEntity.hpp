@@ -12,7 +12,7 @@ DEFINE_ENTITY(TilemapEntity, "tilemap")
 	void Render(Renderer* renderer) override;
 
 private:
-    void OnAdded(const EntityDictionary& properties) override;
+    void OnAdded() override;
     void OnDestroyed() override;
     const MapSegment* _mapSegment = nullptr;
 

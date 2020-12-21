@@ -19,18 +19,18 @@ namespace EntityUtil
 {
     struct EntityMetadata
     {
-        EntityMetadata(StringId type_, Entity* (*createEntity_)(Scene* scene, const EntityDictionary& properties))
+        EntityMetadata(StringId type_, Entity* (*createEntity_)(Scene* scene, const EntitySerializer& serializer))
             : type(type_),
             createEntity(createEntity_)
         {
             Register(this);
         }
 
-        static Entity* CreateEntityFromType(Scene* scene, const EntityDictionary& properties);
+        static Entity* CreateEntityFromType(StringId type, Scene* scene, EntitySerializer& serializer);
         static void Register(EntityMetadata* metadata);
 
         StringId type;
-        Entity* (*createEntity)(Scene* scene, const EntityDictionary& properties);
+        Entity* (*createEntity)(Scene* scene, const EntitySerializer& serializer);
     };
 }
 
@@ -41,9 +41,11 @@ struct BaseEntity : Entity
 
     virtual EntityUtil::EntityMetadata* GetMetadata() { return &metadata; }
 
-    static Entity* CreateEntity(Scene* scene, const EntityDictionary& properties)
+    static Entity* CreateEntity(Scene* scene, const EntitySerializer& serializer)
     {
-        return scene->CreateEntityInternal<TDerived>(properties);
+    	// TODO: add new version of CreateEntity that takes the serializer
+    	assert(scene != nullptr);
+        return scene->CreateEntity<TDerived>({ });
     }
 
     static EntityUtil::EntityMetadata metadata;
