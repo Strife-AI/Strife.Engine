@@ -44,7 +44,6 @@ DEFINE_ENTITY(PlayerEntity, "player")
     using NeuralNetwork = NeuralNetworkComponent<PlayerNetwork>;
 
     void OnAdded() override;
-    void ReceiveEvent(const IEntityEvent& ev) override;
     void ReceiveServerEvent(const IEntityEvent& ev) override;
     void OnDestroyed() override;
 
@@ -60,5 +59,5 @@ DEFINE_ENTITY(PlayerEntity, "player")
     PlayerState state = PlayerState::None;
     float attackCoolDown = 0;
 
-    PointLight light;
+	void Die(const OutOfHealthEvent* outOfHealth);
 };

@@ -38,12 +38,10 @@ void CastleEntity::OnAdded()
     _spawnSlots[2] = Center() + offset.YVector();
     _spawnSlots[3] = Center() - offset.YVector();
 
-    if(!scene->isServer)
-        scene->GetLightManager()->AddLight(&_light);
-
-    _light.position = Center();
-    _light.intensity = 0;
-    _light.maxDistance = 500;
+    _light = AddComponent<LightComponent<PointLight>>();
+    _light->position = Center();
+    _light->intensity = 0.5;
+    _light->maxDistance = 500;
 }
 
 void CastleEntity::Update(float deltaTime)
@@ -53,14 +51,9 @@ void CastleEntity::Update(float deltaTime)
         return;
     }
 
-    _light.color = scene->replicationManager->localClientId == net->ownerClientId
+    _light->color = scene->replicationManager->localClientId == net->ownerClientId
         ? Color::Green()
         : Color::White();
-
-    if(net->ownerClientId >= 0)
-        _light.intensity = 0.5;
-    else
-        _light.intensity = 0;
 }
 
 void CastleEntity::ReceiveServerEvent(const IEntityEvent& ev)
@@ -82,9 +75,6 @@ void CastleEntity::SpawnPlayer()
 
 void CastleEntity::OnDestroyed()
 {
-    if(!scene->isServer)
-        scene->GetLightManager()->RemoveLight(&_light);
-
     if(scene->isServer && net != nullptr && net->ownerClientId >= 0)
     {
         for(auto player : scene->GetEntitiesOfType<PlayerEntity>())
