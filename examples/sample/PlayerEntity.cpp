@@ -1,4 +1,5 @@
 #include <Memory/Util.hpp>
+#include <Components/LightComponent.hpp>
 #include "PlayerEntity.hpp"
 #include "InputService.hpp"
 #include "Components/RigidBodyComponent.hpp"
@@ -13,13 +14,11 @@
 
 void PlayerEntity::OnAdded()
 {
-    if(!scene->isServer)
-        scene->GetLightManager()->AddLight(&light);
-
-    light.position = Center();
-    light.color = Color(255, 255, 255, 255);
-    light.maxDistance = 400;
-    light.intensity = 0.6;
+    auto light = AddComponent<LightComponent<PointLight>>();
+    light->position = Center();
+	light->color = Color(255, 255, 255, 255);
+	light->maxDistance = 400;
+	light->intensity = 0.6;
 
     health = AddComponent<HealthBarComponent>();
     health->offsetFromCenter = Vector2(0, -20);
@@ -72,11 +71,6 @@ void PlayerEntity::OnAdded()
     }
 }
 
-void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)
-{
-
-}
-
 void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
     if (auto moveTo = ev.Is<MoveToEvent>())
@@ -92,122 +86,106 @@ void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
     }
     else if (auto outOfHealth = ev.Is<OutOfHealthEvent>())
     {
-        Destroy();
+		Die(outOfHealth);
+	}
+}
 
-        auto& selfName = scene->replicationManager->GetClient(outOfHealth->killer->GetComponent<NetComponent>()->ownerClientId).clientName;
-        auto& otherName = scene->replicationManager->GetClient(net->ownerClientId).clientName;
+void PlayerEntity::Die(const OutOfHealthEvent* outOfHealth)
+{
+	Destroy();
 
-        scene->SendEvent(BroadcastToClientMessage(selfName + " killed " + otherName + "'s bot!"));
+	auto& selfName = scene->replicationManager->GetClient(outOfHealth->killer->GetComponent<NetComponent>()->ownerClientId).clientName;
+	auto& otherName = scene->replicationManager->GetClient(net->ownerClientId).clientName;
 
-        for(auto spawn : scene->GetService<InputService>()->spawns)
-        {
-            if(spawn->net->ownerClientId == net->ownerClientId)
-            {
-                auto server = GetEngine()->GetServerGame();
+	scene->SendEvent(BroadcastToClientMessage(selfName + " killed " + otherName + "'s bot!"));
 
-                spawn->StartTimer(10, [=]
-                {
-                    spawn->SpawnPlayer();
-                    server->ExecuteRpc(spawn->net->ownerClientId, MessageHudRpc("Your bot has respawned at your base"));
-                });
+	for(auto spawn : scene->GetService<InputService>()->spawns)
+	{
+		if(spawn->net->ownerClientId == net->ownerClientId)
+		{
+			auto server = GetEngine()->GetServerGame();
 
-                break;
-            }
-        }
-    }
+			spawn->StartTimer(10, [=]
+			{
+				spawn->SpawnPlayer();
+				server->ExecuteRpc(spawn->net->ownerClientId, MessageHudRpc("Your bot has respawned at your base"));
+			});
+
+			break;
+		}
+	}
 }
 
 void PlayerEntity::OnDestroyed()
 {
     RemoveFromVector(scene->GetService<InputService>()->players, this);
-
-    if(!scene->isServer)
-        scene->GetLightManager()->RemoveLight(&light);
 }
 
 void PlayerEntity::Render(Renderer* renderer)
 {
-    light.position = Center();
-
     auto position = Center();
 
-    Color c[5] = {
-        Color::CornflowerBlue(),
-        Color::Green(),
-        Color::Orange(),
-        Color::HotPink(),
-        Color::Yellow()
-    };
+    // Render player
+	{
+		Color c[5] = {
+				Color::CornflowerBlue(),
+				Color::Green(),
+				Color::Orange(),
+				Color::HotPink(),
+				Color::Yellow()
+		};
 
-    auto color = c[net->ownerClientId];
+		auto color = c[net->ownerClientId];
+		renderer->RenderRectangle(Rectangle(position - Dimensions() / 2, Dimensions()), color, -0.99);
+	}
 
-    renderer->RenderRectangle(Rectangle(position - Dimensions() / 2, Dimensions()), color, -0.99);
+    // Render name
+	{
+		FontSettings font;
+		font.spriteFont = ResourceManager::GetResource<SpriteFont>("console-font"_sid);
+		font.scale = 0.75;
 
-    FontSettings font;
-    font.spriteFont = ResourceManager::GetResource<SpriteFont>("console-font"_sid);
-    font.scale = 0.75;
-
-    auto& name = scene->replicationManager->GetClient(net->ownerClientId).clientName;
-    Vector2 size = font.spriteFont->MeasureStringWithNewlines(name.c_str(), 0.75).AsVectorOfType<float>();
-
-    renderer->RenderString(font, name.c_str(), Center() - Vector2(0, 32) - size / 2, -1);
-
-
-//    for(auto p : PositionData().snapshots)
-//    {
-//        renderer->RenderCircle(p.
-//        value, 2, Color::Red(), -1);
-//    }
-
-    //if(net->netId == )
-//    printf("========================================\n");
-//    Vector2 prev(0, 0);
-//
-//    for(auto it = PositionData().snapshots.begin(); it != PositionData().snapshots.end(); ++it)
-//    {
-//        auto next = it;
-//        ++next;
-//
-//        if(next == PositionData().snapshots.end()) break;
-//
-//        float diff = (*next).time - (*it).time;
-//
-//        float length = ((*next).value - (*it).value).Length();
-//
-//        prev = (*it).value;
-//
-//        printf("time: %f, position: %f %f\n", (*it).time, (*it).value.x, (*it).value.y);
-//    }
+		auto& name = scene->replicationManager->GetClient(net->ownerClientId).clientName;
+		Vector2 size = font.spriteFont->MeasureStringWithNewlines(name.c_str(), 0.75).AsVectorOfType<float>();
+		renderer->RenderString(font, name.c_str(), Center() - Vector2(0, 32) - size / 2, -1);
+	}
 }
 
 void PlayerEntity::ServerFixedUpdate(float deltaTime)
 {
-    auto client = net;
-
     attackCoolDown -= deltaTime;
 
-    if(state == PlayerState::Attacking)
+    if (state == PlayerState::Attacking)
     {
         Entity* target;
         RaycastResult hitResult;
-        if(attackTarget.TryGetValue(target)
-            && (target->Center() - Center()).Length() < 200
-            && scene->Raycast(Center(), target->Center(), hitResult)
-            && hitResult.handle.OwningEntity() == target)
-        {
-            rigidBody->SetVelocity({ 0, 0 });
-            auto dir = (target->Center() - Center()).Normalize();
+        if (attackTarget.TryGetValue(target))
+		{
+        	bool withinAttackingRange = (target->Center() - Center()).Length() < 200;
+        	bool canSeeTarget = scene->Raycast(Center(), target->Center(), hitResult)
+				&& hitResult.handle.OwningEntity() == target;
 
-            if (attackCoolDown <= 0)
-            {
-                auto fireball = scene->CreateEntity<FireballEntity>(Center(), dir * 400);
-                fireball->GetComponent<NetComponent>()->ownerClientId = net->ownerClientId;
-                fireball->ownerId = id;
+        	if (withinAttackingRange && canSeeTarget)
+			{
+				rigidBody->SetVelocity({ 0, 0 });
+				auto dir = (target->Center() - Center()).Normalize();
 
-                attackCoolDown = 1;
-            }
+				if (attackCoolDown <= 0)
+				{
+					auto fireball = scene->CreateEntity<FireballEntity>(Center(), dir * 400);
+					fireball->GetComponent<NetComponent>()->ownerClientId = net->ownerClientId;
+					fireball->ownerId = id;
 
-            return;
-        }
+					attackCoolDown = 1;
+				}
+
+				return;
+			}
+		}
+        else
+		{
+        	pathFollower->Stop(true);
+        	state = PlayerState::None;
+		}
     }
 }

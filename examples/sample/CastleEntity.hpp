@@ -2,6 +2,7 @@
 
 #include "Components/NetComponent.hpp"
 #include "Components/SpriteComponent.hpp"
+#include "Components/LightComponent.hpp"
 #include "Scene/BaseEntity.hpp"
 #include "Scene/IEntityEvent.hpp"
 
@@ -24,5 +25,5 @@ private:
     Vector2 _spawnSlots[4];
     int _nextSpawnSlotId = 0;
 
-    PointLight _light;
+    LightComponent<PointLight>* _light;
 };
