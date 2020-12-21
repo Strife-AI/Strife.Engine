@@ -102,12 +102,19 @@ Engine* Entity::GetEngine() const
 
 void Entity::SendEvent(const IEntityEvent& ev)
 {
-    ReceiveEvent(ev);
-
     if(scene->isServer)
     {
         ReceiveServerEvent(ev);
     }
+    else
+	{
+		ReceiveEvent(ev);
+	}
+
+    for (auto component = _componentList; component != nullptr; component = component->next)
+	{
+    	component->ReceiveEvent(ev);
+	}
 }
 
 void Entity::Serialize(EntitySerializer& serializer)
