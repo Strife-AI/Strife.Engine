@@ -25,6 +25,7 @@ void PlayerEntity::OnAdded()
     health->offsetFromCenter = Vector2(0, -20);
 
     rigidBody = AddComponent<RigidBodyComponent>(b2_dynamicBody);
+    pathFollower = AddComponent<PathFollowerComponent>(rigidBody);
 
     SetDimensions( { 30, 30 });
     auto box = rigidBody->CreateBoxCollider(Dimensions());
@@ -80,14 +81,14 @@ void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
     if (auto moveTo = ev.Is<MoveToEvent>())
     {
-        scene->GetService<PathFinderService>()->RequestFlowField(Center(), moveTo->position, this);
+    	pathFollower->SetTarget(moveTo->position);
         state = PlayerState::Moving;
     }
     else if (auto attack = ev.Is<AttackEvent>())
     {
         attackTarget = attack->entity;
-        updateTargetTimer = 0;
         state = PlayerState::Attacking;
+        pathFollower->FollowEntity(attack->entity, 200);
     }
     else if (auto outOfHealth = ev.Is<OutOfHealthEvent>())
     {
@@ -210,17 +211,3 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
         }
     }
 }
-
-void PlayerEntity::ServerUpdate(float deltaTime)
-{
-    if (state == PlayerState::Attacking)
-    {
-
-    }
-}
-
-void PlayerEntity::SetMoveDirection(Vector2 direction)
-{
-    rigidBody->SetVelocity(direction);
-}
-

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Components/PathFollowerComponent.hpp>
 #include "GameML.hpp"
 #include "Components/NetComponent.hpp"
 #include "ML/ML.hpp"
@@ -49,16 +50,14 @@ DEFINE_ENTITY(PlayerEntity, "player")
 
     void Render(Renderer* renderer) override;
     void ServerFixedUpdate(float deltaTime) override;
-    void ServerUpdate(float deltaTime) override;
-    void SetMoveDirection(Vector2 direction);
 
     RigidBodyComponent* rigidBody;
+    PathFollowerComponent* pathFollower;
     NetComponent* net;
     HealthBarComponent* health;
 
     EntityReference<Entity> attackTarget;
     PlayerState state = PlayerState::None;
-    float updateTargetTimer = 0;
     float attackCoolDown = 0;
 
     PointLight light;
