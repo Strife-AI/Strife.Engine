@@ -309,10 +309,13 @@ void Scene::NotifyFixedUpdate()
 {
     SendEvent(FixedUpdateEvent());
 
-    for (auto fixedUpdatable : _entityManager.fixedUpdatables)
-    {
-        fixedUpdatable->FixedUpdate(PhysicsDeltaTime);
-    }
+    if (!isServer)
+	{
+		for (auto fixedUpdatable : _entityManager.fixedUpdatables)
+		{
+			fixedUpdatable->FixedUpdate(PhysicsDeltaTime);
+		}
+	}
 
 	for (auto component : _componentManager.fixedUpdatables)
 	{
@@ -333,10 +336,13 @@ void Scene::NotifyServerFixedUpdate()
 
 void Scene::NotifyUpdate(float deltaTime)
 {
-    for (auto updatable : _entityManager.updatables)
-    {
-        updatable->Update(deltaTime);
-    }
+	if (!isServer)
+	{
+		for (auto updatable : _entityManager.updatables)
+		{
+			updatable->Update(deltaTime);
+		}
+	}
 
     for (auto component : _componentManager.updatables)
     {
