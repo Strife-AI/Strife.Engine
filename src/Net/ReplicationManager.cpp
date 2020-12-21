@@ -674,15 +674,9 @@ void ReplicationManager::ProcessSpawnEntity(SpawnEntityMessage& message)
 
     NetLog("Spawn entity with netId %d\n", message.netId);
 
-    EntityProperty properties[] =
-    {
-        { "type", message.type },
-        { "position", message.position },
-        { "dimensions", message.dimensions },
-        { "net", true }
-    };
+    EntitySerializer serializer;
+    auto entity = _scene->CreateEntity(StringId(message.type), serializer);
 
-    auto entity = _scene->CreateEntity(EntityDictionary(properties));
     auto netComponent = entity->GetComponent<NetComponent>();
 
     if (netComponent != nullptr)

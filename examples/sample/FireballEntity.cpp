@@ -3,7 +3,7 @@
 #include "Components/NetComponent.hpp"
 #include "HealthBarComponent.hpp"
 
-void FireballEntity::OnAdded(const EntityDictionary& properties)
+void FireballEntity::OnAdded()
 {
     auto rb = AddComponent<RigidBodyComponent>(b2_dynamicBody);
     rb->CreateCircleCollider(Radius, true);
@@ -16,7 +16,7 @@ void FireballEntity::OnAdded(const EntityDictionary& properties)
 
     if(!scene->isServer) scene->GetLightManager()->AddLight(&light);
 
-    rb->SetVelocity(properties.GetValueOrDefault("velocity", Vector2{ 0, 0 }));
+    rb->SetVelocity(velocity);
 }
 
 void FireballEntity::OnDestroyed()

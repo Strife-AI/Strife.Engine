@@ -44,14 +44,11 @@ struct MapLayer
 
 struct EntityInstance
 {
-    std::unique_ptr<EntityProperty[]> properties;
     int totalProperties;
 };
 
 struct MapSegment
 {
-    void SetProperties(const std::map<std::string, std::string>& mapProperties);
-
     StringId name;
 
     std::vector<Rectanglei> colliders;
@@ -61,13 +58,11 @@ struct MapSegment
     std::vector<EntityInstance> entities;
     std::vector<TileProperties*> tileProperties;
 
-    EntityDictionary properties;
 
     // TODO: deprecate
     Vector2 startMarker;
     Vector2 endMarker;
 
 private:
-    std::vector<EntityProperty> _mapProperties;
 };
 

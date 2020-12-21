@@ -56,6 +56,25 @@ struct RaycastResult
     Vector2 normal;
 };
 
+struct Transform
+{
+	constexpr Transform()
+		: rotation(0)
+	{
+
+	}
+
+	constexpr Transform(Vector2 position, float rotation = 0)
+		: position(position),
+		rotation(rotation)
+	{
+
+	}
+
+	Vector2 position;
+	float rotation;
+};
+
 class ReplicationManager;
 
 class Scene
@@ -80,8 +99,6 @@ public:
     auto& GetEntities() { return _entityManager.entities; }
 
     void SetSoundListener(Entity* entity);
-
-    Entity* CreateEntity(const EntityDictionary& properties);
 
     void StepPhysicsSimulation();
 
@@ -113,7 +130,8 @@ public:
     template<typename TEntity> TEntity* GetFirstNamedEntityOfType(StringId name);
 
     template <typename TEntity, typename ... Args>
-    TEntity* CreateEntityInternal(const EntityDictionary& properties, Args&& ... constructorArgs);
+    TEntity* CreateEntity(const Transform& transform, Args&& ... constructorArgs);
+    Entity* CreateEntity(StringId type, EntitySerializer& serializer);
 
     void* AllocateMemory(int size) const;
     void FreeMemory(void* mem, int size) const;
@@ -140,7 +158,7 @@ private:
     std::vector<std::unique_ptr<ISceneService>> _services;
 
     void MarkEntityForDestruction(Entity* entity);
-    void RegisterEntity(Entity* entity, const EntityDictionary& properties);
+    void RegisterEntity(Entity* entity);
     void RemoveEntity(Entity* entity);
     void DestroyScheduledEntities();
 
@@ -175,7 +193,7 @@ private:
 #define CHECK_OVERRIDE(name_, flag_) if (&TEntity::name_ != &Entity::name_) entity->flags.SetFlag(flag_)
 
 template <typename TEntity, typename ... Args>
-TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& ... constructorArgs)
+TEntity* Scene::CreateEntity(const Transform& transform, Args&& ... constructorArgs)
 {
     auto oldEntityUnderConstruction = entityUnderConstruction;
 
@@ -186,22 +204,13 @@ TEntity* Scene::CreateEntityInternal(const EntityDictionary& properties, Args&& 
     entityUnderConstruction = entity;
     new(entity) TEntity(std::forward<Args>(constructorArgs) ...);
 
-    entity->_position = properties.GetValueOrDefault<Vector2>("position", Vector2(0, 0));
+    entity->_position = transform.position;
+    entity->_rotation = transform.rotation;
     entity->type = TEntity::Type;
+	entity->scene = this;
 
-    CHECK_OVERRIDE(Update, EntityFlags::EnableUpdate);
-    CHECK_OVERRIDE(FixedUpdate, EntityFlags::EnableFixedUpdate);
-    CHECK_OVERRIDE(ServerUpdate, EntityFlags::EnableServerUpdate);
-    CHECK_OVERRIDE(ServerFixedUpdate, EntityFlags::EnableServerFixedUpdate);
-    CHECK_OVERRIDE(Render, EntityFlags::EnableRender);
-    CHECK_OVERRIDE(RenderHud, EntityFlags::EnableRenderHud);
-
-    if(&TEntity::Update != &Entity::Update)
-	{
-    	Log("Different functions\n");
-	}
-
-    RegisterEntity(entity, properties);
+    RegisterEntity(entity);
+	((Entity*)entity)->OnAdded();
     entityUnderConstruction = oldEntityUnderConstruction;
 
     return entity;

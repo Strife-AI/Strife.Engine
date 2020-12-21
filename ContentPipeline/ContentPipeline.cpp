@@ -484,46 +484,6 @@ void LoadObjectGroup(tmx::Map& map, tmx::ObjectGroup& layer, MapSegment* mapSegm
             return;
         }
     }
-
-    for (const auto& tilemapObject : layer.getObjects())
-    {
-        EntityDictionaryBuilder builder;
-
-        for (const auto& prop : tilemapObject.getProperties())
-        {
-            // Find prefab property and instantiates entity to mapsegment.
-            if (prop.getType() == tmx::Property::Type::String && prop.getName() == "prefab")
-            {
-                auto dimensions = Vector2(tilemapObject.getAABB().width, tilemapObject.getAABB().height);
-                builder.AddProperty({ "type", prop.getStringValue().c_str() });
-                builder.AddProperty({ "dimensions", dimensions });
-
-                Vector2 position;
-
-                if (tilemapObject.getTileID() != 0)
-                {
-                    position = Vector2(tilemapObject.getPosition().x, tilemapObject.getPosition().y
-                    - dimensions.y);
-                }
-                else
-                {
-                    position = Vector2(tilemapObject.getPosition().x, tilemapObject.getPosition().y);
-                }
-
-                builder.AddProperty({ "position", position + dimensions / 2 });
-                builder.AddProperty({ "rotation", tilemapObject.getRotation() * 3.14159f / 180 });
-            }
-            else
-            {
-                builder.AddProperty({ prop.getName().c_str(), GetTmxPropertyValue(prop).c_str() });
-            }
-        }
-
-        EntityInstanceDto newObject;
-        newObject.properties = builder.BuildMap();
-
-        mapSegmentDto->entities.emplace_back(newObject);
-    }
 }
 
 MapSegment* AddMap(ResourceFileWriter& resourceWriter, const std::string& path, const std::string& resourceName, const std::string& lightPath = "")
@@ -597,51 +557,6 @@ MapSegment* AddMap(ResourceFileWriter& resourceWriter, const std::string& path, 
         {
             auto objectGroup = layer->getLayerAs<tmx::ObjectGroup>();
             LoadObjectGroup(map, objectGroup, mapSegment, &mapSegmentDto);
-        }
-    }
-
-    if (!lightPath.empty())
-    {
-        //Process light file
-        std::fstream lightFile(lightPath);
-        json lightContent;
-
-        if (lightFile.peek() == std::ifstream::traits_type::eof())
-        {
-            lightFile.close();
-        }
-        else
-        {
-            lightFile >> lightContent;
-            lightFile.close();
-
-            //Process ambient light
-            EntityInstanceDto ambientLight;
-
-
-            auto ambientLightColor = lightContent["ambient"]["color"];
-            ambientLight.properties["color"] = ToColor(ambientLightColor[0], ambientLightColor[1], ambientLightColor[2], ambientLightColor[3]);
-            ambientLight.properties["intensity"] = std::to_string((float)lightContent["ambient"]["intensity"]);
-            ambientLight.properties["type"] = "ambient-light";
-
-            mapSegmentDto.entities.push_back(ambientLight);
-
-            if (lightContent.contains("lights") && !lightContent["lights"].is_null())
-            {
-                for (auto light : lightContent["lights"].items())
-                {
-                    EntityDictionaryBuilder builder;
-
-                    for (auto property : light.value().items())
-                    {
-                        builder.AddProperty({ property.key().c_str(), property.value().get<std::string>().c_str() });
-                    }
-
-                    EntityInstanceDto newLight;
-                    newLight.properties = builder.BuildMap();
-                    mapSegmentDto.entities.push_back(newLight);
-                }
-            }
         }
     }
 

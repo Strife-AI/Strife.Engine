@@ -43,6 +43,8 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
                 spawnPositions.push_back(spawn->Center());
                 spawn->Destroy();
             }
+
+            spawnPositions.push_back({ 1000, 1000});
         }
     }
     if (ev.Is<UpdateEvent>())
@@ -114,13 +116,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             auto spawnPoint = spawnPositions[spawnPositions.size() - 1];
             spawnPositions.pop_back();
 
-            EntityProperty properties[] = {
-                    EntityProperty::EntityType<CastleEntity>(),
-                    { "position", spawnPoint },
-                    { "dimensions", { 32, 32} },
-            };
-
-            auto spawn = static_cast<CastleEntity*>(scene->CreateEntity({ properties }));
+            auto spawn = scene->CreateEntity<CastleEntity>(spawnPoint);
 
             spawn->net->ownerClientId = connectedEvent->id;
 

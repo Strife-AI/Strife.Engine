@@ -45,20 +45,10 @@ Vector2 Scene::Box2DToPixel(b2Vec2 v)
     return Vector2(v.x * Box2DToPixelsRatio.x, v.y * Box2DToPixelsRatio.y);
 }
 
-void Scene::RegisterEntity(Entity* entity, const EntityDictionary& properties)
+void Scene::RegisterEntity(Entity* entity)
 {
-    entity->_dimensions = properties.GetValueOrDefault<Vector2>("dimensions", Vector2(0, 0));
-    entity->_rotation = properties.GetValueOrDefault<float>("rotation", 0);
-
-    std::string_view name = properties.GetValueOrDefault<std::string_view>("name", "");
-    entity->name = StringId(name);
-
     _entityManager.RegisterEntity(entity);
-
-    entity->scene = this;
     _engine->GetSoundManager()->AddSoundEmitter(&entity->_soundEmitter, entity);
-
-    entity->OnAdded(properties);
     _entityManager.AddInterfaces(entity);
 }
 
@@ -90,13 +80,6 @@ void Scene::RemoveEntity(Entity* entity)
         entity->~Entity();
         FreeMemory(memoryBlock.second, memoryBlock.first);
     }
-}
-
-Entity* Scene::CreateEntity(const EntityDictionary& properties)
-{
-    auto result = EntityUtil::EntityMetadata::CreateEntityFromType(this, properties);
-
-    return result;
 }
 
 void Scene::MarkEntityForDestruction(Entity* entity)
@@ -213,21 +196,9 @@ void Scene::LoadMapSegment(StringId id)
 
 void Scene::LoadMapSegment(const MapSegment& segment)
 {
-    EntityProperty properties[] =
-    {
-        { "type", "tilemap"_sid }
-    };
-
-    EntityDictionary tilemapProperties(properties);
-
-    auto tileMap = CreateEntityInternal<TilemapEntity>(tilemapProperties);
+	// TODO: load entities from the editor
+    auto tileMap = CreateEntity<TilemapEntity>({ 0, 0 });
     tileMap->SetMapSegment(segment);
-
-    for (auto& instance : segment.entities)
-    {
-        EntityDictionary properties(instance.properties.get(), instance.totalProperties);
-        CreateEntity(properties);
-    }
 }
 
 void Scene::StartTimer(float timeSeconds, const std::function<void()>& callback)
@@ -378,4 +349,9 @@ void Scene::NotifyServerUpdate(float deltaTime)
             serverUpdatable->ServerUpdate(deltaTime);
         }
     }
+}
+
+Entity* Scene::CreateEntity(StringId type, EntitySerializer& serializer)
+{
+	return EntityUtil::EntityMetadata::CreateEntityFromType(type,  this, serializer);
 }
