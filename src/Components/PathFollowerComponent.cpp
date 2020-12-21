@@ -102,8 +102,8 @@ void PathFollowerComponent::UpdateFlowField(Vector2 newTarget)
 
 void PathFollowerComponent::SetTarget(Vector2 position)
 {
-	UpdateFlowField(position);
 	state = PathFollowerState::MovingToTarget;
+	UpdateFlowField(position);
 }
 
 void PathFollowerComponent::Stop(bool loseVelocity)
@@ -121,4 +121,12 @@ void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
 		flowField = flowFieldReady->result;
 		acceleration = { 0, 0 };
 	}
+}
+
+void PathFollowerComponent::FollowEntity(Entity* entity, float minDistance)
+{
+	state = PathFollowerState::FollowingEntity;
+	UpdateFlowField(entity->Center());
+	entityToFollow = entity;
+	updateTargetTimer = 2;
 }

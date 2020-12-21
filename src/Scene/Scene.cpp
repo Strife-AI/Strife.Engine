@@ -63,6 +63,10 @@ void Scene::RemoveEntity(Entity* entity)
         {
         	_componentManager.Unregister(component);
             auto next = component->next;
+
+            // Prevent any events from being sent after it's been destroyed e.g. ContactEndEvent
+            entity->_componentList = next;
+
             component->OnRemoved();
             auto block = component->GetMemoryBlock();
             FreeMemory(block.second, block.first);
@@ -312,7 +316,7 @@ void Scene::NotifyFixedUpdate()
 
 	for (auto component : _componentManager.fixedUpdatables)
 	{
-		component->Update(deltaTime);
+		component->FixedUpdate(deltaTime);
 	}
 }
 
