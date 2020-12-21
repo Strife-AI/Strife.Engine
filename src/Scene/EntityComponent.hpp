@@ -32,6 +32,7 @@ struct IEntityComponent
     virtual void Render(Renderer* renderer);
     virtual void Update(float deltaTime);
     virtual void FixedUpdate(float deltaTime);
+    virtual void ReceiveEvent(const struct IEntityEvent& ev) { };
 
     void Register();
 

@@ -65,8 +65,6 @@ DEFINE_COMPONENT(NetComponent)
     int ownerClientId = -2;
     bool isMarkedForDestructionOnClient = false;
 
-    std::shared_ptr<FlowField> flowField;   // TODO: shouldn't be here
-    Vector2 acceleration;
     float destroyTime = INFINITY;
     bool markedForDestruction = false;
 };

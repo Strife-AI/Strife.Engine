@@ -78,12 +78,7 @@ void PlayerEntity::ReceiveEvent(const IEntityEvent& ev)
 
 void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
-    if (auto flowFieldReady = ev.Is<FlowFieldReadyEvent>())
-    {
-        net->flowField = flowFieldReady->result;
-        net->acceleration = { 0, 0 };
-    }
-    else if (auto moveTo = ev.Is<MoveToEvent>())
+    if (auto moveTo = ev.Is<MoveToEvent>())
     {
         scene->GetService<PathFinderService>()->RequestFlowField(Center(), moveTo->position, this);
         state = PlayerState::Moving;
@@ -214,85 +209,13 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
             return;
         }
     }
-
-    if (client->flowField != nullptr)
-    {
-        Vector2 velocity;
-
-        Vector2 points[4];
-        client->owner->Bounds().GetPoints(points);
-
-        bool useBeeLine = true;
-        for (auto p : points)
-        {
-            RaycastResult result;
-            if (scene->Raycast(p, client->flowField->target, result, false, [=](auto collider) { return collider.OwningEntity() != this; })
-                && (state != PlayerState::Attacking || result.handle.OwningEntity() != attackTarget.GetValueOrNull()))
-            {
-                useBeeLine = false;
-                break;
-            }
-        }
-
-        if (useBeeLine)
-        {
-            velocity = (client->flowField->target - client->owner->Center()).Normalize() * 200;
-        }
-        else
-        {
-            velocity = client->flowField->GetFilteredFlowDirection(client->owner->Center() - Vector2(16, 16)) * 200;
-
-        }
-
-        float dist = (client->flowField->target - client->owner->Center()).Length();
-        if(dist > 20)
-        {
-            velocity = client->owner->GetComponent<RigidBodyComponent>()->GetVelocity().SmoothDamp(
-                velocity,
-                client->acceleration,
-                0.05,
-                Scene::PhysicsDeltaTime);
-        }
-
-        if(dist <= 1)
-        {
-            velocity = { 0, 0 };
-            client->acceleration = { 0, 0 };
-            client->flowField = nullptr;
-        }
-
-        client->owner->GetComponent<RigidBodyComponent>()->SetVelocity(velocity);
-        //Renderer::DrawDebugLine({ client->owner->Center(), client->owner->Center() + velocity, useBeeLine ? Color::Red() : Color::Green() });
-    }
-    else
-    {
-        SetMoveDirection({ 0, 0 });
-    }
 }
 
 void PlayerEntity::ServerUpdate(float deltaTime)
 {
     if (state == PlayerState::Attacking)
     {
-        Entity* target;
-        if (attackTarget.TryGetValue(target))
-        {
-            updateTargetTimer -= deltaTime;
-            if (updateTargetTimer <= 0)
-            {
-                scene->GetService<PathFinderService>()->RequestFlowField(Center(), target->Center(), this);
-                updateTargetTimer = 2;
-            }
-            else if (net->flowField != nullptr)
-            {
-                net->flowField->target = target->Center();
-            }
-        }
-        else
-        {
-            state = PlayerState::None;
-            net->flowField = nullptr;
-        }
+
     }
 }
 
