@@ -18,18 +18,6 @@ enum class PlayerCommandStatus
     Complete
 };
 
-Vector2 GetDirectionFromKeyBits(unsigned int keyBits);
-
-DEFINE_EVENT(MoveToEvent)
-{
-    Vector2 position;
-};
-
-DEFINE_EVENT(AttackEvent)
-{
-    Entity* entity;
-};
-
 class ReadWriteBitStream;
 
 struct PlayerCommand

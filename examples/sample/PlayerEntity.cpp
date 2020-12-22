@@ -73,13 +73,7 @@ void PlayerEntity::OnAdded()
 
 void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
-    if (auto attack = ev.Is<AttackEvent>())
-    {
-        attackTarget = attack->entity;
-        state = PlayerState::Attacking;
-        pathFollower->FollowEntity(attack->entity, 200);
-    }
-    else if (auto outOfHealth = ev.Is<OutOfHealthEvent>())
+	if (auto outOfHealth = ev.Is<OutOfHealthEvent>())
     {
 		Die(outOfHealth);
 	}
@@ -189,4 +183,11 @@ void PlayerEntity::MoveTo(Vector2 position)
 {
 	pathFollower->SetTarget(position);
 	state = PlayerState::Moving;
+}
+
+void PlayerEntity::Attack(Entity* entity)
+{
+	attackTarget = entity;
+	state = PlayerState::Attacking;
+	pathFollower->FollowEntity(entity, 200);
 }

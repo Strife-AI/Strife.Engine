@@ -44,6 +44,8 @@ DEFINE_ENTITY(PlayerEntity, "player")
     using NeuralNetwork = NeuralNetworkComponent<PlayerNetwork>;
 
     void MoveTo(Vector2 position);
+    void Attack(Entity* entity);
+
     void OnAdded() override;
     void ReceiveServerEvent(const IEntityEvent& ev) override;
     void OnDestroyed() override;
