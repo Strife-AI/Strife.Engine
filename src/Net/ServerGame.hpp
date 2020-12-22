@@ -282,8 +282,6 @@ struct ServerGame : BaseGameInstance
     void ExecuteRpc(int clientId, const IRemoteProcedureCall& rpc);
     int TotalConnectedClients();
 
-    std::function<void(SLNet::BitStream& message, SLNet::BitStream& response, int clientId)> onUpdateRequest;
-
     ServerGameClient clients[MaxClients];
 
     void DisconnectClient(int clientId);
@@ -300,7 +298,6 @@ struct ClientGame : BaseGameInstance
 
     float GetServerClockOffset();
 
-    std::function<void(SLNet::BitStream& message)> onUpdateResponse;
     int clientId = -1;
     SLNet::AddressOrGUID serverAddress;
     std::vector<float> pingBuffer;
