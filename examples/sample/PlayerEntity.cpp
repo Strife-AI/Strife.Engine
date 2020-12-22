@@ -73,12 +73,7 @@ void PlayerEntity::OnAdded()
 
 void PlayerEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
-    if (auto moveTo = ev.Is<MoveToEvent>())
-    {
-    	pathFollower->SetTarget(moveTo->position);
-        state = PlayerState::Moving;
-    }
-    else if (auto attack = ev.Is<AttackEvent>())
+    if (auto attack = ev.Is<AttackEvent>())
     {
         attackTarget = attack->entity;
         state = PlayerState::Attacking;
@@ -188,4 +183,10 @@ void PlayerEntity::ServerFixedUpdate(float deltaTime)
         	state = PlayerState::None;
 		}
     }
+}
+
+void PlayerEntity::MoveTo(Vector2 position)
+{
+	pathFollower->SetTarget(position);
+	state = PlayerState::Moving;
 }

@@ -218,7 +218,8 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, ClientGame* g
 
 		for (int i = 0; i < totalCommands; ++i)
 		{
-			bool hasRoomForCommand = message.GetNumberOfBitsUsed() + commands[i]->stream.GetNumberOfBitsUsed() <= maxPacketSize * 8;
+			commands[i]->stream.ResetReadPointer();
+			bool hasRoomForCommand = message.GetNumberOfBitsUsed() + commands[i]->stream.GetNumberOfUnreadBits() <= maxPacketSize * 8;
 			if (hasRoomForCommand)
 			{
 				message.Write(commands[i]->stream);
@@ -425,7 +426,6 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
 
         	while (message.GetNumberOfUnreadBits() >= 8)
 			{
-        		Log("Process command: %d\n", currentCommandId);
         		auto command = playerCommandHandler.DeserializeCommand(readMessage);
         		command->id = currentCommandId++;
         		auto& handler = playerCommandHandler.handlerByMetadata[command->metadata];
