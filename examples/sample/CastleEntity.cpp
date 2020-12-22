@@ -8,21 +8,13 @@
 #include "Net/ReplicationManager.hpp"
 #include "MessageHud.hpp"
 
-void CastleEntity::OnAdded(const EntityDictionary& properties)
+void CastleEntity::OnAdded()
 {
-    auto spriteName = StringId(properties.GetValueOrDefault("sprite", "castle"));
-    spriteComponent = AddComponent<SpriteComponent>(spriteName);
+    spriteComponent = AddComponent<SpriteComponent>("castle"_sid);
 
     Vector2 size{ 67 * 5, 55 * 5 };
     SetDimensions(size);
     scene->GetService<PathFinderService>()->AddObstacle(Bounds());
-
-
-    if(!scene->isServer && !properties.HasProperty("net"))
-    {
-        Destroy();
-        return;
-    }
 
     spriteComponent->scale = Vector2(5.0f);
 
@@ -31,8 +23,6 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
     rigidBody->CreateBoxCollider(size);
 
     rigidBody->CreateBoxCollider({ 600, 600 }, true);
-
-
 
     net = AddComponent<NetComponent>();
 
@@ -48,34 +38,27 @@ void CastleEntity::OnAdded(const EntityDictionary& properties)
     _spawnSlots[2] = Center() + offset.YVector();
     _spawnSlots[3] = Center() - offset.YVector();
 
-    if(!scene->isServer)
-        scene->GetLightManager()->AddLight(&_light);
-
-    _light.position = Center();
-    _light.intensity = 0;
-    _light.maxDistance = 500;
+    _light = AddComponent<LightComponent<PointLight>>();
+    _light->position = Center();
+    _light->intensity = 0.5;
+    _light->maxDistance = 500;
 }
 
 void CastleEntity::Update(float deltaTime)
 {
-    if(net == nullptr)
+    if (net == nullptr)
     {
         return;
     }
 
-    _light.color = scene->replicationManager->localClientId == net->ownerClientId
-        ? Color::Green()
-        : Color::White();
-
-    if(net->ownerClientId >= 0)
-        _light.intensity = 0.5;
-    else
-        _light.intensity = 0;
+    _light->color = scene->replicationManager->localClientId == net->ownerClientId
+                    ? Color::Green()
+                    : Color::White();
 }
 
 void CastleEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
-    if(ev.Is<OutOfHealthEvent>())
+    if (ev.Is<OutOfHealthEvent>())
     {
         Destroy();
     }
@@ -86,27 +69,17 @@ void CastleEntity::SpawnPlayer()
     auto position = _spawnSlots[_nextSpawnSlotId];
     _nextSpawnSlotId = (_nextSpawnSlotId + 1) % 4;
 
-    EntityProperty properties[] = {
-            EntityProperty::EntityType<PlayerEntity>(),
-            { "position", position },
-            { "dimensions", { 30, 30 } },
-    };
-
-    auto player = static_cast<PlayerEntity*>(scene->CreateEntity(EntityDictionary(properties)));
-
+    auto player = scene->CreateEntity<PlayerEntity>({ position });
     player->GetComponent<NetComponent>()->ownerClientId = net->ownerClientId;
 }
 
 void CastleEntity::OnDestroyed()
 {
-    if(!scene->isServer)
-        scene->GetLightManager()->RemoveLight(&_light);
-
-    if(scene->isServer && net != nullptr && net->ownerClientId >= 0)
+    if (scene->isServer && net != nullptr && net->ownerClientId >= 0)
     {
-        for(auto player : scene->GetEntitiesOfType<PlayerEntity>())
+        for (auto player : scene->GetEntitiesOfType<PlayerEntity>())
         {
-            if(player->net->ownerClientId == net->ownerClientId)
+            if (player->net->ownerClientId == net->ownerClientId)
             {
                 player->Destroy();
             }
