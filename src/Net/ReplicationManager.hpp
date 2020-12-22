@@ -1,4 +1,5 @@
 #pragma once
+
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
@@ -11,14 +12,17 @@
 
 struct ClientGame;
 struct NetworkInterface;
+
 class NetworkManager;
 
-namespace SLNet {
+namespace SLNet
+{
     class BitStream;
 }
 
 enum class MessageType : uint8;
 struct ReadWriteBitStream;
+
 class WorldState;
 
 struct WorldDiff
@@ -53,7 +57,7 @@ DEFINE_EVENT(PlayerConnectedEvent)
 DEFINE_EVENT(PlayerInfoUpdatedEvent)
 {
     PlayerInfoUpdatedEvent(int clientId)
-            : clientId(clientId)
+        : clientId(clientId)
     {
 
     }
@@ -102,7 +106,7 @@ public:
 
     void RemoveNetComponent(NetComponent* component)
     {
-        if(!_isServer && !component->isMarkedForDestructionOnClient)
+        if (!_isServer && !component->isMarkedForDestructionOnClient)
         {
             // FIXME: this doesn't work when destroying the scene
             //FatalError("Tried to remove net component from %s on client\n", typeid(*component->owner).name());
@@ -116,25 +120,32 @@ public:
     {
         auto it = _componentsByNetId.find(id);
         return it != _componentsByNetId.end()
-            ? it->second
-            : nullptr;
+               ? it->second
+               : nullptr;
     }
 
     Entity* GetEntityByNetId(int id) const
-	{
-    	auto net = GetNetComponentById(id);
-    	if (net == nullptr) return nullptr;
-    	else return net->owner;
-	}
+    {
+        auto net = GetNetComponentById(id);
+        if (net == nullptr) return nullptr;
+        else return net->owner;
+    }
 
-    auto& GetClients() { return _clientStateByClientId; }
-    ClientState& GetClient(int clientId) { return _clientStateByClientId[clientId]; }
+    auto& GetClients()
+    {
+        return _clientStateByClientId;
+    }
+
+    ClientState& GetClient(int clientId)
+    {
+        return _clientStateByClientId[clientId];
+    }
 
     void Client_ReceiveUpdateResponse(SLNet::BitStream& stream);
     void Client_SendUpdateRequest(float deltaTime, ClientGame* game);
 
     void Server_ProcessUpdateRequest(SLNet::BitStream& message, int clientId);
-    bool Server_SendWorldUpdate(int clientId, SLNet::BitStream &response);
+    bool Server_SendWorldUpdate(int clientId, SLNet::BitStream& response);
 
     void Server_ClientDisconnected(int clientId);
 
@@ -142,11 +153,14 @@ public:
 
     WorldState GetCurrentWorldState();
 
-    uint32 GetCurrentSnapshotId() const { return _currentSnapshotId; }
+    uint32 GetCurrentSnapshotId() const
+    {
+        return _currentSnapshotId;
+    }
 
     std::unordered_set<NetComponent*> components;
     int localClientId = -1;
-	PlayerCommandHandler playerCommandHandler;
+    PlayerCommandHandler playerCommandHandler;
 
 private:
     void ReceiveEvent(const IEntityEvent& ev) override;

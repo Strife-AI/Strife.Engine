@@ -44,8 +44,8 @@ void BaseGameInstance::RunFrame(float currentTime)
     auto realDeltaTime = currentTime - scene->lastFrameStart;
 
     float renderDeltaTime = !engine->IsPaused()
-        ? realDeltaTime
-        : realDeltaTime; //0;
+                            ? realDeltaTime
+                            : realDeltaTime; //0;
 
     scene->deltaTime = renderDeltaTime;
 
@@ -103,7 +103,7 @@ void BaseGameInstance::RunFrame(float currentTime)
             engine->GetMetricsManager()->GetOrCreateMetric("fps")->Add(fps);
 
             count = (count + 1) % 60;
-            if(count == 0)
+            if (count == 0)
             {
                 SDL_SetWindowTitle(engine->GetSdlManager()->Window(), std::to_string(fps).c_str());
             }
@@ -220,68 +220,68 @@ void ServerGame::UpdateNetwork()
     {
         switch ((PacketType)packet->data[0])
         {
-            case PacketType::NewConnection:
-                HandleNewConnection(packet);
-                break;
+        case PacketType::NewConnection:
+            HandleNewConnection(packet);
+            break;
 
-            case PacketType::UpdateRequest:
-            {
-                int clientId = GetClientId(packet->systemAddress);
-                if (clientId == -1) continue;
+        case PacketType::UpdateRequest:
+        {
+            int clientId = GetClientId(packet->systemAddress);
+            if (clientId == -1) continue;
 
-                SLNet::BitStream request(packet->data, packet->length, false);
-                request.IgnoreBytes(1);
-				GetScene()->replicationManager->Server_ProcessUpdateRequest(request, clientId);
+            SLNet::BitStream request(packet->data, packet->length, false);
+            request.IgnoreBytes(1);
+            GetScene()->replicationManager->Server_ProcessUpdateRequest(request, clientId);
 
-                break;
-            }
-            case PacketType::Disconnected:
-            {
-                int clientId = GetClientId(packet->systemAddress);
-                if (clientId == -1) continue;
+            break;
+        }
+        case PacketType::Disconnected:
+        {
+            int clientId = GetClientId(packet->systemAddress);
+            if (clientId == -1) continue;
 
-                Log("Client %d disconnected\n", clientId);
+            Log("Client %d disconnected\n", clientId);
 
-                DisconnectClient(clientId);
+            DisconnectClient(clientId);
 
-                break;
-            }
-            case PacketType::ConnectionLost:
-            {
-                int clientId = GetClientId(packet->systemAddress);
-                if (clientId == -1) continue;
+            break;
+        }
+        case PacketType::ConnectionLost:
+        {
+            int clientId = GetClientId(packet->systemAddress);
+            if (clientId == -1) continue;
 
-                Log("Client %d lost connection\n", clientId);
+            Log("Client %d lost connection\n", clientId);
 
-                DisconnectClient(clientId);
+            DisconnectClient(clientId);
 
-                break;
-            }
-            case PacketType::Ping:
-            {
-                SLNet::BitStream request(packet->data, packet->length, false);
-                request.IgnoreBytes(1);
+            break;
+        }
+        case PacketType::Ping:
+        {
+            SLNet::BitStream request(packet->data, packet->length, false);
+            request.IgnoreBytes(1);
 
-                float sentClientTime;
-                request.Read(sentClientTime);
+            float sentClientTime;
+            request.Read(sentClientTime);
 
-                SLNet::BitStream response;
-                response.Write(PacketType::PingResponse);
-                response.Write(sentClientTime);
-                response.Write(GetScene()->absoluteTime);
-                networkInterface.SendUnreliable(packet->systemAddress, response);
-                break;
-            }
-            case PacketType::RpcCall:
-            {
-                int clientId = GetClientId(packet->systemAddress);
-                //if (clientId == -1) continue;
+            SLNet::BitStream response;
+            response.Write(PacketType::PingResponse);
+            response.Write(sentClientTime);
+            response.Write(GetScene()->absoluteTime);
+            networkInterface.SendUnreliable(packet->systemAddress, response);
+            break;
+        }
+        case PacketType::RpcCall:
+        {
+            int clientId = GetClientId(packet->systemAddress);
+            //if (clientId == -1) continue;
 
-                SLNet::BitStream stream(packet->data, packet->length, false);
-                stream.IgnoreBytes(1);
-                rpcManager.Receive(stream, engine, clientId);
-                break;
-            }
+            SLNet::BitStream stream(packet->data, packet->length, false);
+            stream.IgnoreBytes(1);
+            rpcManager.Receive(stream, engine, clientId);
+            break;
+        }
         }
     }
 }
@@ -302,73 +302,73 @@ void ClientGame::UpdateNetwork()
     {
         switch ((PacketType)packet->data[0])
         {
-            case PacketType::NewConnectionResponse:
+        case PacketType::NewConnectionResponse:
+        {
+            SLNet::BitStream message(packet->data, packet->length, false);
+            message.IgnoreBytes(1);
+
+            message.Read(clientId);
+
+            StringId mapName;
+            message.Read(mapName.key);
+            if (!sceneManager.TrySwitchScene(mapName))
             {
-                SLNet::BitStream message(packet->data, packet->length, false);
-                message.IgnoreBytes(1);
-
-                message.Read(clientId);
-
-                StringId mapName;
-                message.Read(mapName.key);
-                if(!sceneManager.TrySwitchScene(mapName))
-                {
-                    Log("Failed to switch scene\n");
-                    return;
-                }
-
-                Log("Assigned client id %d\n", clientId);
-                serverAddress = packet->systemAddress;
-                sceneManager.GetScene()->SendEvent(JoinedServerEvent(clientId));
-
-                MeasureRoundTripTime();
-
-                rpcManager.Execute(serverAddress, ServerSetPlayerInfoRpc(g_name.Value()));
-
-                break;
+                Log("Failed to switch scene\n");
+                return;
             }
-            case PacketType::ConnectionAttemptFailed:
-            {
-                Log("Connection attempt failed\n");
-                break;
-            }
-            case (PacketType)ID_NO_FREE_INCOMING_CONNECTIONS:
-            {
-                Log("Connection failed: servere not accepting incoming connections\n");
-                break;
-            }
-            case PacketType::UpdateResponse:
-            {
-                SLNet::BitStream stream(packet->data, packet->length, false);
-                stream.IgnoreBytes(1);
-				GetScene()->replicationManager->Client_ReceiveUpdateResponse(stream);
-                break;
-            }
-            case PacketType::PingResponse:
-            {
-                SLNet::BitStream stream(packet->data, packet->length, false);
-                stream.IgnoreBytes(1);
-                float sentTime;
-                float serverTime;
-                stream.Read(sentTime);
-                stream.Read(serverTime);
 
-                float pingTime = (sceneManager.GetScene()->relativeTime - sentTime);
-                float clockOffset = serverTime + pingTime / 2 - sentTime;
+            Log("Assigned client id %d\n", clientId);
+            serverAddress = packet->systemAddress;
+            sceneManager.GetScene()->SendEvent(JoinedServerEvent(clientId));
 
-                //Log("Clock offset: %f ms\n", clockOffset);
-                pingBuffer.push_back(clockOffset);
-                break;
-            }
-            case PacketType::RpcCall:
-            {
-                int clientId = 0;
-                SLNet::BitStream stream(packet->data, packet->length, false);
-                stream.IgnoreBytes(1);
-                rpcManager.Receive(stream, engine, clientId);
+            MeasureRoundTripTime();
 
-                break;
-            }
+            rpcManager.Execute(serverAddress, ServerSetPlayerInfoRpc(g_name.Value()));
+
+            break;
+        }
+        case PacketType::ConnectionAttemptFailed:
+        {
+            Log("Connection attempt failed\n");
+            break;
+        }
+        case (PacketType)ID_NO_FREE_INCOMING_CONNECTIONS:
+        {
+            Log("Connection failed: servere not accepting incoming connections\n");
+            break;
+        }
+        case PacketType::UpdateResponse:
+        {
+            SLNet::BitStream stream(packet->data, packet->length, false);
+            stream.IgnoreBytes(1);
+            GetScene()->replicationManager->Client_ReceiveUpdateResponse(stream);
+            break;
+        }
+        case PacketType::PingResponse:
+        {
+            SLNet::BitStream stream(packet->data, packet->length, false);
+            stream.IgnoreBytes(1);
+            float sentTime;
+            float serverTime;
+            stream.Read(sentTime);
+            stream.Read(serverTime);
+
+            float pingTime = (sceneManager.GetScene()->relativeTime - sentTime);
+            float clockOffset = serverTime + pingTime / 2 - sentTime;
+
+            //Log("Clock offset: %f ms\n", clockOffset);
+            pingBuffer.push_back(clockOffset);
+            break;
+        }
+        case PacketType::RpcCall:
+        {
+            int clientId = 0;
+            SLNet::BitStream stream(packet->data, packet->length, false);
+            stream.IgnoreBytes(1);
+            rpcManager.Receive(stream, engine, clientId);
+
+            break;
+        }
         }
     }
 }
@@ -377,7 +377,7 @@ void ClientGame::MeasureRoundTripTime()
 {
     pingBuffer.clear();
 
-    for(int i = 0; i < 5; ++i)
+    for (int i = 0; i < 5; ++i)
     {
         SLNet::BitStream request;
         request.Write(PacketType::Ping);
@@ -390,7 +390,7 @@ void ClientGame::MeasureRoundTripTime()
 
 float ClientGame::GetServerClockOffset()
 {
-    if(pingBuffer.size() == 0)
+    if (pingBuffer.size() == 0)
     {
         return 1e10;
     }
@@ -406,7 +406,7 @@ void ClientGame::Disconnect()
     networkInterface.SendReliable(serverAddress, stream);
 }
 
-ClientGame::ClientGame(Engine *engine, SLNet::RakPeerInterface *raknetInterface, SLNet::AddressOrGUID localAddress_)
+ClientGame::ClientGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_)
     : BaseGameInstance(engine, raknetInterface, localAddress_, false)
 {
     isHeadless = false;
@@ -416,7 +416,7 @@ ClientGame::ClientGame(Engine *engine, SLNet::RakPeerInterface *raknetInterface,
 
 void ClientGame::AddPlayerCommand(PlayerCommand& command)
 {
-	GetScene()->replicationManager->playerCommandHandler.AddCommand(command);
+    GetScene()->replicationManager->playerCommandHandler.AddCommand(command);
 }
 
 void PingCommand(ConsoleCommandBinder& binder)
@@ -424,7 +424,7 @@ void PingCommand(ConsoleCommandBinder& binder)
     binder.Help("Measures ping time to the server");
 
     auto clientGame = binder.GetEngine()->GetClientGame();
-    if(clientGame == nullptr)
+    if (clientGame == nullptr)
     {
         binder.GetConsole()->Log("No client game running\n");
         return;
@@ -432,6 +432,7 @@ void PingCommand(ConsoleCommandBinder& binder)
 
     clientGame->MeasureRoundTripTime();
 }
+
 ConsoleCmd pingCmd("ping", PingCommand);
 
 int ServerGame::AddClient(const SLNet::AddressOrGUID& address)
@@ -471,20 +472,20 @@ void ServerGame::PostUpdateEntities()
     replicationManager->TakeSnapshot();
 
     SLNet::BitStream worldUpdateStream;
-    for(auto& client : clients)
+    for (auto& client : clients)
     {
-        if(client.status != ClientConnectionStatus::Connected) continue;
+        if (client.status != ClientConnectionStatus::Connected) continue;
 
         worldUpdateStream.Reset();
-        if(replicationManager->Server_SendWorldUpdate(client.clientId, worldUpdateStream))
+        if (replicationManager->Server_SendWorldUpdate(client.clientId, worldUpdateStream))
         {
             networkInterface.SendReliable(client.address, worldUpdateStream);
         }
     }
 }
 
-ServerGame::ServerGame(Engine *engine, SLNet::RakPeerInterface *raknetInterface, SLNet::AddressOrGUID localAddress_)
-        : BaseGameInstance(engine, raknetInterface, localAddress_, true)
+ServerGame::ServerGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_)
+    : BaseGameInstance(engine, raknetInterface, localAddress_, true)
 {
     isHeadless = true;
     targetTickRate = 30;
@@ -494,9 +495,9 @@ ServerGame::ServerGame(Engine *engine, SLNet::RakPeerInterface *raknetInterface,
 
 void ServerGame::ForEachClient(const std::function<void(ServerGameClient&)>& handler)
 {
-    for(int i = 0; i < MaxClients; ++i)
+    for (int i = 0; i < MaxClients; ++i)
     {
-        if(clients[i].status == ClientConnectionStatus::Connected)
+        if (clients[i].status == ClientConnectionStatus::Connected)
         {
             handler(clients[i]);
         }
@@ -505,12 +506,13 @@ void ServerGame::ForEachClient(const std::function<void(ServerGameClient&)>& han
 
 void ServerGame::BroadcastRpc(const IRemoteProcedureCall& rpc)
 {
-    ForEachClient([=, &rpc](auto& client) { rpcManager.Execute(client.address, rpc); });
+    ForEachClient([=, &rpc](auto& client)
+    { rpcManager.Execute(client.address, rpc); });
 }
 
 void ServerGame::ExecuteRpc(int clientId, const IRemoteProcedureCall& rpc)
 {
-    if(clientId < 0 || clientId >= MaxClients || clients[clientId].status != ClientConnectionStatus::Connected)
+    if (clientId < 0 || clientId >= MaxClients || clients[clientId].status != ClientConnectionStatus::Connected)
     {
         return;
     }
@@ -521,9 +523,9 @@ void ServerGame::ExecuteRpc(int clientId, const IRemoteProcedureCall& rpc)
 int ServerGame::TotalConnectedClients()
 {
     int count = 0;
-    for(int i = 0; i < MaxClients; ++i)
+    for (int i = 0; i < MaxClients; ++i)
     {
-        if(clients[i].status == ClientConnectionStatus::Connected)
+        if (clients[i].status == ClientConnectionStatus::Connected)
         {
             ++count;
         }
@@ -532,7 +534,7 @@ int ServerGame::TotalConnectedClients()
     return count;
 }
 
-ReadWriteBitStream &ReadWriteBitStream::Add(Vector2& out)
+ReadWriteBitStream& ReadWriteBitStream::Add(Vector2& out)
 {
     if (isReading)
     {
@@ -548,9 +550,9 @@ ReadWriteBitStream &ReadWriteBitStream::Add(Vector2& out)
     return *this;
 }
 
-ReadWriteBitStream &ReadWriteBitStream::Add(std::string& str)
+ReadWriteBitStream& ReadWriteBitStream::Add(std::string& str)
 {
-    if(isReading)
+    if (isReading)
     {
         SLNet::RakString rakstr;
         stream.Read(rakstr);
@@ -578,13 +580,13 @@ void RpcManager::Execute(SLNet::AddressOrGUID address, const IRemoteProcedureCal
     _networkInterface->SendReliable(address, stream);
 }
 
-void RpcManager::Receive(SLNet::BitStream &stream, Engine* engine, int fromClientId)
+void RpcManager::Receive(SLNet::BitStream& stream, Engine* engine, int fromClientId)
 {
     unsigned int rpcName;
     stream.Read(rpcName);
 
     auto handler = _handlersByStringIdName.find(rpcName);
-    if(handler != _handlersByStringIdName.end())
+    if (handler != _handlersByStringIdName.end())
     {
         ReadWriteBitStream rw(stream, true);
         handler->second(rw, engine, fromClientId);
@@ -599,7 +601,8 @@ void ServerSetPlayerInfoRpc::Execute()
 {
     auto server = engine->GetServerGame();
     engine->GetServerGame()->GetScene()->replicationManager->GetClient(fromClientId).clientName = name;
-    server->ForEachClient([=](auto& client) { server->rpcManager.Execute(client.address, ClientSetPlayerInfoRpc(fromClientId, name)); });
+    server->ForEachClient([=](auto& client)
+    { server->rpcManager.Execute(client.address, ClientSetPlayerInfoRpc(fromClientId, name)); });
 }
 
 void ClientSetPlayerInfoRpc::Execute()

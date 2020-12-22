@@ -15,7 +15,7 @@ DEFINE_EVENT(PlayerAddedToGame)
     PlayerAddedToGame(PlayerEntity* player_)
         : player(player_)
     {
-        
+
     }
 
     PlayerEntity* player;
@@ -62,5 +62,5 @@ DEFINE_ENTITY(PlayerEntity, "player")
     PlayerState state = PlayerState::None;
     float attackCoolDown = 0;
 
-	void Die(const OutOfHealthEvent* outOfHealth);
+    void Die(const OutOfHealthEvent* outOfHealth);
 };

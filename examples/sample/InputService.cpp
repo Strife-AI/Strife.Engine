@@ -25,55 +25,55 @@ InputButton g_rightButton(SDL_SCANCODE_D);
 
 DEFINE_COMMAND(MoveToCommand)
 {
-	void DoSerialize(ReadWriteBitStream& stream) override
-	{
-		stream.Add(position).Add(netId);
-	}
+    void DoSerialize(ReadWriteBitStream& stream) override
+    {
+        stream.Add(position).Add(netId);
+    }
 
-	Vector2 position;
-	uint32_t netId;
+    Vector2 position;
+    uint32_t netId;
 };
 
 DEFINE_COMMAND(AttackCommand)
 {
-	void DoSerialize(ReadWriteBitStream& stream) override
-	{
-		stream.Add(netId).Add(attackNetId);
-	}
+    void DoSerialize(ReadWriteBitStream& stream) override
+    {
+        stream.Add(netId).Add(attackNetId);
+    }
 
-	uint32_t netId;
-	uint32_t attackNetId;
+    uint32_t netId;
+    uint32_t attackNetId;
 };
 
 void InputService::OnAdded()
 {
-	auto& handler = scene->replicationManager->playerCommandHandler;
-	ReplicationManager* replicationManager = scene->replicationManager;
+    auto& handler = scene->replicationManager->playerCommandHandler;
+    ReplicationManager* replicationManager = scene->replicationManager;
 
-	handler.RegisterCommandType<MoveToCommand>(1, [=](const MoveToCommand& command)
-	{
-		auto entity = replicationManager->GetEntityByNetId(command.netId);
-		PlayerEntity* player;
-		if (entity != nullptr && entity->Is(player))
-		{
-			player->MoveTo(command.position);
-		}
-	});
+    handler.RegisterCommandType<MoveToCommand>(1, [=](const MoveToCommand& command)
+    {
+        auto entity = replicationManager->GetEntityByNetId(command.netId);
+        PlayerEntity* player;
+        if (entity != nullptr && entity->Is(player))
+        {
+            player->MoveTo(command.position);
+        }
+    });
 
-	handler.RegisterCommandType<AttackCommand>(2, [=](const AttackCommand& command)
-	{
-		auto entity = replicationManager->GetEntityByNetId(command.netId);
-		PlayerEntity* player;
-		if (entity != nullptr && entity->Is(player))
-		{
-			auto attack = replicationManager->GetEntityByNetId(command.attackNetId);
+    handler.RegisterCommandType<AttackCommand>(2, [=](const AttackCommand& command)
+    {
+        auto entity = replicationManager->GetEntityByNetId(command.netId);
+        PlayerEntity* player;
+        if (entity != nullptr && entity->Is(player))
+        {
+            auto attack = replicationManager->GetEntityByNetId(command.attackNetId);
 
-			if (attack != nullptr)
-			{
-				player->Attack(attack);
-			}
-		}
-	});
+            if (attack != nullptr)
+            {
+                player->Attack(attack);
+            }
+        }
+    });
 }
 
 
@@ -89,7 +89,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
                 spawn->Destroy();
             }
 
-            spawnPositions.push_back({ 1000, 1000});
+            spawnPositions.push_back({ 1000, 1000 });
         }
     }
     if (ev.Is<UpdateEvent>())
@@ -159,22 +159,22 @@ void InputService::HandleInput()
 
     if (!scene->isServer)
     {
-        if(scene->deltaTime == 0)
+        if (scene->deltaTime == 0)
         {
             return;
         }
 
         auto mouse = scene->GetEngine()->GetInput()->GetMouse();
 
-        if(mouse->LeftPressed())
+        if (mouse->LeftPressed())
         {
-            for(auto player : players)
+            for (auto player : players)
             {
-                if(player->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition()))
+                if (player->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition()))
                     && player->net->ownerClientId == scene->replicationManager->localClientId)
                 {
                     PlayerEntity* oldPlayer;
-                    if(activePlayer.TryGetValue(oldPlayer))
+                    if (activePlayer.TryGetValue(oldPlayer))
                     {
                         oldPlayer->GetComponent<PlayerEntity::NeuralNetwork>()->mode = NeuralNetworkMode::Deciding;
                     }
@@ -190,44 +190,44 @@ void InputService::HandleInput()
         PlayerEntity* self;
         if (activePlayer.TryGetValue(self))
         {
-			if(mouse->RightPressed())
-			{
-				bool attack = false;
-				for (auto entity : scene->GetEntities())
-				{
-					auto netComponent = entity->GetComponent<NetComponent>(false);
+            if (mouse->RightPressed())
+            {
+                bool attack = false;
+                for (auto entity : scene->GetEntities())
+                {
+                    auto netComponent = entity->GetComponent<NetComponent>(false);
 
-					if(netComponent == nullptr)
-					{
-						continue;
-					}
+                    if (netComponent == nullptr)
+                    {
+                        continue;
+                    }
 
-					if(entity->GetComponent<HealthBarComponent>(false) == nullptr)
-					{
-						continue;
-					}
+                    if (entity->GetComponent<HealthBarComponent>(false) == nullptr)
+                    {
+                        continue;
+                    }
 
-					if (entity->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
-					{
-						AttackCommand command;
-						command.netId = self->net->netId;
-						command.attackNetId = netComponent->netId;
-						scene->replicationManager->playerCommandHandler.AddCommand(command);
+                    if (entity->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
+                    {
+                        AttackCommand command;
+                        command.netId = self->net->netId;
+                        command.attackNetId = netComponent->netId;
+                        scene->replicationManager->playerCommandHandler.AddCommand(command);
 
-						attack = true;
-						break;
-					}
-				}
+                        attack = true;
+                        break;
+                    }
+                }
 
-				if (!attack)
-				{
-					MoveToCommand command;
-					command.position = scene->GetCamera()->ScreenToWorld(mouse->MousePosition());
-					command.netId = self->net->netId;
-					scene->replicationManager->playerCommandHandler.AddCommand(command);
-				}
-			}
-		}
+                if (!attack)
+                {
+                    MoveToCommand command;
+                    command.position = scene->GetCamera()->ScreenToWorld(mouse->MousePosition());
+                    command.netId = self->net->netId;
+                    scene->replicationManager->playerCommandHandler.AddCommand(command);
+                }
+            }
+        }
 
         scene->replicationManager->Client_SendUpdateRequest(scene->deltaTime, scene->GetEngine()->GetClientGame());
     }

@@ -46,19 +46,19 @@ void CastleEntity::OnAdded()
 
 void CastleEntity::Update(float deltaTime)
 {
-    if(net == nullptr)
+    if (net == nullptr)
     {
         return;
     }
 
     _light->color = scene->replicationManager->localClientId == net->ownerClientId
-        ? Color::Green()
-        : Color::White();
+                    ? Color::Green()
+                    : Color::White();
 }
 
 void CastleEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
-    if(ev.Is<OutOfHealthEvent>())
+    if (ev.Is<OutOfHealthEvent>())
     {
         Destroy();
     }
@@ -75,11 +75,11 @@ void CastleEntity::SpawnPlayer()
 
 void CastleEntity::OnDestroyed()
 {
-    if(scene->isServer && net != nullptr && net->ownerClientId >= 0)
+    if (scene->isServer && net != nullptr && net->ownerClientId >= 0)
     {
-        for(auto player : scene->GetEntitiesOfType<PlayerEntity>())
+        for (auto player : scene->GetEntitiesOfType<PlayerEntity>())
         {
-            if(player->net->ownerClientId == net->ownerClientId)
+            if (player->net->ownerClientId == net->ownerClientId)
             {
                 player->Destroy();
             }

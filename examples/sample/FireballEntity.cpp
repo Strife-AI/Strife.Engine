@@ -14,28 +14,27 @@ void FireballEntity::OnAdded()
     light.maxDistance = Radius;
     light.intensity = 2;
 
-    if(!scene->isServer) scene->GetLightManager()->AddLight(&light);
+    if (!scene->isServer) scene->GetLightManager()->AddLight(&light);
 
     rb->SetVelocity(velocity);
 }
 
 void FireballEntity::OnDestroyed()
 {
-    if(!scene->isServer) scene->GetLightManager()->RemoveLight(&light);
+    if (!scene->isServer) scene->GetLightManager()->RemoveLight(&light);
 }
 
 void FireballEntity::ReceiveServerEvent(const IEntityEvent& ev)
 {
-    if(auto contactBegin = ev.Is<ContactBeginEvent>())
+    if (auto contactBegin = ev.Is<ContactBeginEvent>())
     {
-
         auto other = contactBegin->other.OwningEntity();
-        if(other->id == ownerId) return;
-        if(contactBegin->other.IsTrigger()) return;
+        if (other->id == ownerId) return;
+        if (contactBegin->other.IsTrigger()) return;
 
         auto healthBar = other->GetComponent<HealthBarComponent>(false);
 
-        if(healthBar != nullptr)
+        if (healthBar != nullptr)
         {
             healthBar->TakeDamage(5, this);
         }
