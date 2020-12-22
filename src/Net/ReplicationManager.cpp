@@ -435,7 +435,7 @@ void ReadVars(ISyncVar* head, uint32 fromSnapshotId, uint32 toSnapshotId, float 
 
 static WorldState g_emptyWorldState;
 
-void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
+void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, int clientId)
 {
     auto& client = _clientStateByClientId[clientId];
 

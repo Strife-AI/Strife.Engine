@@ -230,12 +230,9 @@ void ServerGame::UpdateNetwork()
                 if (clientId == -1) continue;
 
                 SLNet::BitStream request(packet->data, packet->length, false);
-                SLNet::BitStream response;
-
                 request.IgnoreBytes(1);
-                onUpdateRequest(request, response, clientId);
+				GetScene()->replicationManager->Server_ProcessUpdateRequest(request, clientId);
 
-                //networkInterface.SendReliable(packet->systemAddress, response);
                 break;
             }
             case PacketType::Disconnected:
@@ -344,7 +341,7 @@ void ClientGame::UpdateNetwork()
             {
                 SLNet::BitStream stream(packet->data, packet->length, false);
                 stream.IgnoreBytes(1);
-                onUpdateResponse(stream);
+				GetScene()->replicationManager->Client_ReceiveUpdateResponse(stream);
                 break;
             }
             case PacketType::PingResponse:

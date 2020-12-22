@@ -130,7 +130,7 @@ public:
     void Client_SendUpdateRequest(float deltaTime, ClientGame* game);
     void Client_AddPlayerCommand(const PlayerCommand& command);
 
-    void Server_ProcessUpdateRequest(SLNet::BitStream& message, SLNet::BitStream& response, int clientId);
+    void Server_ProcessUpdateRequest(SLNet::BitStream& message, int clientId);
     bool Server_SendWorldUpdate(int clientId, SLNet::BitStream &response);
 
     void Server_ClientDisconnected(int clientId);

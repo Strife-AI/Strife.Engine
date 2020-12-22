@@ -22,7 +22,6 @@ InputButton g_upButton(SDL_SCANCODE_W);
 InputButton g_downButton(SDL_SCANCODE_S);
 InputButton g_leftButton(SDL_SCANCODE_A);
 InputButton g_rightButton(SDL_SCANCODE_D);
-InputButton g_nextPlayer(SDL_SCANCODE_TAB);
 
 void InputService::ReceiveEvent(const IEntityEvent& ev)
 {
@@ -30,14 +29,6 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if (scene->isServer)
         {
-//            EntityProperty properties[] = {
-//                    EntityProperty::EntityType<PuckEntity>(),
-//                    { "position", { 1800, 1800} },
-//                    { "dimensions", { 32, 32} },
-//            };
-
-//            scene->CreateEntity(EntityDictionary(properties));
-
             for (auto spawn : scene->GetEntitiesOfType<CastleEntity>())
             {
                 spawnPositions.push_back(spawn->Center());
@@ -78,18 +69,6 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if (auto renderEvent = ev.Is<RenderEvent>())
     {
-        if (scene->isServer)
-        {
-            std::string result;
-
-            for(auto& c : scene->replicationManager->GetClients())
-            {
-                result += "[" + std::to_string(c.first) + "] = " + std::to_string((int)scene->replicationManager->GetCurrentSnapshotId() - (int)c.second.lastReceivedSnapshotId) + "\n";
-            }
-
-            status.VFormat("%s", result.c_str());
-        }
-
         Render(renderEvent->renderer);
     }
     else if (auto fixedUpdateEvent = ev.Is<FixedUpdateEvent>())
@@ -126,59 +105,6 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             }
 
             spawns.push_back(spawn);
-        }
-    }
-}
-
-PlayerEntity* InputService::GetPlayerByNetId(int netId)
-{
-    for(auto player : players)
-    {
-        if(player->net->netId == netId)
-        {
-            return player;
-        }
-    }
-
-    return nullptr;
-}
-
-void InputService::OnAdded()
-{
-    if(scene->isServer)
-    {
-        scene->GetCameraFollower()->FollowMouse();
-
-        if (scene->GetEngine()->GetServerGame())
-        {
-            scene->GetEngine()->GetServerGame()->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
-            {
-                scene->replicationManager->Server_ProcessUpdateRequest(message, response, clientId);
-            };
-        }
-    }
-    else
-    {
-        if (scene->GetEngine()->GetClientGame())
-        {
-            scene->GetEngine()->GetClientGame()->onUpdateResponse = [=](SLNet::BitStream& message)
-            {
-                auto& c = scene->replicationManager->GetClients()[scene->replicationManager->localClientId].commands;
-
-                int count = 0;
-                for(auto it : c)
-                {
-                    ++count;
-                }
-
-                status.VFormat("Commands behind: %d\n", count);
-
-                auto last = c.IsEmpty() ? 0.0f : (*(--c.end())).timeRecorded;
-
-                //status.VFormat("%d bytes (%f ms)", NearestPowerOf2(message.GetNumberOfUnreadBits(), 8) / 8, (scene->relativeTime - last) * 1000);
-
-                scene->replicationManager->Client_ReceiveUpdateResponse(message);
-            };
         }
     }
 }
