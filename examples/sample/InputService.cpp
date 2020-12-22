@@ -34,6 +34,17 @@ DEFINE_COMMAND(MoveToCommand)
 	uint32_t netId;
 };
 
+DEFINE_COMMAND(AttackCommand)
+{
+	void DoSerialize(ReadWriteBitStream& stream) override
+	{
+		stream.Add(netId).Add(attackNetId);
+	}
+
+	uint32_t netId;
+	uint32_t attackNetId;
+};
+
 void InputService::OnAdded()
 {
 	auto& handler = scene->replicationManager->playerCommandHandler;
@@ -46,6 +57,21 @@ void InputService::OnAdded()
 		if (entity != nullptr && entity->Is(player))
 		{
 			player->MoveTo(command.position);
+		}
+	});
+
+	handler.RegisterCommandType<AttackCommand>(2, [=](const AttackCommand& command)
+	{
+		auto entity = replicationManager->GetEntityByNetId(command.netId);
+		PlayerEntity* player;
+		if (entity != nullptr && entity->Is(player))
+		{
+			auto attack = replicationManager->GetEntityByNetId(command.attackNetId);
+
+			if (attack != nullptr)
+			{
+				player->Attack(attack);
+			}
 		}
 	});
 }
@@ -183,10 +209,13 @@ void InputService::HandleInput()
 
 					if (entity->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
 					{
-//                            command.attackTarget = true;
-//                            command.attackNetId = netComponent->netId;
-//                            attack = true;
-//                            break;
+						AttackCommand command;
+						command.netId = self->net->netId;
+						command.attackNetId = netComponent->netId;
+						scene->replicationManager->playerCommandHandler.AddCommand(command);
+
+						attack = true;
+						break;
 					}
 				}
 
@@ -198,9 +227,6 @@ void InputService::HandleInput()
 					scene->replicationManager->playerCommandHandler.AddCommand(command);
 				}
 			}
-
-			//scene->replicationManager->Client_AddPlayerCommand(command);
-
 		}
 
         scene->replicationManager->Client_SendUpdateRequest(scene->deltaTime, scene->GetEngine()->GetClientGame());
