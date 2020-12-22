@@ -37,10 +37,16 @@ DEFINE_COMMAND(MoveToCommand)
 void InputService::OnAdded()
 {
 	auto& handler = scene->replicationManager->playerCommandHandler;
+	ReplicationManager* replicationManager = scene->replicationManager;
 
 	handler.RegisterCommandType<MoveToCommand>(1, [=](const MoveToCommand& command)
 	{
-		Log("Receive move to\n");
+		auto entity = replicationManager->GetEntityByNetId(command.netId);
+		PlayerEntity* player;
+		if (entity != nullptr && entity->Is(player))
+		{
+			player->MoveTo(command.position);
+		}
 	});
 }
 

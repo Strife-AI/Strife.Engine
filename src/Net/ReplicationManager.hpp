@@ -123,6 +123,13 @@ public:
             : nullptr;
     }
 
+    Entity* GetEntityByNetId(int id) const
+	{
+    	auto net = GetNetComponentById(id);
+    	if (net == nullptr) return nullptr;
+    	else return net->owner;
+	}
+
     auto& GetClients() { return _clientStateByClientId; }
     ClientState& GetClient(int clientId) { return _clientStateByClientId[clientId]; }
 
