@@ -5,7 +5,7 @@
 #include "Physics/PathFinding.hpp"
 #include "Renderer/Renderer.hpp"
 
-void TilemapEntity::OnAdded(const EntityDictionary& properties)
+void TilemapEntity::OnAdded()
 {
     flags.SetFlag(EntityFlags::CastsShadows);
 

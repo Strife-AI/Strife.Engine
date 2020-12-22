@@ -5,7 +5,6 @@
 #include "Components/NetComponent.hpp"
 #include "Scene/Scene.hpp"
 #include "Components/RigidBodyComponent.hpp"
-#include "Physics/PathFinding.hpp"
 
 void UpdateVarsToTime(ISyncVar* head, float time)
 {
@@ -19,11 +18,11 @@ ConsoleVar<float> g_jitterTime("jitter", 0.2);
 
 void NetworkPhysics::ReceiveEvent(const IEntityEvent& ev)
 {
-    if(ev.Is<FixedUpdateEvent>())
+    if (ev.Is<FixedUpdateEvent>())
     {
-        if (_isServer)  ServerFixedUpdate();
+        if (_isServer) ServerFixedUpdate();
     }
-    else if(ev.Is<UpdateEvent>())
+    else if (ev.Is<UpdateEvent>())
     {
         if (!_isServer)
         {
@@ -54,13 +53,13 @@ void NetworkPhysics::ServerFixedUpdate()
         {
             for (auto& currentCommand : client.second.commands)
             {
-                if (currentCommand.status == PlayerCommandStatus::Complete)
+                if (currentCommand->status == PlayerCommandStatus::Complete)
                 {
                     continue;
                 }
                 else
                 {
-                    commandToExecute = &currentCommand;
+                    commandToExecute = currentCommand;
                     break;
                 }
             }
@@ -72,32 +71,10 @@ void NetworkPhysics::ServerFixedUpdate()
                     commandToExecute->fixedUpdateStartId = currentFixedUpdateId;
                     commandToExecute->status = PlayerCommandStatus::InProgress;
 
-                    if(commandToExecute->moveToTarget)
+                    auto& handler = scene->replicationManager->playerCommandHandler.handlerByMetadata[commandToExecute->metadata];
+                    if (handler != nullptr)
                     {
-                        NetComponent* player = scene->replicationManager->GetNetComponentById(commandToExecute->netId);
-
-                        if (player != nullptr)
-                        {
-                            MoveToEvent moveTo;
-                            moveTo.position = commandToExecute->target;
-                            player->owner->SendEvent(moveTo);
-                        }
-                    }
-                    else if(commandToExecute->attackTarget)
-                    {
-                        NetComponent* player = scene->replicationManager->GetNetComponentById(commandToExecute->netId);
-
-                        if (player != nullptr)
-                        {
-                            NetComponent* attack = scene->replicationManager->GetNetComponentById(commandToExecute->attackNetId);
-
-                            if(attack != nullptr)
-                            {
-                                AttackEvent attackEvent;
-                                attackEvent.entity = attack->owner;
-                                player->owner->SendEvent(attackEvent);
-                            }
-                        }
+                        handler(*commandToExecute);
                     }
                 }
 
@@ -105,16 +82,16 @@ void NetworkPhysics::ServerFixedUpdate()
                 {
                     commandToExecute->status = PlayerCommandStatus::Complete;
 
-                    client.second.lastServerExecuted = commandToExecute->id;
+                    client.second.lastServerExecutedCommandId = commandToExecute->id;
                 }
                 else
                 {
                     commandToExecute->fixedUpdateCount--;
                 }
 
-                if(client.second.wasted > 0)
+                if (client.second.fixedUpdateCountWithMissingCommand > 0)
                 {
-                    --client.second.wasted;
+                    --client.second.fixedUpdateCountWithMissingCommand;
                     continue;
                 }
 
@@ -122,7 +99,7 @@ void NetworkPhysics::ServerFixedUpdate()
             }
             else
             {
-                ++client.second.wasted;
+                ++client.second.fixedUpdateCountWithMissingCommand;
 
                 break;
             }

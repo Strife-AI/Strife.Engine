@@ -9,7 +9,6 @@
 #include <vcruntime_typeinfo.h>
 #endif
 
-
 #include "EntityComponent.hpp"
 #include "Math/Vector2.hpp"
 #include "Memory/Dictionary.hpp"
@@ -22,19 +21,25 @@
 #include "Sound/SoundManager.hpp"
 
 class b2Body;
+
 struct IEntityEvent;
 struct MoveResult;
+
 class Renderer;
+
 class Scene;
+
 struct Entity;
+
 class Engine;
+
 struct EntityInstance;
 
 struct EntityHeader
 {
     EntityHeader()
     {
-        
+
     }
 
     Entity* entity;
@@ -55,138 +60,9 @@ enum class EntityFlags
     EnableRenderHud = 256
 };
 
-struct EntityProperty
+struct EntitySerializer
 {
-    EntityProperty() = default;
 
-    constexpr EntityProperty(const char* key_, const char* value_)
-        : key(key_),
-        value(value_)
-    {
-
-    }
-
-    EntityProperty(const char* key_, float value_)
-        : key(key_)
-    {
-        value.VFormat("%f", value_);
-    }
-
-    EntityProperty(const char* key_, int value_)
-        : key(key_)
-    {
-        value.VFormat("%d", value_);
-    }
-
-    EntityProperty(const char* key_, StringId value_)
-        : key(key_)
-    {
-        value.VFormat("#%u", value_.key);
-    }
-
-    EntityProperty(const char* key_, Vector2 value_)
-        : key(key_)
-    {
-        value.VFormat("%f %f", value_.x, value_.y);
-    }
-
-    EntityProperty(const char* key_, Color color)
-        : key(key_)
-    {
-        value.VFormat("%d %d %d %d", color.r, color.g, color.b, color.a);
-    }
-
-    template<typename TEntity>
-    static constexpr EntityProperty EntityType()
-    {
-        return EntityProperty("type", TEntity::Type);
-    }
-
-    FixedLengthString<32> key;
-    FixedLengthString<128> value;
-};
-
-class EntityDictionary : public Dictionary<EntityDictionary>
-{
-public:
-    int TotalProperties() const { return _totalProperties; }
-    const EntityProperty* Properties() const { return _properties; }
-
-    constexpr EntityDictionary(EntityProperty* properties, int count)
-        : _totalProperties(count),
-        _properties(properties)
-    {
-
-    }
-
-    constexpr EntityDictionary()
-        : _totalProperties(0),
-        _properties(nullptr)
-    {
-
-    }
-
-    constexpr EntityDictionary(gsl::span<EntityProperty> properties)
-        : _totalProperties(properties.size()),
-        _properties(properties.data())
-    {
-
-    }
-
-    const EntityProperty* begin() const
-    {
-        return _properties;
-    }
-
-    const EntityProperty* end() const
-    {
-        return _properties + _totalProperties;
-    }
-
-    void Print() const;
-
-private:
-    template<typename T>
-    bool TryGetCustomProperty(const char* key, T& outResult) const
-    {
-        return false;
-    }
-
-    bool TryGetStringViewProperty(const char* key, std::string_view& result) const
-    {
-        for (int i = 0; i < _totalProperties; ++i)
-        {
-            if (_properties[i].key == key)
-            {
-                result = std::string_view(_properties[i].value.c_str(), _properties[i].value.Length());
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    int _totalProperties = 0;
-    const EntityProperty* _properties;
-    friend class Dictionary<EntityDictionary>;
-};
-
-class EntityDictionaryBuilder
-{
-public:
-    EntityDictionaryBuilder& AddProperty(const EntityProperty& property);
-    EntityDictionaryBuilder& AddMap(const std::map<std::string, std::string>& properties);
-
-    EntityDictionary Build()
-    {
-        return EntityDictionary(&_properties[0], _properties.size());
-    }
-
-    std::map<std::string, std::string> BuildMap();
-    std::vector<EntityProperty> BuildList() const { return _properties; }
-
-private:
-    std::vector<EntityProperty> _properties;
 };
 
 struct Entity;
@@ -216,14 +92,42 @@ struct Entity
     void SetCenter(const Vector2& newPosition);
     void SetRotation(float angle);
 
-    Vector2 TopLeft() const { return _position.Value() - _dimensions / 2; }
-    Vector2 Center() const { return _position.Value(); }
-    Vector2 Dimensions() const { return _dimensions; }
-    void SetDimensions(Vector2 dimensions) { _dimensions = dimensions; }
-    Rectangle Bounds() const { return Rectangle(TopLeft(), Dimensions()); }
-    float Rotation() const { return _rotation; }
+    Vector2 TopLeft() const
+    {
+        return _position.Value() - _dimensions / 2;
+    }
+
+    Vector2 Center() const
+    {
+        return _position.Value();
+    }
+
+    Vector2 Dimensions() const
+    {
+        return _dimensions;
+    }
+
+    void SetDimensions(Vector2 dimensions)
+    {
+        _dimensions = dimensions;
+    }
+
+    Rectangle Bounds() const
+    {
+        return Rectangle(TopLeft(), Dimensions());
+    }
+
+    float Rotation() const
+    {
+        return _rotation;
+    }
+
     Engine* GetEngine() const;
-    const char* DebugName() const { return typeid(*this).name(); }
+
+    const char* DebugName() const
+    {
+        return typeid(*this).name();
+    }
 
     virtual void Update(float deltaTime);
     virtual void ServerUpdate(float deltaTime);
@@ -237,13 +141,16 @@ struct Entity
     /// <summary>
     /// Called when an entity has been added to the scene.
     /// </summary>
-    /// <param name="properties">A dictionary of serialized entity properties</param>
-    virtual void OnAdded(const EntityDictionary& properties) { }
+    virtual void OnAdded()
+    {
+    }
 
     /// <summary>
     /// Called when an entity is about to be destroyed and removed from the scene.
     /// </summary>
-    virtual void OnDestroyed() { }
+    virtual void OnDestroyed()
+    {
+    }
 
     /// <summary>
     /// Sends an event directly to an entity.
@@ -251,14 +158,18 @@ struct Entity
     /// <param name="ev"></param>
     void SendEvent(const IEntityEvent& ev);
 
-    void Serialize(EntityDictionaryBuilder& builder);
+    void Serialize(EntitySerializer& serializer);
 
     /// <summary>
     /// Checks if an entity is a given type.
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <returns></returns>
-    template<typename TEntity> bool Is() { return type == TEntity::Type; }
+    template<typename TEntity>
+    bool Is()
+    {
+        return type == TEntity::Type;
+    }
 
     /// <summary>
     /// Checks if an entity is a given type. If so, it will write the pointer to outEntity. Otherwise, outEntity will be nullptr.
@@ -266,7 +177,8 @@ struct Entity
     /// <typeparam name="TEntity"></typeparam>
     /// <param name="outEntity"></param>
     /// <returns></returns>
-    template<typename TEntity> bool Is(TEntity*& outEntity);
+    template<typename TEntity>
+    bool Is(TEntity*& outEntity);
 
     /// <summary>
     /// Starts a timer that is attached to an entity. If the entity is destroyed before the time expires, the timer
@@ -281,8 +193,10 @@ struct Entity
 
     void UpdateSyncVars();
 
-    template<typename TComponent, typename ...Args> TComponent* AddComponent(Args&& ...args);
-    template<typename TComponent> TComponent* GetComponent(bool fatalIfMissing = true);
+    template<typename TComponent, typename ...Args>
+    TComponent* AddComponent(Args&& ...args);
+    template<typename TComponent>
+    TComponent* GetComponent(bool fatalIfMissing = true);
     void RemoveComponent(IEntityComponent* component);
 
     int id;
@@ -304,20 +218,32 @@ protected:
 
 private:
     friend class Scene;
+
     friend void MoveEntityRecursive(RigidBodyComponent* rigidBody, Vector2 offset);
 
-    virtual void ReceiveEvent(const IEntityEvent& ev) { }
-    virtual void ReceiveServerEvent(const IEntityEvent& ev) { }
+    virtual void ReceiveEvent(const IEntityEvent& ev)
+    {
+    }
+
+    virtual void ReceiveServerEvent(const IEntityEvent& ev)
+    {
+    }
+
     void DoTeleport();
     void FlagsChanged();
 
-    virtual void DoSerialize(EntityDictionaryBuilder& writer) { }
+    virtual void DoSerialize(EntitySerializer& serializer)
+    {
+    }
 
     virtual std::pair<int, void*> GetMemoryBlock() = 0;
 
-    virtual void OnSyncVarsUpdated() { }
+    virtual void OnSyncVarsUpdated()
+    {
+    }
 
-    SyncVar<Vector2> _position{ { 0, 0}, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent, SyncVarDeltaMode::Full };
+    SyncVar<Vector2> _position{{ 0, 0 }, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent,
+                               SyncVarDeltaMode::Full };
 
     Vector2 _dimensions;
     float _rotation;
@@ -327,7 +253,7 @@ private:
     IEntityComponent* _componentList = nullptr;
 };
 
-template <typename TEntity>
+template<typename TEntity>
 bool Entity::Is(TEntity*& outEntity)
 {
     if (type == TEntity::Type)
@@ -344,12 +270,12 @@ bool Entity::Is(TEntity*& outEntity)
 
 void* AllocateComponent(Scene* scene, int size);
 
-template <typename TComponent, typename ...Args>
+template<typename TComponent, typename ...Args>
 TComponent* Entity::AddComponent(Args&& ...args)
 {
     auto newComponent = static_cast<TComponent*>(AllocateComponent(scene, sizeof(TComponent)));
 
-    new (newComponent) TComponent(std::forward<Args>(args)...);
+    new(newComponent) TComponent(std::forward<Args>(args)...);
     newComponent->owner = this;
 
     newComponent->next = _componentList;
@@ -361,7 +287,7 @@ TComponent* Entity::AddComponent(Args&& ...args)
     return newComponent;
 }
 
-template <typename TComponent>
+template<typename TComponent>
 TComponent* Entity::GetComponent(bool fatalIfMissing)
 {
     for (auto component = _componentList; component != nullptr; component = component->next)
@@ -393,7 +319,7 @@ class EntityReference
 public:
     EntityReference()
         : _entityHeader(&InvalidEntityHeader::InvalidHeader),
-        _entityId(Entity::InvalidEntityId)
+          _entityId(Entity::InvalidEntityId)
     {
     }
 
@@ -401,7 +327,7 @@ public:
 
     explicit EntityReference(TEntity* entity)
         : _entityHeader(entity->header),
-        _entityId(entity->id)
+          _entityId(entity->id)
     {
 
     }
@@ -410,7 +336,7 @@ public:
 
     EntityReference& operator=(TEntity* entity)
     {
-        if(entity == nullptr)
+        if (entity == nullptr)
         {
             Invalidate();
 
@@ -458,7 +384,7 @@ public:
 
     static EntityReference Invalid()
     {
-        return {&InvalidEntityHeader::InvalidHeader, Entity::InvalidEntityId};
+        return { &InvalidEntityHeader::InvalidHeader, Entity::InvalidEntityId };
     }
 
 private:

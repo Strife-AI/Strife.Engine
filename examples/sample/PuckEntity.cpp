@@ -7,7 +7,7 @@
 #include "Math/Random.hpp"
 #include "Renderer/Renderer.hpp"
 
-void PuckEntity::OnAdded(const EntityDictionary& properties)
+void PuckEntity::OnAdded()
 {
     auto rb = AddComponent<RigidBodyComponent>(b2_dynamicBody);
     auto box = rb->CreateBoxCollider(Dimensions());

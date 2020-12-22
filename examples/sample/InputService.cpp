@@ -22,7 +22,60 @@ InputButton g_upButton(SDL_SCANCODE_W);
 InputButton g_downButton(SDL_SCANCODE_S);
 InputButton g_leftButton(SDL_SCANCODE_A);
 InputButton g_rightButton(SDL_SCANCODE_D);
-InputButton g_nextPlayer(SDL_SCANCODE_TAB);
+
+DEFINE_COMMAND(MoveToCommand)
+{
+    void DoSerialize(ReadWriteBitStream& stream) override
+    {
+        stream.Add(position).Add(netId);
+    }
+
+    Vector2 position;
+    uint32_t netId;
+};
+
+DEFINE_COMMAND(AttackCommand)
+{
+    void DoSerialize(ReadWriteBitStream& stream) override
+    {
+        stream.Add(netId).Add(attackNetId);
+    }
+
+    uint32_t netId;
+    uint32_t attackNetId;
+};
+
+void InputService::OnAdded()
+{
+    auto& handler = scene->replicationManager->playerCommandHandler;
+    ReplicationManager* replicationManager = scene->replicationManager;
+
+    handler.RegisterCommandType<MoveToCommand>(1, [=](const MoveToCommand& command)
+    {
+        auto entity = replicationManager->GetEntityByNetId(command.netId);
+        PlayerEntity* player;
+        if (entity != nullptr && entity->Is(player))
+        {
+            player->MoveTo(command.position);
+        }
+    });
+
+    handler.RegisterCommandType<AttackCommand>(2, [=](const AttackCommand& command)
+    {
+        auto entity = replicationManager->GetEntityByNetId(command.netId);
+        PlayerEntity* player;
+        if (entity != nullptr && entity->Is(player))
+        {
+            auto attack = replicationManager->GetEntityByNetId(command.attackNetId);
+
+            if (attack != nullptr)
+            {
+                player->Attack(attack);
+            }
+        }
+    });
+}
+
 
 void InputService::ReceiveEvent(const IEntityEvent& ev)
 {
@@ -30,19 +83,13 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     {
         if (scene->isServer)
         {
-//            EntityProperty properties[] = {
-//                    EntityProperty::EntityType<PuckEntity>(),
-//                    { "position", { 1800, 1800} },
-//                    { "dimensions", { 32, 32} },
-//            };
-
-//            scene->CreateEntity(EntityDictionary(properties));
-
             for (auto spawn : scene->GetEntitiesOfType<CastleEntity>())
             {
                 spawnPositions.push_back(spawn->Center());
                 spawn->Destroy();
             }
+
+            spawnPositions.push_back({ 1000, 1000 });
         }
     }
     if (ev.Is<UpdateEvent>())
@@ -76,32 +123,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if (auto renderEvent = ev.Is<RenderEvent>())
     {
-        if (scene->isServer)
-        {
-            std::string result;
-
-            for(auto& c : scene->replicationManager->GetClients())
-            {
-                result += "[" + std::to_string(c.first) + "] = " + std::to_string((int)scene->replicationManager->GetCurrentSnapshotId() - (int)c.second.lastReceivedSnapshotId) + "\n";
-            }
-
-            status.VFormat("%s", result.c_str());
-        }
-
         Render(renderEvent->renderer);
-    }
-    else if (auto fixedUpdateEvent = ev.Is<FixedUpdateEvent>())
-    {
-        if (scene->isServer)
-        {
-
-        }
-        else
-        {
-            ++fixedUpdateCount;
-        }
-
-        ++currentFixedUpdateId;
     }
     else if (auto joinedServerEvent = ev.Is<JoinedServerEvent>())
     {
@@ -114,13 +136,7 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
             auto spawnPoint = spawnPositions[spawnPositions.size() - 1];
             spawnPositions.pop_back();
 
-            EntityProperty properties[] = {
-                    EntityProperty::EntityType<CastleEntity>(),
-                    { "position", spawnPoint },
-                    { "dimensions", { 32, 32} },
-            };
-
-            auto spawn = static_cast<CastleEntity*>(scene->CreateEntity({ properties }));
+            auto spawn = scene->CreateEntity<CastleEntity>(spawnPoint);
 
             spawn->net->ownerClientId = connectedEvent->id;
 
@@ -134,59 +150,6 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     }
 }
 
-PlayerEntity* InputService::GetPlayerByNetId(int netId)
-{
-    for(auto player : players)
-    {
-        if(player->net->netId == netId)
-        {
-            return player;
-        }
-    }
-
-    return nullptr;
-}
-
-void InputService::OnAdded()
-{
-    if(scene->isServer)
-    {
-        scene->GetCameraFollower()->FollowMouse();
-
-        if (scene->GetEngine()->GetServerGame())
-        {
-            scene->GetEngine()->GetServerGame()->onUpdateRequest = [=](SLNet::BitStream& message, SLNet::BitStream& response, int clientId)
-            {
-                scene->replicationManager->Server_ProcessUpdateRequest(message, response, clientId);
-            };
-        }
-    }
-    else
-    {
-        if (scene->GetEngine()->GetClientGame())
-        {
-            scene->GetEngine()->GetClientGame()->onUpdateResponse = [=](SLNet::BitStream& message)
-            {
-                auto& c = scene->replicationManager->GetClients()[scene->replicationManager->localClientId].commands;
-
-                int count = 0;
-                for(auto it : c)
-                {
-                    ++count;
-                }
-
-                status.VFormat("Commands behind: %d\n", count);
-
-                auto last = c.IsEmpty() ? 0.0f : (*(--c.end())).timeRecorded;
-
-                //status.VFormat("%d bytes (%f ms)", NearestPowerOf2(message.GetNumberOfUnreadBits(), 8) / 8, (scene->relativeTime - last) * 1000);
-
-                scene->replicationManager->Client_ReceiveUpdateResponse(message);
-            };
-        }
-    }
-}
-
 void InputService::HandleInput()
 {
     if (g_quit.IsPressed())
@@ -196,22 +159,22 @@ void InputService::HandleInput()
 
     if (!scene->isServer)
     {
-        if(scene->deltaTime == 0)
+        if (scene->deltaTime == 0)
         {
             return;
         }
 
         auto mouse = scene->GetEngine()->GetInput()->GetMouse();
 
-        if(mouse->LeftPressed())
+        if (mouse->LeftPressed())
         {
-            for(auto player : players)
+            for (auto player : players)
             {
-                if(player->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition()))
+                if (player->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition()))
                     && player->net->ownerClientId == scene->replicationManager->localClientId)
                 {
                     PlayerEntity* oldPlayer;
-                    if(activePlayer.TryGetValue(oldPlayer))
+                    if (activePlayer.TryGetValue(oldPlayer))
                     {
                         oldPlayer->GetComponent<PlayerEntity::NeuralNetwork>()->mode = NeuralNetworkMode::Deciding;
                     }
@@ -227,55 +190,42 @@ void InputService::HandleInput()
         PlayerEntity* self;
         if (activePlayer.TryGetValue(self))
         {
-            unsigned int keyBits = (g_leftButton.IsDown() << 0)
-                | (g_rightButton.IsDown() << 1)
-                | (g_upButton.IsDown() << 2)
-                | (g_downButton.IsDown() << 3);
-
-
-            if (fixedUpdateCount > 0)
+            if (mouse->RightPressed())
             {
-                PlayerCommand command;
-
-                command.keys = keyBits;
-                command.fixedUpdateCount = fixedUpdateCount;
-                command.netId = self->net->netId;
-                fixedUpdateCount = 0;
-
-                if(mouse->RightPressed())
+                bool attack = false;
+                for (auto entity : scene->GetEntities())
                 {
-                    bool attack = false;
-                    for (auto entity : scene->GetEntities())
+                    auto netComponent = entity->GetComponent<NetComponent>(false);
+
+                    if (netComponent == nullptr)
                     {
-                        auto netComponent = entity->GetComponent<NetComponent>(false);
-
-                        if(netComponent == nullptr)
-                        {
-                            continue;
-                        }
-
-                        if(entity->GetComponent<HealthBarComponent>(false) == nullptr)
-                        {
-                            continue;
-                        }
-
-                        if (entity->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
-                        {
-                            command.attackTarget = true;
-                            command.attackNetId = netComponent->netId;
-                            attack = true;
-                            break;
-                        }
+                        continue;
                     }
 
-                    if (!attack)
+                    if (entity->GetComponent<HealthBarComponent>(false) == nullptr)
                     {
-                        command.moveToTarget = true;
-                        command.target = scene->GetCamera()->ScreenToWorld(mouse->MousePosition());
+                        continue;
+                    }
+
+                    if (entity->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
+                    {
+                        AttackCommand command;
+                        command.netId = self->net->netId;
+                        command.attackNetId = netComponent->netId;
+                        scene->replicationManager->playerCommandHandler.AddCommand(command);
+
+                        attack = true;
+                        break;
                     }
                 }
 
-                scene->replicationManager->Client_AddPlayerCommand(command);
+                if (!attack)
+                {
+                    MoveToCommand command;
+                    command.position = scene->GetCamera()->ScreenToWorld(mouse->MousePosition());
+                    command.netId = self->net->netId;
+                    scene->replicationManager->playerCommandHandler.AddCommand(command);
+                }
             }
         }
 
@@ -290,11 +240,4 @@ void InputService::Render(Renderer* renderer)
     {
         renderer->RenderRectangleOutline(currentPlayer->Bounds(), Color::White(), -1);
     }
-
-#if false
-    renderer->RenderString(FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid), 1),
-        status.c_str(),
-        Vector2(0, 200) + scene->GetCamera()->TopLeft(),
-        -1);
-#endif
 }

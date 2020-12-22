@@ -311,17 +311,7 @@ MapSegment* LoadMapSegment(StringId id, gsl::span<std::byte> data)
         else
         {
             EntityInstance instance;
-            instance.totalProperties = entity.properties.size();
-            instance.properties = std::make_unique<EntityProperty[]>(instance.totalProperties);
-
-            int index = 0;
-
-            for(auto& p : entity.properties)
-            {
-                instance.properties[index++] = { p.first.c_str(), p.second.c_str() };
-            }
-
-            segment->entities.push_back(std::move(instance));
+            instance.totalProperties = 0;
         }
     }
 
@@ -338,7 +328,6 @@ MapSegment* LoadMapSegment(StringId id, gsl::span<std::byte> data)
     }
 #endif
 
-    segment->SetProperties(segmentDto.properties);
     segment->name = id;
 
     ResourceManager::AddResource(id, segment, CleanupMapSegment);

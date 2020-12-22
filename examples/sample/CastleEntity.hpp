@@ -2,12 +2,13 @@
 
 #include "Components/NetComponent.hpp"
 #include "Components/SpriteComponent.hpp"
+#include "Components/LightComponent.hpp"
 #include "Scene/BaseEntity.hpp"
 #include "Scene/IEntityEvent.hpp"
 
 DEFINE_ENTITY(CastleEntity, "castle")
 {
-    void OnAdded(const EntityDictionary & properties) override;
+    void OnAdded() override;
     void OnDestroyed() override;
     void Update(float deltaTime) override;
     void SpawnPlayer();
@@ -24,5 +25,5 @@ private:
     Vector2 _spawnSlots[4];
     int _nextSpawnSlotId = 0;
 
-    PointLight _light;
+    LightComponent<PointLight>* _light;
 };

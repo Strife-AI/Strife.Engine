@@ -19,101 +19,14 @@ std::unordered_map<unsigned, EntityUtil::EntityMetadata*>& GetEntityMetadataByTy
     return metadataByType;
 }
 
-Entity* EntityUtil::EntityMetadata::CreateEntityFromType(Scene* scene, const EntityDictionary& properties)
+Entity* EntityUtil::EntityMetadata::CreateEntityFromType(StringId type, Scene* scene, EntitySerializer& serializer)
 {
-    auto& metadata = GetEntityMetadataByType();
-
-    StringId key;
-
-    std::string_view type;
-    if (!properties.TryGetProperty("type", type))
-    {
-        for (int i = 0; i < properties.TotalProperties(); ++i)
-        {
-            printf("%s: %s\n", properties.Properties()[i].key.c_str(), properties.Properties()[i].value.c_str());
-        }
-
-        FatalError("Entity missing type property");
-    }
-
-    if (type[0] == '#')
-    {
-        // Type is given as a string id
-        properties.TryGetProperty("type", key);
-    }
-    else
-    {
-        key = StringId(type);
-    }
-
-    auto it = metadata.find(key);
-
-    if (it == metadata.end())
-    {
-        properties.Print();
-
-        for (int i = 0; i < properties.TotalProperties(); ++i)
-        {
-            printf("%s: %s\n", properties.Properties()[i].key.c_str(), properties.Properties()[i].value.c_str());
-        }
-
-        std::string name(type.data(), type.data() + type.length());
-        FatalError("Unknown entity type: %s\n", name.c_str());
-    }
-
-    return it->second->createEntity(scene, properties);
+    return GetEntityMetadataByType()[type]->createEntity(scene, serializer);
 }
 
 void EntityUtil::EntityMetadata::Register(EntityMetadata* metadata)
 {
     GetEntityMetadataByType()[metadata->type.key] = metadata;
-}
-
-void EntityDictionary::Print() const
-{
-    printf("==================\n");
-    for (int i = 0; i < _totalProperties; ++i)
-    {
-        printf("%s: %s\n", _properties[i].key.c_str(), _properties[i].value.c_str());
-    }
-}
-
-EntityDictionaryBuilder& EntityDictionaryBuilder::AddProperty(const EntityProperty& property)
-{
-    for (auto& p : _properties)
-    {
-        if (p.key == property.key)
-        {
-            p = property;
-            return *this;
-        }
-    }
-
-    _properties.push_back(property);
-
-    return *this;
-}
-
-EntityDictionaryBuilder& EntityDictionaryBuilder::AddMap(const std::map<std::string, std::string>& properties)
-{
-    for (const auto& pair : properties)
-    {
-        AddProperty({ pair.first.c_str(), pair.second.c_str() });
-    }
-
-    return *this;
-}
-
-std::map<std::string, std::string> EntityDictionaryBuilder::BuildMap()
-{
-    std::map<std::string, std::string> result;
-
-    for (auto& p : _properties)
-    {
-        result[p.key.c_str()] = p.value.c_str();
-    }
-
-    return result;
 }
 
 Entity::~Entity()
@@ -189,24 +102,25 @@ Engine* Entity::GetEngine() const
 
 void Entity::SendEvent(const IEntityEvent& ev)
 {
-    ReceiveEvent(ev);
-
-    if(scene->isServer)
+    if (scene->isServer)
     {
         ReceiveServerEvent(ev);
     }
+    else
+    {
+        ReceiveEvent(ev);
+    }
+
+    for (auto component = _componentList; component != nullptr; component = component->next)
+    {
+        component->ReceiveEvent(ev);
+    }
 }
 
-void Entity::Serialize(EntityDictionaryBuilder& builder)
+void Entity::Serialize(EntitySerializer& serializer)
 {
-    builder
-        .AddProperty({ "position", TopLeft() })
-        .AddProperty({ "rotation", Rotation() })
-        .AddProperty({ "dimensions", Dimensions() })
-        .AddProperty({ "type", type })
-        .AddProperty({ "name", name });
-
-    DoSerialize(builder);
+    // TODO: add position and rotation
+    DoSerialize(serializer);
 }
 
 void Entity::StartTimer(float timeSeconds, const std::function<void()>& callback)
@@ -246,9 +160,9 @@ void Entity::RemoveComponent(IEntityComponent* component)
     }
     else
     {
-        for(auto c = _componentList; c != nullptr; c = c->next)
+        for (auto c = _componentList; c != nullptr; c = c->next)
         {
-            if(c->next == component)
+            if (c->next == component)
             {
                 c->next = component->next;
                 return;
@@ -272,55 +186,55 @@ void Entity::NotifyMovement()
 }
 
 Entity::Entity()
-	: flags {
-		EntityFlags::EnableUpdate,
-		EntityFlags::EnableFixedUpdate,
-		EntityFlags::EnableServerUpdate,
-		EntityFlags::EnableServerFixedUpdate,
-		EntityFlags::EnableRender,
-		EntityFlags::EnableRenderHud
-	}
+    : flags{
+    EntityFlags::EnableUpdate,
+    EntityFlags::EnableFixedUpdate,
+    EntityFlags::EnableServerUpdate,
+    EntityFlags::EnableServerFixedUpdate,
+    EntityFlags::EnableRender,
+    EntityFlags::EnableRenderHud
+}
 {
 
 }
 
 void Entity::Update(float deltaTime)
 {
-	flags.ResetFlag(EntityFlags::EnableUpdate);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableUpdate);
+    FlagsChanged();
 }
 
 void Entity::ServerUpdate(float deltaTime)
 {
-	flags.ResetFlag(EntityFlags::EnableServerUpdate);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableServerUpdate);
+    FlagsChanged();
 }
 
 void Entity::FixedUpdate(float deltaTime)
 {
-	flags.ResetFlag(EntityFlags::EnableFixedUpdate);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableFixedUpdate);
+    FlagsChanged();
 }
 
 void Entity::ServerFixedUpdate(float deltaTime)
 {
-	flags.ResetFlag(EntityFlags::EnableServerUpdate);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableServerUpdate);
+    FlagsChanged();
 }
 
 void Entity::Render(Renderer* renderer)
 {
-	flags.ResetFlag(EntityFlags::EnableRender);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableRender);
+    FlagsChanged();
 }
 
 void Entity::RenderHud(Renderer* renderer)
 {
-	flags.ResetFlag(EntityFlags::EnableRenderHud);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableRenderHud);
+    FlagsChanged();
 }
 
 void Entity::FlagsChanged()
 {
-	scene->GetEntityManager().ScheduleUpdateInterfaces(this);
+    scene->GetEntityManager().ScheduleUpdateInterfaces(this);
 }
