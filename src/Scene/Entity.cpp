@@ -21,7 +21,7 @@ std::unordered_map<unsigned, EntityUtil::EntityMetadata*>& GetEntityMetadataByTy
 
 Entity* EntityUtil::EntityMetadata::CreateEntityFromType(StringId type, Scene* scene, EntitySerializer& serializer)
 {
-	return GetEntityMetadataByType()[type]->createEntity(scene, serializer);
+    return GetEntityMetadataByType()[type]->createEntity(scene, serializer);
 }
 
 void EntityUtil::EntityMetadata::Register(EntityMetadata* metadata)
@@ -102,24 +102,24 @@ Engine* Entity::GetEngine() const
 
 void Entity::SendEvent(const IEntityEvent& ev)
 {
-    if(scene->isServer)
+    if (scene->isServer)
     {
         ReceiveServerEvent(ev);
     }
     else
-	{
-		ReceiveEvent(ev);
-	}
+    {
+        ReceiveEvent(ev);
+    }
 
     for (auto component = _componentList; component != nullptr; component = component->next)
-	{
-    	component->ReceiveEvent(ev);
-	}
+    {
+        component->ReceiveEvent(ev);
+    }
 }
 
 void Entity::Serialize(EntitySerializer& serializer)
 {
-	// TODO: add position and rotation
+    // TODO: add position and rotation
     DoSerialize(serializer);
 }
 
@@ -160,9 +160,9 @@ void Entity::RemoveComponent(IEntityComponent* component)
     }
     else
     {
-        for(auto c = _componentList; c != nullptr; c = c->next)
+        for (auto c = _componentList; c != nullptr; c = c->next)
         {
-            if(c->next == component)
+            if (c->next == component)
             {
                 c->next = component->next;
                 return;
@@ -186,55 +186,55 @@ void Entity::NotifyMovement()
 }
 
 Entity::Entity()
-	: flags {
-		EntityFlags::EnableUpdate,
-		EntityFlags::EnableFixedUpdate,
-		EntityFlags::EnableServerUpdate,
-		EntityFlags::EnableServerFixedUpdate,
-		EntityFlags::EnableRender,
-		EntityFlags::EnableRenderHud
-	}
+    : flags{
+    EntityFlags::EnableUpdate,
+    EntityFlags::EnableFixedUpdate,
+    EntityFlags::EnableServerUpdate,
+    EntityFlags::EnableServerFixedUpdate,
+    EntityFlags::EnableRender,
+    EntityFlags::EnableRenderHud
+}
 {
 
 }
 
 void Entity::Update(float deltaTime)
 {
-	flags.ResetFlag(EntityFlags::EnableUpdate);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableUpdate);
+    FlagsChanged();
 }
 
 void Entity::ServerUpdate(float deltaTime)
 {
-	flags.ResetFlag(EntityFlags::EnableServerUpdate);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableServerUpdate);
+    FlagsChanged();
 }
 
 void Entity::FixedUpdate(float deltaTime)
 {
-	flags.ResetFlag(EntityFlags::EnableFixedUpdate);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableFixedUpdate);
+    FlagsChanged();
 }
 
 void Entity::ServerFixedUpdate(float deltaTime)
 {
-	flags.ResetFlag(EntityFlags::EnableServerUpdate);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableServerUpdate);
+    FlagsChanged();
 }
 
 void Entity::Render(Renderer* renderer)
 {
-	flags.ResetFlag(EntityFlags::EnableRender);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableRender);
+    FlagsChanged();
 }
 
 void Entity::RenderHud(Renderer* renderer)
 {
-	flags.ResetFlag(EntityFlags::EnableRenderHud);
-	FlagsChanged();
+    flags.ResetFlag(EntityFlags::EnableRenderHud);
+    FlagsChanged();
 }
 
 void Entity::FlagsChanged()
 {
-	scene->GetEntityManager().ScheduleUpdateInterfaces(this);
+    scene->GetEntityManager().ScheduleUpdateInterfaces(this);
 }

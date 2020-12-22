@@ -1,4 +1,5 @@
 #pragma once
+
 #include "PlayerEntity.hpp"
 #include "Scene/IEntityEvent.hpp"
 #include "Scene/Scene.hpp"
@@ -7,7 +8,7 @@ struct CastleEntity;
 
 struct InputService : ISceneService
 {
-	void OnAdded() override;
+    void OnAdded() override;
     void HandleInput();
     void Render(Renderer* renderer);
     void ReceiveEvent(const IEntityEvent& ev) override;

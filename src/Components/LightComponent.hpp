@@ -9,50 +9,50 @@
 template<typename TLight>
 struct LightComponent : ComponentTemplate<LightComponent<TLight>>, TLight
 {
-	void OnAdded() override;
-	void OnRemoved() override;
-	void ReceiveEvent(const IEntityEvent& ev) override;
+    void OnAdded() override;
+    void OnRemoved() override;
+    void ReceiveEvent(const IEntityEvent& ev) override;
 
-	Vector2 offsetFromCenter;
+    Vector2 offsetFromCenter;
 };
 
 template<typename TLight>
 void LightComponent<TLight>::OnAdded()
 {
-	if (this->GetScene()->isServer)
-	{
-		return;
-	}
+    if (this->GetScene()->isServer)
+    {
+        return;
+    }
 
-	auto renderer = this->GetScene()->GetEngine()->GetRenderer();
+    auto renderer = this->GetScene()->GetEngine()->GetRenderer();
 
-	if (renderer != nullptr)
-	{
-		renderer->GetLightManager()->AddLight(this);
-	}
+    if (renderer != nullptr)
+    {
+        renderer->GetLightManager()->AddLight(this);
+    }
 }
 
 template<typename TLight>
 void LightComponent<TLight>::OnRemoved()
 {
-	if (this->GetScene()->isServer)
-	{
-		return;
-	}
+    if (this->GetScene()->isServer)
+    {
+        return;
+    }
 
-	auto renderer = this->GetScene()->GetEngine()->GetRenderer();
+    auto renderer = this->GetScene()->GetEngine()->GetRenderer();
 
-	if (renderer != nullptr)
-	{
-		renderer->GetLightManager()->RemoveLight(this);
-	}
+    if (renderer != nullptr)
+    {
+        renderer->GetLightManager()->RemoveLight(this);
+    }
 }
 
 template<typename TLight>
 void LightComponent<TLight>::ReceiveEvent(const IEntityEvent& ev)
 {
-	if (ev.Is<EntityMovedEvent>())
-	{
-		this->position = this->owner->Center() + offsetFromCenter;
-	}
+    if (ev.Is<EntityMovedEvent>())
+    {
+        this->position = this->owner->Center() + offsetFromCenter;
+    }
 }

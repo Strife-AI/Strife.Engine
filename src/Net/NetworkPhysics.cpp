@@ -18,11 +18,11 @@ ConsoleVar<float> g_jitterTime("jitter", 0.2);
 
 void NetworkPhysics::ReceiveEvent(const IEntityEvent& ev)
 {
-    if(ev.Is<FixedUpdateEvent>())
+    if (ev.Is<FixedUpdateEvent>())
     {
-        if (_isServer)  ServerFixedUpdate();
+        if (_isServer) ServerFixedUpdate();
     }
-    else if(ev.Is<UpdateEvent>())
+    else if (ev.Is<UpdateEvent>())
     {
         if (!_isServer)
         {
@@ -73,9 +73,9 @@ void NetworkPhysics::ServerFixedUpdate()
 
                     auto& handler = scene->replicationManager->playerCommandHandler.handlerByMetadata[commandToExecute->metadata];
                     if (handler != nullptr)
-					{
-                    	handler(*commandToExecute);
-					}
+                    {
+                        handler(*commandToExecute);
+                    }
                 }
 
                 if ((int)commandToExecute->fixedUpdateCount - 1 <= 0)
@@ -89,7 +89,7 @@ void NetworkPhysics::ServerFixedUpdate()
                     commandToExecute->fixedUpdateCount--;
                 }
 
-                if(client.second.fixedUpdateCountWithMissingCommand > 0)
+                if (client.second.fixedUpdateCountWithMissingCommand > 0)
                 {
                     --client.second.fixedUpdateCountWithMissingCommand;
                     continue;

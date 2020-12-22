@@ -7,11 +7,12 @@ DEFINE_ENTITY(FireballEntity, "fireball")
     static constexpr float Radius = 5;
 
     FireballEntity() = default;
-    FireballEntity(Vector2 velocity)
-    	: velocity(velocity)
-	{
 
-	}
+    FireballEntity(Vector2 velocity)
+        : velocity(velocity)
+    {
+
+    }
 
     void OnAdded() override;
     void OnDestroyed() override;
