@@ -414,6 +414,11 @@ ClientGame::ClientGame(Engine *engine, SLNet::RakPeerInterface *raknetInterface,
     rpcManager.Register<ClientSetPlayerInfoRpc>();
 }
 
+void ClientGame::AddPlayerCommand(PlayerCommand& command)
+{
+	GetScene()->replicationManager->playerCommandHandler.AddCommand(command);
+}
+
 void PingCommand(ConsoleCommandBinder& binder)
 {
     binder.Help("Measures ping time to the server");

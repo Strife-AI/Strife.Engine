@@ -7,6 +7,7 @@ struct CastleEntity;
 
 struct InputService : ISceneService
 {
+	void OnAdded() override;
     void HandleInput();
     void Render(Renderer* renderer);
     void ReceiveEvent(const IEntityEvent& ev) override;
@@ -18,9 +19,5 @@ struct InputService : ISceneService
 
     float sendUpdateTimer = 0;
 
-    int totalTime = 0;
-    int fixedUpdateCount = 0;
-
-    int currentFixedUpdateId = 0;
     bool gameOver = false;
 };

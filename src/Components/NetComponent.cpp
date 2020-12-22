@@ -3,18 +3,7 @@
 #include "Net/ReplicationManager.hpp"
 #include "Scene/Entity.hpp"
 #include "Scene/Scene.hpp"
-
-Vector2 GetDirectionFromKeyBits(unsigned keyBits)
-{
-    Vector2 moveDirection;
-
-    if (keyBits & 1) moveDirection.x -= 1;
-    if (keyBits & 2) moveDirection.x += 1;
-    if (keyBits & 4) moveDirection.y -= 1;
-    if (keyBits & 8) moveDirection.y += 1;
-
-    return moveDirection;
-}
+#include "Net/ServerGame.hpp"
 
 ISyncVar::ISyncVar(SyncVarUpdateFrequency frequency_)
     : frequency(frequency_)
@@ -37,4 +26,19 @@ void NetComponent::OnAdded()
 void NetComponent::OnRemoved()
 {
     GetScene()->replicationManager->RemoveNetComponent(this);
+}
+
+PlayerCommand* PlayerCommandHandler::DeserializeCommand(ReadWriteBitStream& stream)
+{
+	uint8_t commandId;
+	stream.stream.Read(commandId);
+
+	auto deserializer = deserializerById.find(commandId);
+	if (deserializer == deserializerById.end())
+	{
+		Log(LogType::Error, "No command handler for command id %d\n", (int)commandId);
+		return nullptr;
+	}
+
+	return deserializer->second(stream);
 }

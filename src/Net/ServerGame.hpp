@@ -295,8 +295,8 @@ struct ClientGame : BaseGameInstance
 
     void UpdateNetwork() override;
     void MeasureRoundTripTime();
-
     float GetServerClockOffset();
+    void AddPlayerCommand(struct PlayerCommand& command);
 
     int clientId = -1;
     SLNet::AddressOrGUID serverAddress;
