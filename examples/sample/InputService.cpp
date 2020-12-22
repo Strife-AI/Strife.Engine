@@ -23,6 +23,28 @@ InputButton g_downButton(SDL_SCANCODE_S);
 InputButton g_leftButton(SDL_SCANCODE_A);
 InputButton g_rightButton(SDL_SCANCODE_D);
 
+DEFINE_COMMAND(MoveToCommand)
+{
+	void DoSerialize(ReadWriteBitStream& stream) override
+	{
+		stream.Add(position).Add(netId);
+	}
+
+	Vector2 position;
+	uint32_t netId;
+};
+
+void InputService::OnAdded()
+{
+	auto& handler = scene->replicationManager->playerCommandHandler;
+
+	handler.RegisterCommandType<MoveToCommand>(1, [=](const MoveToCommand& command)
+	{
+		Log("Receive move to\n");
+	});
+}
+
+
 void InputService::ReceiveEvent(const IEntityEvent& ev)
 {
     if (ev.Is<SceneLoadedEvent>())
@@ -70,19 +92,6 @@ void InputService::ReceiveEvent(const IEntityEvent& ev)
     else if (auto renderEvent = ev.Is<RenderEvent>())
     {
         Render(renderEvent->renderer);
-    }
-    else if (auto fixedUpdateEvent = ev.Is<FixedUpdateEvent>())
-    {
-        if (scene->isServer)
-        {
-
-        }
-        else
-        {
-            ++fixedUpdateCount;
-        }
-
-        ++currentFixedUpdateId;
     }
     else if (auto joinedServerEvent = ev.Is<JoinedServerEvent>())
     {
@@ -149,57 +158,44 @@ void InputService::HandleInput()
         PlayerEntity* self;
         if (activePlayer.TryGetValue(self))
         {
-            unsigned int keyBits = (g_leftButton.IsDown() << 0)
-                | (g_rightButton.IsDown() << 1)
-                | (g_upButton.IsDown() << 2)
-                | (g_downButton.IsDown() << 3);
+			if(mouse->RightPressed())
+			{
+				bool attack = false;
+				for (auto entity : scene->GetEntities())
+				{
+					auto netComponent = entity->GetComponent<NetComponent>(false);
 
+					if(netComponent == nullptr)
+					{
+						continue;
+					}
 
-            if (fixedUpdateCount > 0)
-            {
-                PlayerCommand command;
+					if(entity->GetComponent<HealthBarComponent>(false) == nullptr)
+					{
+						continue;
+					}
 
-                command.keys = keyBits;
-                command.fixedUpdateCount = fixedUpdateCount;
-                command.netId = self->net->netId;
-                fixedUpdateCount = 0;
+					if (entity->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
+					{
+//                            command.attackTarget = true;
+//                            command.attackNetId = netComponent->netId;
+//                            attack = true;
+//                            break;
+					}
+				}
 
-                if(mouse->RightPressed())
-                {
-                    bool attack = false;
-                    for (auto entity : scene->GetEntities())
-                    {
-                        auto netComponent = entity->GetComponent<NetComponent>(false);
+				if (!attack)
+				{
+					MoveToCommand command;
+					command.position = scene->GetCamera()->ScreenToWorld(mouse->MousePosition());
+					command.netId = self->net->netId;
+					scene->replicationManager->playerCommandHandler.AddCommand(command);
+				}
+			}
 
-                        if(netComponent == nullptr)
-                        {
-                            continue;
-                        }
+			//scene->replicationManager->Client_AddPlayerCommand(command);
 
-                        if(entity->GetComponent<HealthBarComponent>(false) == nullptr)
-                        {
-                            continue;
-                        }
-
-                        if (entity->Bounds().ContainsPoint(scene->GetCamera()->ScreenToWorld(mouse->MousePosition())))
-                        {
-                            command.attackTarget = true;
-                            command.attackNetId = netComponent->netId;
-                            attack = true;
-                            break;
-                        }
-                    }
-
-                    if (!attack)
-                    {
-                        command.moveToTarget = true;
-                        command.target = scene->GetCamera()->ScreenToWorld(mouse->MousePosition());
-                    }
-                }
-
-                scene->replicationManager->Client_AddPlayerCommand(command);
-            }
-        }
+		}
 
         scene->replicationManager->Client_SendUpdateRequest(scene->deltaTime, scene->GetEngine()->GetClientGame());
     }
@@ -212,11 +208,4 @@ void InputService::Render(Renderer* renderer)
     {
         renderer->RenderRectangleOutline(currentPlayer->Bounds(), Color::White(), -1);
     }
-
-#if false
-    renderer->RenderString(FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid), 1),
-        status.c_str(),
-        Vector2(0, 200) + scene->GetCamera()->TopLeft(),
-        -1);
-#endif
 }

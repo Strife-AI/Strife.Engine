@@ -60,6 +60,8 @@ public:
         tail(items)
     { }
 
+    static constexpr int Capacity() { return size; }
+
     bool IsFull()
     {
         return Next(tail) == head;

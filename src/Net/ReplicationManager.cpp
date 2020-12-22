@@ -88,52 +88,15 @@ struct EntitySnapshotMessage
     int totalEntities;
 };
 
-struct PlayerCommandMessage
-{
-    void ReadWrite(ReadWriteBitStream& stream)
-    {
-        stream
-            .Add(keys)
-            .Add(fixedUpdateCount)
-            .Add(moveToTarget)
-            .Add(target)
-            .Add(netId)
-            .Add(attackTarget)
-            .Add(attackNetId);  
-    }
-
-    uint8 keys;
-    uint8 fixedUpdateCount;
-    bool moveToTarget;
-    bool attackTarget;
-    uint32 attackNetId;
-    Vector2 target;
-    uint32 netId;
-};
-
 struct ClientUpdateRequestMessage
 {
     void ReadWrite(ReadWriteBitStream& stream)
     {
         stream.Add(lastReceivedSnapshotId);
-        stream.Add(commandCount);
-
-        if (commandCount > 0)
-        {
-            stream.Add(firstCommandId);
-
-            for (int i = 0; i < commandCount; ++i)
-            {
-                commands[i].ReadWrite(stream);
-            }
-        }
+		stream.Add(firstCommandId);
     }
 
-    static constexpr int MaxCommands = 60;
-
-    uint8 commandCount;
     uint32 firstCommandId;
-    PlayerCommandMessage commands[MaxCommands];
     uint32 lastReceivedSnapshotId;
 };
 
@@ -222,40 +185,49 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, ClientGame* g
             }
         }
 
+        const int maxPacketSize = 1300;
+
         ClientUpdateRequestMessage request;
-        int commandCount = 0;
+		request.lastReceivedSnapshotId = client.lastReceivedSnapshotId;
 
-        for (auto& command : client.commands)
+		SLNet::BitStream message;
+		message.Write(PacketType::UpdateRequest);
+		ReadWriteBitStream stream(message, false);
+
+		PlayerCommandHandler::ScheduledCommand* commands[decltype(playerCommandHandler.localCommands)::Capacity()];
+		int totalCommands = 0;
+
+        for (auto& command : playerCommandHandler.localCommands)
         {
-            if (command.id > client.lastServerSequenceNumber)
+            if (command.commandId > client.lastServerSequenceNumber)
             {
-                if (commandCount == 0)
-                {
-                    request.firstCommandId = command.id;
-                }
-
-                request.commands[commandCount].keys = command.keys;
-                request.commands[commandCount].fixedUpdateCount = command.fixedUpdateCount; // TODO: clamp
-                request.commands[commandCount].target = command.target;
-                request.commands[commandCount].moveToTarget = command.moveToTarget;
-                request.commands[commandCount].netId = command.netId;
-                request.commands[commandCount].attackTarget = command.attackTarget;
-                request.commands[commandCount].attackNetId = command.attackNetId;
-
-                if (++commandCount == ClientUpdateRequestMessage::MaxCommands)
-                {
-                    break;
-                }
+            	commands[totalCommands++] = &command;
             }
         }
 
-        request.commandCount = commandCount;
-        request.lastReceivedSnapshotId = client.lastReceivedSnapshotId;
+        if (totalCommands == 0)
+		{
+        	request.firstCommandId = 0;
+		}
+        else
+		{
+			request.firstCommandId = commands[0]->commandId;
+		}
 
-        SLNet::BitStream message;
-        message.Write(PacketType::UpdateRequest);
-        ReadWriteBitStream stream(message, false);
-        request.ReadWrite(stream);
+		request.ReadWrite(stream);
+
+		for (int i = 0; i < totalCommands; ++i)
+		{
+			bool hasRoomForCommand = message.GetNumberOfBitsUsed() + commands[i]->stream.GetNumberOfBitsUsed() <= maxPacketSize * 8;
+			if (hasRoomForCommand)
+			{
+				message.Write(commands[i]->stream);
+			}
+			else
+			{
+				break;
+			}
+		}
 
         game->networkInterface.SendReliable(game->serverAddress, message);
     }
@@ -449,30 +421,20 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
 
         if (client.lastServerSequenceNumber + 1 <= request.firstCommandId)
         {
-            for (int i = 0; i < request.commandCount; ++i)
-            {
-                unsigned int currentId = request.firstCommandId + i;
-                if (currentId > client.lastServerSequenceNumber)
-                {
-                    PlayerCommand newCommand;
-                    newCommand.id = currentId;
-                    newCommand.keys = request.commands[i].keys;
-                    newCommand.fixedUpdateCount = request.commands[i].fixedUpdateCount;
-                    newCommand.moveToTarget = request.commands[i].moveToTarget;
-                    newCommand.target = request.commands[i].target;
-                    newCommand.netId = request.commands[i].netId;
-                    newCommand.attackTarget = request.commands[i].attackTarget;
-                    newCommand.attackNetId = request.commands[i].attackNetId;
-                    client.lastServerSequenceNumber = currentId;
+        	unsigned int currentCommandId = request.firstCommandId;
 
-                    if (client.commands.IsFull())
-                    {
-                        client.commands.Dequeue();
-                    }
+        	while (message.GetNumberOfUnreadBits() >= 8)
+			{
+        		Log("Process command: %d\n", currentCommandId);
+        		auto command = playerCommandHandler.DeserializeCommand(readMessage);
+        		command->id = currentCommandId++;
+        		auto& handler = playerCommandHandler.handlerByMetadata[command->metadata];
 
-                    client.commands.Enqueue(newCommand);
-                }
-            }
+        		if (handler != nullptr)
+				{
+        			handler(*command);
+				}
+			}
         }
     }
 }
@@ -824,9 +786,10 @@ void ReplicationManager::TakeSnapshot()
     _worldSnapshots.Enqueue(std::move(state));
 }
 
-ReplicationManager::ReplicationManager(Scene *scene, bool isServer)
+ReplicationManager::ReplicationManager(Scene* scene, bool isServer)
     : _isServer(isServer),
-      _scene(scene)
+      _scene(scene),
+      playerCommandHandler(scene->GetEngine()->GetDefaultBlockAllocator())
 {
     _worldSnapshots.Enqueue(g_emptyWorldState);
 }

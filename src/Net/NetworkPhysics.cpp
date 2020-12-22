@@ -5,7 +5,6 @@
 #include "Components/NetComponent.hpp"
 #include "Scene/Scene.hpp"
 #include "Components/RigidBodyComponent.hpp"
-#include "Physics/PathFinding.hpp"
 
 void UpdateVarsToTime(ISyncVar* head, float time)
 {
@@ -71,7 +70,7 @@ void NetworkPhysics::ServerFixedUpdate()
                 {
                     commandToExecute->fixedUpdateStartId = currentFixedUpdateId;
                     commandToExecute->status = PlayerCommandStatus::InProgress;
-
+#if false
                     if(commandToExecute->moveToTarget)
                     {
                         NetComponent* player = scene->replicationManager->GetNetComponentById(commandToExecute->netId);
@@ -99,6 +98,7 @@ void NetworkPhysics::ServerFixedUpdate()
                             }
                         }
                     }
+#endif
                 }
 
                 if ((int)commandToExecute->fixedUpdateCount - 1 <= 0)

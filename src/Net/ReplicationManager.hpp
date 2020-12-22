@@ -143,6 +143,7 @@ public:
 
     std::unordered_set<NetComponent*> components;
     int localClientId = -1;
+	PlayerCommandHandler playerCommandHandler;
 
 private:
     void ReceiveEvent(const IEntityEvent& ev) override;
