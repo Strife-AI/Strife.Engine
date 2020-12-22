@@ -42,10 +42,8 @@ struct PlayerCommand
     	DoSerialize(stream);
     }
 
-    virtual void DoSerialize(class ReadWriteBitStream& stream)
-	{
-
-	}
+    virtual void DoSerialize(class ReadWriteBitStream& stream) { }
+    virtual void Free(BlockAllocator* blockAllocator) = 0;
 
 	uint8_t fixedUpdateCount;
 	unsigned int id;
@@ -65,11 +63,16 @@ struct PlayerCommandTemplate : PlayerCommand
 		this->metadata = &typeMetadata;
 	}
 
+	void Free(BlockAllocator* blockAllocator) override
+	{
+		blockAllocator->Free(static_cast<TCommand*>(this), sizeof(TCommand));
+	}
+
 	static Metadata typeMetadata;
 };
 
 template<typename TCommand>
-PlayerCommand::Metadata PlayerCommandTemplate<TCommand>::typeMetadata;
+PlayerCommand::Metadata PlayerCommandTemplate<TCommand>::typeMetadata{ };
 
 #define DEFINE_COMMAND(structName_) struct structName_ : PlayerCommandTemplate<structName_>
 
@@ -123,6 +126,7 @@ struct PlayerCommandHandler
 	}
 
 	PlayerCommand* DeserializeCommand(ReadWriteBitStream& stream);
+	void FreeCommand(PlayerCommand* command);
 
 	std::unordered_map<int, std::function<PlayerCommand*(ReadWriteBitStream& stream)>> deserializerById;
 	std::unordered_map<PlayerCommand::Metadata*, int> commandIdByMetadata;

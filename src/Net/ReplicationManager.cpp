@@ -110,9 +110,9 @@ PlayerCommand* ClientState::GetCommandById(int id)
 {
     for (auto& command : commands)
     {
-        if (command.id == id)
+        if (command->id == id)
         {
-            return &command;
+            return command;
         }
     }
 
@@ -179,9 +179,10 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, ClientGame* g
 
         // Garbage collect old commands that the server already has
         {
-            while (!client.commands.IsEmpty() && client.commands.Peek().id < client.lastServerExecuted)
+            while (!client.commands.IsEmpty() && client.commands.Peek()->id < client.lastServerExecutedCommandId)
             {
-                client.commands.Dequeue();
+            	auto oldCommand = client.commands.Dequeue();
+            	playerCommandHandler.FreeCommand(*oldCommand);
             }
         }
 
@@ -199,7 +200,7 @@ void ReplicationManager::Client_SendUpdateRequest(float deltaTime, ClientGame* g
 
         for (auto& command : playerCommandHandler.localCommands)
         {
-            if (command.commandId > client.lastServerSequenceNumber)
+            if (command.commandId > client.lastServerReceivedCommandId)
             {
             	commands[totalCommands++] = &command;
             }
@@ -420,7 +421,7 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
 
         client.lastReceivedSnapshotId = Max(client.lastReceivedSnapshotId, request.lastReceivedSnapshotId);
 
-        if (client.lastServerSequenceNumber + 1 <= request.firstCommandId)
+        if (client.lastServerReceivedCommandId + 1 <= request.firstCommandId)
         {
         	unsigned int currentCommandId = request.firstCommandId;
 
@@ -428,11 +429,23 @@ void ReplicationManager::Server_ProcessUpdateRequest(SLNet::BitStream& message, 
 			{
         		auto command = playerCommandHandler.DeserializeCommand(readMessage);
         		command->id = currentCommandId++;
-        		auto& handler = playerCommandHandler.handlerByMetadata[command->metadata];
 
-        		if (handler != nullptr)
+        		// Only add commands we haven't already received
+        		if (command->id > client.lastServerReceivedCommandId)
 				{
-        			handler(*command);
+        			if (client.commands.IsFull())
+        			{
+        				auto oldCommand = client.commands.Dequeue();
+        				playerCommandHandler.FreeCommand(*oldCommand);
+        			}
+
+        			client.commands.Enqueue(command);
+        			client.lastServerReceivedCommandId = command->id;
+				}
+        		else
+				{
+        			// Duplicate
+        			playerCommandHandler.FreeCommand(command);
 				}
 			}
         }
@@ -550,8 +563,8 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
 
         // Send message
         EntitySnapshotMessage responseMessage;
-        responseMessage.lastServerSequence = client.lastServerSequenceNumber;
-        responseMessage.lastServerExecuted = client.lastServerExecuted;
+        responseMessage.lastServerSequence = client.lastServerReceivedCommandId;
+        responseMessage.lastServerExecuted = client.lastServerExecutedCommandId;
         responseMessage.sentTime = scene->absoluteTime;
         responseMessage.totalEntities = currentState->entities.size();
 
@@ -584,26 +597,6 @@ bool ReplicationManager::Server_SendWorldUpdate(int clientId, SLNet::BitStream& 
     }
 
     return true;
-}
-
-void ReplicationManager::Client_AddPlayerCommand(const PlayerCommand& command)
-{
-    if(localClientId == -1)
-    {
-        return;
-    }
-
-    auto copy = command;
-    auto& client = _clientStateByClientId[localClientId];
-
-    copy.id = ++client.nextCommandSequenceNumber;
-
-    if(client.commands.IsFull())
-    {
-        client.commands.Dequeue();
-    }
-
-    client.commands.Enqueue(copy);
 }
 
 WorldState ReplicationManager::GetCurrentWorldState()
@@ -714,8 +707,8 @@ void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream
 
     auto& client = _clientStateByClientId[localClientId];
 
-    client.lastServerSequenceNumber = message.lastServerSequence;
-    client.lastServerExecuted = message.lastServerExecuted;
+    client.lastServerReceivedCommandId = message.lastServerSequence;
+    client.lastServerExecutedCommandId = message.lastServerExecuted;
 
     NetLog("Total client-side entities: %d\n", (int)_componentsByNetId.size());
 

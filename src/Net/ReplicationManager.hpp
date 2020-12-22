@@ -76,15 +76,12 @@ struct ClientState
 {
     PlayerCommand* GetCommandById(int id);
 
-    unsigned int lastServerSequenceNumber = 0;
+    unsigned int lastServerReceivedCommandId = 0;
     unsigned int lastReceivedSnapshotId = 0;
-    unsigned int nextCommandSequenceNumber = 0;
-    unsigned int lastServerExecuted = 0;
-    int wasted = 0;
+    unsigned int lastServerExecutedCommandId = 0;
+    int fixedUpdateCountWithMissingCommand = 0;
 
-    unsigned int clientClock = 0;
-
-    CircularQueue<PlayerCommand, 128> commands;
+    CircularQueue<PlayerCommand*, 128> commands;
     std::string clientName;
 };
 
@@ -135,7 +132,6 @@ public:
 
     void Client_ReceiveUpdateResponse(SLNet::BitStream& stream);
     void Client_SendUpdateRequest(float deltaTime, ClientGame* game);
-    void Client_AddPlayerCommand(const PlayerCommand& command);
 
     void Server_ProcessUpdateRequest(SLNet::BitStream& message, int clientId);
     bool Server_SendWorldUpdate(int clientId, SLNet::BitStream &response);

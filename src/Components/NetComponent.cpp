@@ -42,3 +42,8 @@ PlayerCommand* PlayerCommandHandler::DeserializeCommand(ReadWriteBitStream& stre
 
 	return deserializer->second(stream);
 }
+
+void PlayerCommandHandler::FreeCommand(PlayerCommand* playerCommand)
+{
+	playerCommand->Free(blockAllocator);
+}
