@@ -60,6 +60,14 @@ enum class EntityFlags
     EnableRenderHud = 256
 };
 
+enum class EntitySerializerMode
+{
+	ReadOnly,
+	ReadWrite,
+	EditorRead,
+	EditorReadWrite,
+};
+
 struct EntitySerializer
 {
 
