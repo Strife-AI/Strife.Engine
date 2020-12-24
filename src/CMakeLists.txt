@@ -155,7 +155,7 @@ add_library(Strife.Engine STATIC
         "Physics/PathFinding.cpp"
         "Scene/EntityManager.cpp"
         
-     "Net/ServerGame.cpp" "ML/ML.hpp" "ML/ML.cpp" Components/PathFollowerComponent.cpp Components/PathFollowerComponent.hpp Components/LightComponent.hpp)
+     "Net/ServerGame.cpp" "ML/ML.hpp" "ML/ML.cpp" Components/PathFollowerComponent.cpp Components/PathFollowerComponent.hpp Components/LightComponent.hpp Net/FileTransfer.hpp Net/FileTransfer.cpp)
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
