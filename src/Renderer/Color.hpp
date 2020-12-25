@@ -105,9 +105,14 @@ struct Color
         return r | (g << 8) | (b << 16) | (a << 24);
     }
 
-    static Color FromPacked(unsigned int rgba)
+    static Color FromPackedRGBA(unsigned int rgba)
     {
         return Color(rgba & 255, rgba >> 8 & 255, rgba >> 16 & 255, rgba >> 24 & 255);
+    }
+
+    static Color FromPackedBGRA(unsigned int bgra)
+    {
+        return Color(bgra >> 16 & 255, bgra >> 8 & 255, bgra & 255, bgra >> 24 & 255);
     }
 
     static Color FromVector4(const Vector4& v)
