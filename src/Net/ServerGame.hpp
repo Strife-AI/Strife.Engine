@@ -13,6 +13,7 @@
 
 #include "Scene/SceneManager.hpp"
 #include "Memory/StringId.hpp"
+#include "FileTransfer.hpp"
 
 namespace SLNet
 {
@@ -32,7 +33,8 @@ enum class PacketType : unsigned char
     ServerFull,
     Ping,
     PingResponse,
-    RpcCall
+    RpcCall,
+    UploadFile
 };
 
 enum class ClientConnectionStatus
@@ -62,6 +64,7 @@ struct ReadWriteBitStream
 
     ReadWriteBitStream& Add(Vector2& out);
     ReadWriteBitStream& Add(std::string& str);
+    ReadWriteBitStream& Add(std::vector<unsigned char>& v);
 
     SLNet::BitStream& stream;
     bool isReading;
@@ -88,17 +91,19 @@ struct RemoteProcedureCall : IRemoteProcedureCall
         return GetRpcName<T>();
     }
 
-    static void ExecuteInternal(ReadWriteBitStream& stream, Engine* engine, int fromClientId)
+    static void ExecuteInternal(ReadWriteBitStream& stream, Engine* engine, int fromClientId, SLNet::AddressOrGUID fromAddress)
     {
         T rpc;
         rpc.engine = engine;
         rpc.fromClientId = fromClientId;
+        rpc.fromAddress = fromAddress;
         rpc.Serialize(stream);
         rpc.Execute();
     }
 
     Engine* engine;
     int fromClientId;
+    SLNet::AddressOrGUID fromAddress;
 };
 
 #define DEFINE_RPC(structName_) struct structName_; \
@@ -226,11 +231,10 @@ public:
 
     void Execute(SLNet::AddressOrGUID address, const IRemoteProcedureCall& rpc);
 
-    void Receive(SLNet::BitStream& stream, Engine* engine, int fromClientId);
+    void Receive(SLNet::BitStream& stream, Engine* engine, int fromClientId, SLNet::AddressOrGUID fromAddress);
 
 private:
-    std::unordered_map<unsigned int, void (*)(ReadWriteBitStream& stream, Engine* engine,
-        int clientId)> _handlersByStringIdName;
+    std::unordered_map<unsigned int, void (*)(ReadWriteBitStream& stream, Engine* engine, int clientId, SLNet::AddressOrGUID)> _handlersByStringIdName;
     NetworkInterface* _networkInterface;
 };
 
@@ -241,20 +245,14 @@ struct ServerGameClient
     int clientId;
 };
 
+class FileTransferService;
+
 struct BaseGameInstance
 {
     virtual ~BaseGameInstance() = default;
 
     BaseGameInstance(Engine* engine, SLNet::RakPeerInterface* raknetInterface, SLNet::AddressOrGUID localAddress_,
-        bool isServer)
-        : sceneManager(engine, isServer),
-          networkInterface(raknetInterface),
-          rpcManager(&networkInterface),
-          localAddress(localAddress_),
-          engine(engine)
-    {
-
-    }
+        bool isServer);
 
     void RunFrame(float currentTime);
     void Render(Scene* scene, float deltaTime, float renderDeltaTime);
@@ -278,6 +276,7 @@ struct BaseGameInstance
     bool isHeadless = false;
     float targetTickRate;
     float nextUpdateTime = 0;
+    FileTransferService fileTransferService;
 };
 
 struct ServerGame : BaseGameInstance

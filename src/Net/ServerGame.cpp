@@ -188,6 +188,18 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
     sdlManager->EndRender();
 }
 
+BaseGameInstance::BaseGameInstance(Engine* engine, SLNet::RakPeerInterface* raknetInterface,
+    SLNet::AddressOrGUID localAddress_, bool isServer)
+    : sceneManager(engine, isServer),
+      networkInterface(raknetInterface),
+      rpcManager(&networkInterface),
+      localAddress(localAddress_),
+      engine(engine),
+      fileTransferService(&rpcManager)
+{
+
+}
+
 void ServerGame::HandleNewConnection(SLNet::Packet* packet)
 {
     SLNet::BitStream response;
@@ -279,7 +291,7 @@ void ServerGame::UpdateNetwork()
 
             SLNet::BitStream stream(packet->data, packet->length, false);
             stream.IgnoreBytes(1);
-            rpcManager.Receive(stream, engine, clientId);
+            rpcManager.Receive(stream, engine, clientId, packet->systemAddress);
             break;
         }
         }
@@ -365,7 +377,7 @@ void ClientGame::UpdateNetwork()
             int clientId = 0;
             SLNet::BitStream stream(packet->data, packet->length, false);
             stream.IgnoreBytes(1);
-            rpcManager.Receive(stream, engine, clientId);
+            rpcManager.Receive(stream, engine, clientId, packet->systemAddress);
 
             break;
         }
@@ -412,6 +424,7 @@ ClientGame::ClientGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface,
     isHeadless = false;
     targetTickRate = 60;
     rpcManager.Register<ClientSetPlayerInfoRpc>();
+    fileTransferService.RegisterRpc();
 }
 
 void ClientGame::AddPlayerCommand(PlayerCommand& command)
@@ -491,6 +504,7 @@ ServerGame::ServerGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface,
     targetTickRate = 30;
 
     rpcManager.Register<ServerSetPlayerInfoRpc>();
+    fileTransferService.RegisterRpc();
 }
 
 void ServerGame::ForEachClient(const std::function<void(ServerGameClient&)>& handler)
@@ -566,6 +580,25 @@ ReadWriteBitStream& ReadWriteBitStream::Add(std::string& str)
     return *this;
 }
 
+ReadWriteBitStream& ReadWriteBitStream::Add(std::vector<unsigned char>& v)
+{
+    if (isReading)
+    {
+        uint32_t size;
+        stream.Read(size);
+        v.resize(size);
+        stream.ReadBits(v.data(), size * 8);
+    }
+    else
+    {
+        uint32_t size = v.size();
+        stream.Write(size);
+        stream.WriteBits(v.data(), size * 8);
+    }
+
+    return *this;
+}
+
 void RpcManager::Execute(SLNet::AddressOrGUID address, const IRemoteProcedureCall& rpc)
 {
     SLNet::BitStream stream;
@@ -580,7 +613,7 @@ void RpcManager::Execute(SLNet::AddressOrGUID address, const IRemoteProcedureCal
     _networkInterface->SendReliable(address, stream);
 }
 
-void RpcManager::Receive(SLNet::BitStream& stream, Engine* engine, int fromClientId)
+void RpcManager::Receive(SLNet::BitStream& stream, Engine* engine, int fromClientId, SLNet::AddressOrGUID fromAddress)
 {
     unsigned int rpcName;
     stream.Read(rpcName);
@@ -589,7 +622,7 @@ void RpcManager::Receive(SLNet::BitStream& stream, Engine* engine, int fromClien
     if (handler != _handlersByStringIdName.end())
     {
         ReadWriteBitStream rw(stream, true);
-        handler->second(rw, engine, fromClientId);
+        handler->second(rw, engine, fromClientId, fromAddress);
     }
     else
     {
