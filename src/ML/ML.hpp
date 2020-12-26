@@ -31,7 +31,7 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
 
     explicit NeuralNetworkComponent(float decisionsPerSecond_ = 1)
         : decisionInput(StrifeML::MlUtil::SharedArray<InputType>(TNeuralNetwork::SequenceLength)),
-        decisionsPerSecond(decisionsPerSecond_)
+          decisionsPerSecond(decisionsPerSecond_)
     {
 
     }
@@ -69,14 +69,6 @@ void NeuralNetworkComponent<TNeuralNetwork>::Update(float deltaTime)
     }
     else if (mode == NeuralNetworkMode::Deciding)
     {
-        makeDecisionsTimer -= deltaTime;
-
-        if (makeDecisionsTimer <= 0)
-        {
-            makeDecisionsTimer = 0;
-            MakeDecision();
-        }
-
         OutputType output;
         if (decisionInProgress != nullptr && decisionInProgress->TryGetResult(output))
         {
@@ -86,6 +78,14 @@ void NeuralNetworkComponent<TNeuralNetwork>::Update(float deltaTime)
             }
 
             decisionInProgress = nullptr;
+        }
+
+        makeDecisionsTimer -= deltaTime;
+
+        if (makeDecisionsTimer <= 0)
+        {
+            makeDecisionsTimer = 0;
+            MakeDecision();
         }
     }
     else if (mode == NeuralNetworkMode::CollectingSamples)
@@ -172,7 +172,7 @@ struct SensorObjectDefinition
         return object;
     }
 
-    
+
     SensorObject& GetEntitySensorObject(StringId key)
     {
         auto it = entityIdToObjectId.find(key.key);
@@ -206,11 +206,11 @@ struct NeuralNetworkManager
         return deciderPtr;
     }
 
-    template<typename TTrainer>
-    TTrainer* CreateTrainer()
+    template<typename TTrainer, typename ... Args>
+    TTrainer* CreateTrainer(Args&& ... constructorArgs)
     {
         static_assert(std::is_base_of_v<StrifeML::ITrainer, TTrainer>, "Trainer must inherit from ITrainer<TInput, TOutput>");
-        auto trainer = std::make_shared<TTrainer>();
+        auto trainer = std::make_shared<TTrainer>(std::forward<Args>(constructorArgs) ...);
         auto trainerPtr = trainer.get();
         _trainers.emplace(std::move(trainer));
         return trainerPtr;
@@ -230,6 +230,7 @@ struct NeuralNetworkManager
         auto newContext = std::make_shared<StrifeML::NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
         _networksByName[name] = newContext;
         newContext->trainer->networkContext = newContext;
+        newContext->decider->networkContext = newContext;
     }
 
     // TODO remove network method
@@ -262,7 +263,7 @@ private:
 template<typename TNeuralNetwork>
 void NeuralNetworkComponent<TNeuralNetwork>::SetNetwork(const char* name)
 {
-    auto nnManager = this->owner->scene->GetEngine()->GetNeuralNetworkManager();
+    auto nnManager = this->owner->GetEngine()->GetNeuralNetworkManager();
     networkContext = nnManager->template GetNetwork<TNeuralNetwork>(name);
 }
 
@@ -275,14 +276,14 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
     SensorObjectDefinition* objectDefinition,
     Entity* self);
 
-void DecompressGridSensorOutput(gsl::span<const uint64_t> compressedRectangles, Grid<int>& outGrid, SensorObjectDefinition* objectDefinition);
+void DecompressGridSensorOutput(gsl::span<const uint64_t> compressedRectangles, Grid<uint64_t>& outGrid, SensorObjectDefinition* objectDefinition);
 
 template<int Rows, int Cols>
 struct GridSensorOutput
 {
     GridSensorOutput()
         : _isCompressed(true),
-        _totalRectangles(0)
+          _totalRectangles(0)
     {
 
     }
@@ -314,12 +315,12 @@ struct GridSensorOutput
         else
         {
             _isCompressed = false;
-            Grid<int> grid(Rows, Cols, &data[0][0]);
+            Grid<uint64_t> grid(Rows, Cols, &data[0][0]);
             DecompressGridSensorOutput(rectangles, grid, NeuralNetworkManager::GetSensorObjectDefinition().get());
         }
     }
 
-    void Decompress(Grid<int>& outGrid) const
+    void Decompress(Grid<uint64_t>& outGrid) const
     {
         if(_isCompressed)
         {
@@ -345,7 +346,7 @@ struct GridSensorOutput
         }
     }
 
-    const int* GetRawData() const
+    const uint64_t* GetRawData() const
     {
         return &data[0][0];
     }
@@ -390,23 +391,23 @@ private:
         }
         else
         {
-            memcpy(data, rhs.data, sizeof(int) * Rows * Cols);
+            memcpy(data, rhs.data, sizeof(uint64_t) * Rows * Cols);
         }
     }
 
     bool _isCompressed;
     int _totalRectangles;
 
-    static constexpr int MaxCompressedRectangles = NearestPowerOf2(sizeof(int) * Rows * Cols, sizeof(uint64_t)) / sizeof(uint64_t);
+    static constexpr int MaxCompressedRectangles = NearestPowerOf2(sizeof(uint64_t) * Rows * Cols, sizeof(uint64_t)) / sizeof(uint64_t);
 
     union
     {
-        int data[Rows][Cols];
+        uint64_t data[Rows][Cols];
         uint64_t compressedRectangles[MaxCompressedRectangles];
     };
 };
 
-void RenderGridSensorOutput(Grid<int>& grid, Vector2 center, Vector2 cellSize, SensorObjectDefinition* objectDefinition, Renderer* renderer, float depth);
+void RenderGridSensorOutput(Grid<uint64_t>& grid, Vector2 center, Vector2 cellSize, SensorObjectDefinition* objectDefinition, Renderer* renderer, float depth);
 
 template<int Rows, int Cols>
 struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
@@ -446,14 +447,14 @@ struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
     {
         if (render)
         {
-            FixedSizeGrid<int, Rows, Cols> decompressed;
+            FixedSizeGrid<uint64_t, Rows, Cols> decompressed;
             SensorOutput output;
             Read(output);
             output.Decompress(decompressed);
             RenderGridSensorOutput(decompressed, GridCenter(), cellSize, sensorObjectDefinition.get(), renderer, -1);
         }
     }
-         
+
     Vector2 offsetFromEntityCenter;
     Vector2 cellSize;
     std::shared_ptr<SensorObjectDefinition> sensorObjectDefinition;
