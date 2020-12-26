@@ -71,9 +71,9 @@ namespace StrifeML
     {
         ObjectSerializer(std::vector<unsigned char>& bytes_, bool isReading_)
             : bytes(bytes_),
-            isReading(isReading_)
+              isReading(isReading_)
         {
-            
+
         }
 
         // Create a template specialization of Serialize<> to serialize custom types
@@ -176,10 +176,10 @@ namespace StrifeML
 
         MakeDecisionWorkItem(std::shared_ptr<TNetwork> network_, MlUtil::SharedArray<InputType> input_, int inputLength_)
             : network(network_),
-            input(input_),
-            inputLength(inputLength_)
+              input(input_),
+              inputLength(inputLength_)
         {
-            
+
         }
 
         void Execute() override
@@ -193,6 +193,9 @@ namespace StrifeML
     };
 
     template<typename TNeuralNetwork>
+    struct NetworkContext;
+
+    template<typename TNeuralNetwork>
     struct Decider : IDecider
     {
         using InputType = typename TNeuralNetwork::InputType;
@@ -204,15 +207,10 @@ namespace StrifeML
             static_assert(std::is_base_of_v<INeuralNetwork, TNeuralNetwork>, "Neural network must inherit from INeuralNetwork<>");
         }
 
-        auto MakeDecision(MlUtil::SharedArray<InputType> input, int inputLength)
-        {
-            auto workItem = std::make_shared<MakeDecisionWorkItem<TNeuralNetwork>>(network, input, inputLength);
-            auto threadPool = ThreadPool::GetInstance();
-            threadPool->StartItem(workItem);
-            return workItem;
-        }
+        auto MakeDecision(MlUtil::SharedArray<InputType> input, int inputLength);
 
         std::shared_ptr<TNeuralNetwork> network = std::make_shared<TNeuralNetwork>();
+        std::shared_ptr<NetworkContext<TNeuralNetwork>> networkContext;
     };
 
     struct RandomNumberGenerator
@@ -220,7 +218,7 @@ namespace StrifeML
         RandomNumberGenerator()
             : _rng(std::random_device()())
         {
-            
+
         }
 
         int RandInt(int min, int max)
@@ -255,7 +253,7 @@ namespace StrifeML
         GroupedSampleView(SampleSet<TSample>* owner)
             : _owner(owner)
         {
-            
+
         }
 
         GroupedSampleView* GroupBy(std::function<TSelector(const TSample& sample)> selector)
@@ -290,7 +288,7 @@ namespace StrifeML
         SampleSet(RandomNumberGenerator& rng)
             : _rng(rng)
         {
-            
+
         }
 
         bool TryGetSampleById(int sampleId, TSample& outSample)
@@ -419,7 +417,7 @@ namespace StrifeML
         SampleRepository(RandomNumberGenerator& rng)
             : _rng(rng)
         {
-            
+
         }
 
         SampleSet<TSample>* CreateSampleSet(const char* name)
@@ -457,12 +455,12 @@ namespace StrifeML
             int batchSize_,
             int sequenceLength_)
             : network(network_),
-            samples(samples_),
-            trainer(trainer_),
-            batchSize(batchSize_),
-            sequenceLength(sequenceLength_)
+              samples(samples_),
+              trainer(trainer_),
+              batchSize(batchSize_),
+              sequenceLength(sequenceLength_)
         {
-            
+
         }
 
         void Execute() override;
@@ -484,7 +482,7 @@ namespace StrifeML
     {
         NetworkContext(Decider<TNeuralNetwork>* decider_, Trainer<TNeuralNetwork>* trainer_)
             : decider(decider_),
-            trainer(trainer_)
+              trainer(trainer_)
         {
 
         }
@@ -492,28 +490,43 @@ namespace StrifeML
         void SetNewNetwork(std::stringstream& stream)
         {
             newNetworkLock.Lock();
-            newNetwork = std::move(stream);
+            newNetwork = std::make_shared<TNeuralNetwork>();
+            torch::load(newNetwork, stream);
             newNetworkLock.Unlock();
         }
 
-        bool TryGetNewNetwork(std::stringstream& outNewNetwork)
+        std::shared_ptr<TNeuralNetwork> TryGetNewNetwork()
         {
             newNetworkLock.Lock();
-            bool hasNewNetwork = newNetwork.has_value();
-            outNewNetwork = std::move(*newNetwork);
-            newNetwork = std::nullopt;
+            auto result = newNetwork;
+            newNetwork = nullptr;
             newNetworkLock.Unlock();
-            return hasNewNetwork;
+            return result;
         }
 
         Decider<TNeuralNetwork>* decider;
         Trainer<TNeuralNetwork>* trainer;
 
-        std::optional<std::stringstream> newNetwork;
+        std::shared_ptr<TNeuralNetwork> newNetwork;
         SpinLock newNetworkLock;
 
         virtual ~NetworkContext() = default;
     };
+
+    template <typename TNeuralNetwork>
+    auto Decider<TNeuralNetwork>::MakeDecision(MlUtil::SharedArray<InputType> input, int inputLength)
+    {
+        auto newNetwork = networkContext->TryGetNewNetwork();
+        if (newNetwork != nullptr)
+        {
+            network = newNetwork;
+        }
+
+        auto workItem = std::make_shared<MakeDecisionWorkItem<TNeuralNetwork>>(network, input, inputLength);
+        auto threadPool = ThreadPool::GetInstance();
+        threadPool->StartItem(workItem);
+        return workItem;
+    }
 
     template<typename TNeuralNetwork>
     struct Trainer : ITrainer, std::enable_shared_from_this<Trainer<TNeuralNetwork>>
@@ -525,10 +538,10 @@ namespace StrifeML
 
         Trainer(int batchSize_, float trainsPerSecond_)
             : sampleRepository(rng),
-            trainingInput(MlUtil::SharedArray<SampleType>(batchSize_ * TNeuralNetwork::SequenceLength)),
-            batchSize(batchSize_),
-            sequenceLength(TNeuralNetwork::SequenceLength),
-            trainsPerSecond(trainsPerSecond_)
+              trainingInput(MlUtil::SharedArray<SampleType>(batchSize_ * TNeuralNetwork::SequenceLength)),
+              batchSize(batchSize_),
+              sequenceLength(TNeuralNetwork::SequenceLength),
+              trainsPerSecond(trainsPerSecond_)
         {
             static_assert(std::is_base_of_v<INeuralNetwork, TNeuralNetwork>, "Neural network must inherit from INeuralNetwork<>");
         }
@@ -558,8 +571,8 @@ namespace StrifeML
                 auto taskScheduler = TaskScheduler::GetInstance();
 
                 float runTime = trainTask != nullptr
-                    ? trainTask->startTime + 1.0f / trainsPerSecond
-                    : 0;
+                                ? trainTask->startTime + 1.0f / trainsPerSecond
+                                : 0;
 
                 // TODO: can save the memory allocation by reusing the task
                 trainTask = std::make_shared<ScheduledTask>();
@@ -583,15 +596,19 @@ namespace StrifeML
             return true;
         }
 
-        void NotifyTrainingComplete(std::stringstream& serializedNetwork)
+        void NotifyTrainingComplete(std::stringstream& serializedNetwork, const TrainingBatchResult& result)
         {
             networkContext->SetNewNetwork(serializedNetwork);
+
+            OnTrainingComplete(result);
 
             if(isTraining)
             {
                 RunBatch();
             }
         }
+
+        virtual void OnTrainingComplete(const TrainingBatchResult& result) { }
 
         virtual void ReceiveSample(const SampleType& sample) { }
 
@@ -619,6 +636,6 @@ namespace StrifeML
         network->TrainBatch(input, _result);
         std::stringstream stream;
         torch::save(network, stream);
-        trainer->NotifyTrainingComplete(stream);
+        trainer->NotifyTrainingComplete(stream, _result);
     }
 }

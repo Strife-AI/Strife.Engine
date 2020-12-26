@@ -294,6 +294,13 @@ void Engine::StartLocalServer(int port, StringId mapName)
     _clientGame->networkInterface.SendReliable(_serverGame->localAddress, data);
 }
 
+void Engine::StartSinglePlayerGame(StringId mapName)
+{
+    auto peerInterface = SLNet::RakPeerInterface::GetInstance();
+    _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("0.0.0.3", 1)));
+    _clientGame->sceneManager.TrySwitchScene(mapName);
+}
+
 static void ReloadResources(ConsoleCommandBinder& binder)
 {
     binder.Help("Reloads the resource files");

@@ -25,10 +25,10 @@ static uint64_t PackCompressedRectangle(int x1, int y1, int x2, int y2, int type
     ClampInRange(type);
 
     return (uint64_t)x1 << 0 * bitsPerField
-        | (uint64_t)y1 << 1 * bitsPerField
-        | (uint64_t)x2 << 2 * bitsPerField
-        | (uint64_t)y2 << 3 * bitsPerField
-        | (uint64_t)type << 4 * bitsPerField;
+           | (uint64_t)y1 << 1 * bitsPerField
+           | (uint64_t)x2 << 2 * bitsPerField
+           | (uint64_t)y2 << 3 * bitsPerField
+           | (uint64_t)type << 4 * bitsPerField;
 }
 
 static int GetCompressedRectangleField(uint64_t value, int id)
@@ -95,7 +95,7 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
     return gsl::span<uint64_t>(outputStorage, outputSize);
 }
 
-void DecompressGridSensorOutput(gsl::span<const uint64_t> compressedRectangles, Grid<int>& outGrid, SensorObjectDefinition* objectDefinition)
+void DecompressGridSensorOutput(gsl::span<const uint64_t> compressedRectangles, Grid<uint64_t>& outGrid, SensorObjectDefinition* objectDefinition)
 {
     outGrid.FillWithZero();
 
@@ -126,7 +126,7 @@ void DecompressGridSensorOutput(gsl::span<const uint64_t> compressedRectangles, 
     }
 }
 
-void RenderGridSensorOutput(Grid<int>& grid, Vector2 center, Vector2 cellSize, SensorObjectDefinition* objectDefinition, Renderer* renderer, float depth)
+void RenderGridSensorOutput(Grid<uint64_t>& grid, Vector2 center, Vector2 cellSize, SensorObjectDefinition* objectDefinition, Renderer* renderer, float depth)
 {
     Vector2 gridSize = cellSize * Vector2(grid.Cols(), grid.Rows());
     Vector2 gridTopLeft = ((center - gridSize / 2) / cellSize).Round() * cellSize;
@@ -140,8 +140,8 @@ void RenderGridSensorOutput(Grid<int>& grid, Vector2 center, Vector2 cellSize, S
 
             auto it = objectDefinition->objectById.find(grid[i][j]);
             auto& object = it != objectDefinition->objectById.end()
-                ? it->second
-                : objectDefinition->objectById[0];
+                           ? it->second
+                           : objectDefinition->objectById[0];
 
             if (object.id != 0)
             {
