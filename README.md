@@ -53,7 +53,7 @@ Install dependencies:
 ./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet x64-osx 
 ```
 ### Setting up Strife Engine
-Alternatively, sample projects can be forked but will still need to be configured:
+Alternatively, sample projects can be forked but the engine will still need to be configured following the steps below
 * [Singleplayer Demo](https://github.com/Strife-AI/Strife.SingleplayerDemo)
 * [Multiplayer Demo](https://github.com/Strife-AI/Strife.MultiplayerDemo)
 
