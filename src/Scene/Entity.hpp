@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 #ifdef _WIN32
 #include <vcruntime_typeinfo.h>
@@ -62,15 +63,33 @@ enum class EntityFlags
 
 enum class EntitySerializerMode
 {
-	ReadOnly,
-	ReadWrite,
-	EditorRead,
-	EditorReadWrite,
+    Read,
+    Write,
+    EditorRead,
+    EditorReadWrite,
 };
+
+struct EntitySerializer;
+
+template<typename T>
+void SerializeValue(const char* name, T& value, EntitySerializer& serializer);
+
+template<typename T>
+void SerializeValue(const char* name, Color& value, EntitySerializer& serializer)
+{
+
+}
 
 struct EntitySerializer
 {
+    template<typename T>
+    EntitySerializer& Add(const char* name, T& value)
+    {
+        SerializeValue(name, value);
+        return *this;
+    }
 
+    EntitySerializerMode mode;
 };
 
 struct Entity;
@@ -231,10 +250,12 @@ private:
 
     virtual void ReceiveEvent(const IEntityEvent& ev)
     {
+
     }
 
     virtual void ReceiveServerEvent(const IEntityEvent& ev)
     {
+
     }
 
     void DoTeleport();
@@ -242,12 +263,14 @@ private:
 
     virtual void DoSerialize(EntitySerializer& serializer)
     {
+
     }
 
     virtual std::pair<int, void*> GetMemoryBlock() = 0;
 
     virtual void OnSyncVarsUpdated()
     {
+
     }
 
     SyncVar<Vector2> _position{{ 0, 0 }, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent,
