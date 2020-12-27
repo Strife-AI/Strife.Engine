@@ -9,14 +9,30 @@
 
 int scale = 4;
 
+auto DetectFormatFromSdlSurface(SDL_Surface* surface)
+{
+    auto format = surface->format;
+    return SDL_MasksToPixelFormatEnum(format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+}
+
+SDL_Surface* ConvertToRGBA(SDL_Surface* surface)
+{
+    SDL_PixelFormat* format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA32);
+    return SDL_ConvertSurface(surface, format, 0);
+}
+
 Texture::Texture(SDL_Surface* surface)
     : _size(Vector2(surface->w, surface->h))
 {
-    auto format = surface->format->BytesPerPixel == 4
-        ? TextureFormat::RGBA
-        : TextureFormat::RGB;
+    auto format = DetectFormatFromSdlSurface(surface);
+    SDL_Surface* convertedSurface = nullptr;
 
-    if (format == TextureFormat::RGBA)
+    if (format != SDL_PIXELFORMAT_RGBA32)
+    {
+        convertedSurface = surface = ConvertToRGBA(surface);
+    }
+
+    // Scale up
     {
         unsigned int* newPixels = new unsigned int[surface->w * surface->h * scale * scale];
         unsigned int* pixels = (unsigned int*)surface->pixels;
@@ -31,13 +47,14 @@ Texture::Texture(SDL_Surface* surface)
             }
         }
 
-        CreateOpenGlTexture(surface->w * scale, surface->h * scale, newPixels, format, TextureDataType::UnsignedByte);
+        CreateOpenGlTexture(surface->w * scale, surface->h * scale, newPixels, TextureFormat::RGBA, TextureDataType::UnsignedByte);
 
         delete[] newPixels;
     }
-    else
+
+    if (convertedSurface != nullptr)
     {
-        CreateOpenGlTexture(surface->w, surface->h, surface->pixels, format, TextureDataType::UnsignedByte);
+        SDL_FreeSurface(convertedSurface);
     }
 }
 
@@ -130,6 +147,8 @@ static int TextureFormatToGL(TextureFormat format)
     {
     case TextureFormat::RGBA: return GL_RGBA;
     case TextureFormat::RGB: return GL_RGB;
+    case TextureFormat::BGRA: return GL_BGRA;
+    case TextureFormat::BGR: return GL_BGR;
     case TextureFormat::Red: return GL_RED;
     default: FatalError("Unhandled texture format type");
     }
@@ -162,12 +181,25 @@ void Texture::CreateOpenGlTexture(int width, int height, void* data, TextureForm
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     UseLinearFiltering();
 
-    if(format == TextureFormat::RGBA && type == TextureDataType::UnsignedByte)
+    if (format == TextureFormat::RGBA && type == TextureDataType::UnsignedByte)
     {
         unsigned int* intPtr = (unsigned int*)data;
         for(int i = 0; i < width * height; ++i)
         {
-            int alpha = Color::FromPacked(intPtr[i]).a;
+            int alpha = Color::FromPackedRGBA(intPtr[i]).a;
+            if(alpha < 255)
+            {
+                flags |= PartiallyTransparent;
+                break;
+            }
+        }
+    }
+    else if (format == TextureFormat::BGRA && type == TextureDataType::UnsignedByte)
+    {
+        unsigned int* intPtr = (unsigned int*)data;
+        for(int i = 0; i < width * height; ++i)
+        {
+            int alpha = Color::FromPackedBGRA(intPtr[i]).a;
             if(alpha < 255)
             {
                 flags |= PartiallyTransparent;
