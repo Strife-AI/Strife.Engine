@@ -53,7 +53,11 @@ Install dependencies:
 ./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet x64-osx 
 ```
 ### Setting up Strife Engine
-Clone the repo:
+Optionally, we created sample projects you can fork to get started quicker:
+* https://github.com/Strife-AI/Strife.SingleplayerDemo
+* https://github.com/Strife-AI/Strife.MultiplayerDemo
+
+Clone the repo (if you are using the sample projects, then substitute in the name of that repo instead of Strife.Engine):
 ```shell
 git clone --recurse-submodules -j8 git@github.com:Strife-AI/Strife.Engine.git
 ```
