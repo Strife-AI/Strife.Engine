@@ -1,17 +1,17 @@
 # Strife Engine
 
-The Strife Engine is originally a internal custom engine developed by Strife AI LLC and used in the development of games such as [Human-Like](https://store.steampowered.com/app/1400190/HumanLike/). In the interest of free software, we have decided to open source our engine using a [modified UIUC/NCSA license](https://github.com/Strife-AI/Strife.Engine/blob/master/LICENSE.txt). 
+The Strife Engine is originally an internal custom engine developed by Strife AI LLC and used in the development of games such as [Human-Like](https://store.steampowered.com/app/1400190/HumanLike/). In order to support further work on ML for game development, we have provided source code for our engine under a [modified UIUC/NCSA license](https://github.com/Strife-AI/Strife.Engine/blob/master/LICENSE.txt).
 
 ## Getting started
 
-These instructions are written using the CLion IDE. But utilizes CMake as its build system, so any workflow using CMAKE will sufffice.
+These instructions are written using the CLion IDE, but utilizes CMake as its build system, so any workflow using CMAKE will suffice.
 
 Prerequisites
 There are a few things before getting started:
 * C++ compiler and build tools: The engine builds and runs on MSVC, Gcc, and Clang (For Windows, Linux, and Mac respectively). Using CMake as the build system.
-    * For windows: use the Visual Studio C++ build tools.
+    * For Windows: use the Visual Studio C++ build tools.
     * For Linux: Gcc ships with virtually all distributions.
-    * For macOS: Install the Xcode command line tools using:
+    * For MacOS: Install the Xcode command line tools using:
 ```shell
   xcode-select --install
 ```
@@ -19,7 +19,7 @@ There are a few things before getting started:
 * Configured git client
 * [A downloaded copy of LibTorch](https://pytorch.org/get-started/locally/)
     * The latest stable version of LibTorch (1.7.1) should do the trick
-    * Note for macOS: CUDA is not available for Mac. So make sure to select “None” for CUDA version.
+    * Note for MacOS: CUDA is not available for Mac. So make sure to select “None” for CUDA version.
 * [vcpkg](https://github.com/microsoft/vcpkg), which is used to manage dependencies
 * Optional: The current version of the engine utilizes [Tiled](MapEditor.org) as its map Editor and [X2cm](https://github.com/Strife-AI/X2DContentManager/releases/tag/v1.8.15-stable) which manages content.
     * These are being phased out in favor of a first-class editor integration for the engine.
@@ -40,10 +40,18 @@ Run the bootstrap script for your respective platform
 ./bootstrap-vcpkg.sh
 ```
 Install dependencies:
+* For Windows:
 ```shell
-./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet {x64-windows, x64-linux, x64-osx} 
+./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet x64-windows
 ```
-
+* For Linux:
+```shell
+./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet x64-linux
+```
+* For Mac:
+```shell
+./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet x64-osx 
+```
 ### Setting up Strife Engine
 Clone the repo:
 ```shell
