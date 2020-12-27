@@ -72,24 +72,39 @@ enum class EntitySerializerMode
 struct EntitySerializer;
 
 template<typename T>
-void SerializeValue(const char* name, T& value, EntitySerializer& serializer);
+std::string SerializeEntityProperty(const T& value);
 
 template<typename T>
-void SerializeValue(const char* name, Color& value, EntitySerializer& serializer)
-{
+T DeserializeEntityProperty(const std::string& value);
 
-}
+template<typename T>
+void RenderEntityPropertyUi(const char* name, T& value);
 
 struct EntitySerializer
 {
     template<typename T>
     EntitySerializer& Add(const char* name, T& value)
     {
-        SerializeValue(name, value);
-        return *this;
+        if (mode == EntitySerializerMode::Write)
+        {
+            properties[name] = SerializeEntityProperty(value);
+        }
+        else if (mode == EntitySerializerMode::Read)
+        {
+            auto property = properties.find(name);
+            if (property != properties.end())
+            {
+                value = DeserializeEntityProperty<T>(property->second);
+            }
+        }
+        else if (mode == EntitySerializerMode::EditorReadWrite)
+        {
+            RenderEntityPropertyUi(name, value);
+        }
     }
 
     EntitySerializerMode mode;
+    std::unordered_map<std::string, std::string> properties;
 };
 
 struct Entity;
