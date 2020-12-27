@@ -25,6 +25,8 @@ enum class TextureFormat
 {
     RGBA,
     RGB,
+    BGRA,
+    BGR,
     Red,
 };
 

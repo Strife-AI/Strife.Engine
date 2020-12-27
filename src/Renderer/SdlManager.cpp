@@ -157,6 +157,7 @@ void SdlManager::SetupOpenGl(bool isHeadless)
 
 #if __APPLE__
     float defaultDpi = 72;
+    fullscreenType = SDL_WINDOW_FULLSCREEN_DESKTOP;
 #else
     float defaultDpi = 96;
 #endif
@@ -171,12 +172,12 @@ void SdlManager::SetupOpenGl(bool isHeadless)
 
     auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
         //| SDL_WINDOW_INPUT_FOCUS
-        | ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS : 0));
+        | ((g_FullscreenOnStart.Value()) ? fullscreenType | SDL_WINDOW_BORDERLESS : 0));
 
     if(!isHeadless)
     {
         _window = SDL_CreateWindow(
-                "C.H.A.S.E.R.",
+                "X2D - Strife AI",
                 SDL_WINDOWPOS_CENTERED,
                 SDL_WINDOWPOS_CENTERED,
                 g_Resolution.Value().x,
@@ -219,8 +220,7 @@ void SdlManager::SetupOpenGl(bool isHeadless)
     ImGui_ImplOpenGL3_Init(glsl_version);
 #endif
 
-    if (g_EnableVsync.Value()) EnableVsync();
-    else DisableVsync();
+    SetVsync(g_EnableVsync.Value());
 
     int stencilBufferBits;
     if (SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &stencilBufferBits) == 0)
@@ -348,46 +348,24 @@ Vector2i SdlManager::WindowSize() const
     return Vector2i(w, h);
 }
 
-void SdlManager::EnableFullscreen()
+void SdlManager::SetFullscreen(bool isFullscreen)
 {
-    if (g_FullscreenOnStart.Value())
-    {
-        return;
-    }
-
-    g_FullscreenOnStart.SetValue(true);
-    SDL_SetWindowFullscreen(_window, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS);
-
-    SDL_SetWindowPosition(_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    g_FullscreenOnStart.SetValue(isFullscreen);
+    SDL_SetWindowFullscreen(_window, isFullscreen ? (fullscreenType | SDL_WINDOW_BORDERLESS) : 0);
 }
 
-void SdlManager::DisableFullscreen()
+void SdlManager::SetWindowCaption(const char* title)
 {
-    if (!g_FullscreenOnStart.Value())
-    {
-        return;
-    }
-
-    g_FullscreenOnStart.SetValue(false);
-    SDL_SetWindowFullscreen(_window, 0);
-
-    SDL_SetWindowPosition(_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    SDL_SetWindowTitle(_window, title);
 }
 
-void SdlManager::EnableVsync()
+void SdlManager::SetVsync(bool isEnabled)
 {
-    g_EnableVsync.SetValue(true);
-    SDL_GL_SetSwapInterval(true);
+    g_EnableVsync.SetValue(isEnabled);
+    SDL_GL_SetSwapInterval(isEnabled);
 }
 
-void SdlManager::DisableVsync()
-{
-    // TODO
-    g_EnableVsync.SetValue(false);
-    SDL_GL_SetSwapInterval(false);
-}
-
-
+// TODO Patrick: Clean this up and properly hide the cursor
 void SdlManager::HideCursor()
 {
 #if _WIN32
