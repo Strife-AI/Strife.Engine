@@ -157,6 +157,7 @@ void SdlManager::SetupOpenGl(bool isHeadless)
 
 #if __APPLE__
     float defaultDpi = 72;
+    fullscreenType = SDL_WINDOW_FULLSCREEN_DESKTOP;
 #else
     float defaultDpi = 96;
 #endif
@@ -171,7 +172,7 @@ void SdlManager::SetupOpenGl(bool isHeadless)
 
     auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
         //| SDL_WINDOW_INPUT_FOCUS
-        | ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS : 0));
+        | ((g_FullscreenOnStart.Value()) ? fullscreenType | SDL_WINDOW_BORDERLESS : 0));
 
     if(!isHeadless)
     {
@@ -350,7 +351,7 @@ Vector2i SdlManager::WindowSize() const
 void SdlManager::SetFullscreen(bool isFullscreen)
 {
     g_FullscreenOnStart.SetValue(isFullscreen);
-    SDL_SetWindowFullscreen(_window, isFullscreen ? (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS) : 0);
+    SDL_SetWindowFullscreen(_window, isFullscreen ? (fullscreenType | SDL_WINDOW_BORDERLESS) : 0);
 }
 
 void SdlManager::SetWindowCaption(const char* title)
