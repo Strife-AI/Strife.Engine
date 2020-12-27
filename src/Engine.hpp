@@ -82,6 +82,7 @@ public:
     void StartServer(int port, StringId mapName);
     void ConnectToServer(const char* address, int port);
     void StartLocalServer(int port, StringId mapName);
+    void StartSinglePlayerGame(StringId mapName);
 
 private:
     Engine() = default;

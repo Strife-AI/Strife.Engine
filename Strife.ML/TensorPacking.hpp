@@ -8,7 +8,7 @@ namespace StrifeML
     {
         template<typename ...Args>
         constexpr Dimensions(Args&& ...dims)
-                : dimensions{dims...}
+            : dimensions{dims...}
         {
 
         }
@@ -83,8 +83,9 @@ namespace StrifeML
 
     template<typename T, typename Enable = void>
     struct GetCellType;
+
     template<typename T>
-    struct GetCellType<T, std::enable_if<std::is_arithmetic_v<T>>>
+    struct GetCellType<T, typename std::enable_if<std::is_arithmetic<T>::value>::type>
     {
         using Type = T;
     };
@@ -96,7 +97,7 @@ namespace StrifeML
     template<int Rows, int Cols>
     struct GetCellType<GridSensorOutput<Rows, Cols>>
     {
-        using Type = int;
+        using Type = uint64_t;
     };
     template<typename T>
     struct GetCellType<gsl::span<T>>
@@ -120,6 +121,10 @@ namespace StrifeML
     { return torch::kInt64; }
 
     template<>
+    inline c10::ScalarType GetTorchType<int64_t>()
+    { return torch::kInt64; }
+
+    template<>
     inline c10::ScalarType GetTorchType<double>()
     { return torch::kFloat64; }
 
@@ -133,6 +138,16 @@ namespace StrifeML
     struct TorchPacker<int>
     {
         static int* Pack(const int& value, int* outPtr)
+        {
+            *outPtr = value;
+            return outPtr + 1;
+        }
+    };
+
+    template<>
+    struct TorchPacker<int64_t>
+    {
+        static int64_t* Pack(const int64_t& value, int64_t* outPtr)
         {
             *outPtr = value;
             return outPtr + 1;
@@ -165,20 +180,20 @@ namespace StrifeML
     };
 
     template<int Rows, int Cols>
-    struct TorchPacker<GridSensorOutput<Rows, Cols>, int>
+    struct TorchPacker<GridSensorOutput<Rows, Cols>, uint64_t>
     {
-        static int* Pack(const GridSensorOutput<Rows, Cols>& value, int* outPtr)
+        static uint64_t* Pack(const GridSensorOutput<Rows, Cols>& value, uint64_t* outPtr)
         {
             if (value.IsCompressed())
             {
-                FixedSizeGrid<int, Rows, Cols> decompressedGrid;
+                FixedSizeGrid<uint64_t, Rows, Cols> decompressedGrid;
                 value.Decompress(decompressedGrid);
-                return TorchPacker<Grid<int>, int>::Pack(decompressedGrid, outPtr);
+                return TorchPacker<Grid<uint64_t>, uint64_t>::Pack(decompressedGrid, outPtr);
             }
             else
             {
-                Grid<int> grid(Rows, Cols, const_cast<int*>(value.GetRawData()));
-                return TorchPacker<Grid<int>, int>::Pack(grid, outPtr);
+                Grid<uint64_t> grid(Rows, Cols, const_cast<uint64_t*>(value.GetRawData()));
+                return TorchPacker<Grid<uint64_t>, uint64_t>::Pack(grid, outPtr);
             }
         }
 
@@ -196,15 +211,15 @@ namespace StrifeML
 
         TorchPacker<T, CellType>::Pack(value, t.template data_ptr<CellType>());
 
-        return t.squeeze();
+        return t.squeeze(t.dim()-1);
     }
 
     template<int Rows, int Cols>
     torch::Tensor PackIntoTensor(GridSensorOutput<Rows, Cols>& value)
     {
-        FixedSizeGrid<int, Rows, Cols> grid;
+        FixedSizeGrid<uint64_t, Rows, Cols> grid;
         value.Decompress(grid);
-        return PackIntoTensor((const Grid<int>&) grid);
+        return PackIntoTensor((const Grid<uint64_t>&) grid);
     }
 
     template<typename T, typename TSelector>
@@ -223,7 +238,7 @@ namespace StrifeML
         auto torchType = GetTorchType<CellType>();
         auto t = torch::empty(dims, torchType);
 
-        auto outPtr = t.template data_ptr<CellType>();
+        auto outPtr = reinterpret_cast<CellType*>(t.template data_ptr<std::make_signed_t<CellType>>());
 
         for (int i = 0; i < grid.Rows(); ++i)
         {
@@ -234,7 +249,7 @@ namespace StrifeML
             }
         }
 
-        return t.squeeze();
+        return t.squeeze(t.dim()-1);
     }
 
     template<typename T, typename TSelector>
