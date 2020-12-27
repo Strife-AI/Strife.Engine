@@ -67,4 +67,6 @@ private:
 
     bool _receivedQuit = false;
     bool _cursorVisible = true;
+
+    SDL_WindowFlags fullscreenType = SDL_WINDOW_FULLSCREEN;
 };
