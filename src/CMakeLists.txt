@@ -141,9 +141,7 @@ add_library(Strife.Engine STATIC
 
         Memory/Util.hpp        
         
-        
-        "Scene/ReplicationManager.hpp"
-        "Scene/ReplicationManager.cpp"
+
         "Memory/CircularQueue.hpp"
         "Net/ReplicationManager.hpp"
         "Net/ReplicationManager.cpp"
