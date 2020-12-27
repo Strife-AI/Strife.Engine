@@ -1,6 +1,6 @@
 # Strife Engine
 
-The Strife Engine is originally an internal custom engine developed by Strife AI LLC and used in the development of games such as [Human-Like](https://store.steampowered.com/app/1400190/HumanLike/). In order to support further work on ML for game development, we have provided source code for our engine under a [modified UIUC/NCSA license](https://github.com/Strife-AI/Strife.Engine/blob/master/LICENSE.txt).
+The Strife Engine is originally an internal custom engine developed by Strife AI LLC and used in the development of games such as [Human-Like](https://store.steampowered.com/app/1400190/HumanLike/). In order to support further work on machine learning for game development, we have provided source code for our engine under a [modified UIUC/NCSA license](https://github.com/Strife-AI/Strife.Engine/blob/master/LICENSE.txt).
 
 ## Getting started
 
@@ -11,7 +11,7 @@ There are a few things before getting started:
 * C++ compiler and build tools: The engine builds and runs on MSVC, Gcc, and Clang (For Windows, Linux, and Mac respectively). Using CMake as the build system.
     * For Windows: use the Visual Studio C++ build tools.
     * For Linux: Gcc ships with virtually all distributions.
-    * For MacOS: Install the Xcode command line tools using:
+    * For macOS: Install the Xcode command line tools using:
 ```shell
   xcode-select --install
 ```
@@ -19,7 +19,7 @@ There are a few things before getting started:
 * Configured git client
 * [A downloaded copy of LibTorch](https://pytorch.org/get-started/locally/)
     * The latest stable version of LibTorch (1.7.1) should do the trick
-    * Note for MacOS: CUDA is not available for Mac. So make sure to select “None” for CUDA version.
+    * Note for macOS: CUDA is not available for Mac. So make sure to select “None” for CUDA version.
 * [vcpkg](https://github.com/microsoft/vcpkg), which is used to manage dependencies
 * Optional: The current version of the engine utilizes [Tiled](MapEditor.org) as its map Editor and [X2cm](https://github.com/Strife-AI/X2DContentManager/releases/tag/v1.8.15-stable) which manages content.
     * These are being phased out in favor of a first-class editor integration for the engine.
@@ -53,9 +53,9 @@ Install dependencies:
 ./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet x64-osx 
 ```
 ### Setting up Strife Engine
-Optionally, we created sample projects you can fork to get started quicker:
-* https://github.com/Strife-AI/Strife.SingleplayerDemo
-* https://github.com/Strife-AI/Strife.MultiplayerDemo
+Alternatively, sample projects can be forked but will still need to be configured:
+* [Singleplayer Demo](https://github.com/Strife-AI/Strife.SingleplayerDemo)
+* [Multiplayer Demo](https://github.com/Strife-AI/Strife.MultiplayerDemo)
 
 Clone the repo (if you are using the sample projects, then substitute in the name of that repo instead of Strife.Engine):
 ```shell
