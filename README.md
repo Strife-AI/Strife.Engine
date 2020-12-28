@@ -40,17 +40,8 @@ Run the bootstrap script for your respective platform
 ./bootstrap-vcpkg.sh
 ```
 Install dependencies:
-* For Windows:
 ```shell
-./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet x64-windows
-```
-* For Linux:
-```shell
-./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet x64-linux
-```
-* For Mac:
-```shell
-./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet x64-osx 
+./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet {x64-windows, x64-linux, x64-osx}
 ```
 ### Setting up Strife Engine
 Alternatively, sample projects can be forked but the engine will still need to be configured following the steps below
