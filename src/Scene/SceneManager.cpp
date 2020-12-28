@@ -60,6 +60,8 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
     _scene->GetCamera()->SetZoom(screenSize.y / (1080.0f / 2));
 
     _engine->Game()->BuildScene(_scene.get());
+    // !! Retrieve and create serialized entities here !!
+
     _scene->LoadMapSegment(*mapSegment);
 
     _scene->SendEvent(SceneLoadedEvent());
