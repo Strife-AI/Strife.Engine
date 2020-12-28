@@ -81,3 +81,70 @@ void RenderEntityPropertyUi(const char* name, std::string& value)
     // TODO: Is this right? I don't feel so good about this
     ImGui::InputText(name, value.data(), value.capacity());
 }
+
+// TODO: Let Michael do his Template metaprogramming magic to reduce this if he wants to.
+template<>
+std::string SerializeEntityProperty(const int& value)
+{
+    return std::to_string(value);
+}
+
+template<>
+int DeserializeEntityProperty(const std::string& value)
+{
+    int outValue;
+    sscanf(value.c_str(), "%d", &outValue);
+    return outValue;
+}
+
+template<>
+void RenderEntityPropertyUi(const char* name, int& value)
+{
+    ImGui::DragInt(name, &value);
+}
+
+template<>
+std::string SerializeEntityProperty(const float& value)
+{
+    return std::to_string(value);
+}
+
+template<>
+float DeserializeEntityProperty(const std::string& value)
+{
+    float outValue;
+    sscanf(value.c_str(), "%f", &outValue);
+    return outValue;
+}
+
+template<>
+void RenderEntityPropertyUi(const char* name, float& value)
+{
+    ImGui::DragFloat(name, &value);
+}
+
+template<>
+std::string SerializeEntityProperty(const bool& value)
+{
+    return std::to_string(value);
+}
+
+template<>
+bool DeserializeEntityProperty(const std::string& value)
+{
+    if (value == "true" || value != "0")
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+template<>
+void RenderEntityPropertyUi(const char* name, bool& value)
+{
+    ImGui::Checkbox(name, &value);
+}
+
