@@ -1,5 +1,6 @@
 #include "BaseResource.hpp"
 #include "SpriteResource.hpp"
+#include "TilemapResource.hpp"
 
 void NewResourceManager::LoadResourceFromFile(const char* filePath, const char* resourceName)
 {
@@ -9,13 +10,12 @@ void NewResourceManager::LoadResourceFromFile(const char* filePath, const char* 
     ResourceSettings settings;
     settings.path = pathString.c_str();
     settings.isHeadlessServer = false;
+    settings.resourceName = resourceName;
 
     BaseResource* resource = nullptr;
 
-    if (path.extension() == ".png")
-    {
-        resource = new SpriteResource;
-    }
+    if (path.extension() == ".png") resource = new SpriteResource;
+    else if (path.extension() == ".tmx") resource = new TilemapResource;
 
     if (resource == nullptr)
     {

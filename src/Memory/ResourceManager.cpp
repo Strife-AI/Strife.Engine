@@ -238,6 +238,8 @@ MapSegment* LoadMapSegment(StringId id, gsl::span<std::byte> data)
 
     segmentDto.Read(reader);
 
+    return nullptr;
+
     MapSegment* segment = new MapSegment;
     segment->colliders = std::move(segmentDto.rectangleColliders);
     segment->polygonColliders = std::move(segmentDto.polygonalColliders);
@@ -250,10 +252,10 @@ MapSegment* LoadMapSegment(StringId id, gsl::span<std::byte> data)
         // Expand by a pixel to prevent seams between tiles
         //tileBounds.bottomRight = tileBounds.bottomRight + Vector2(1, 1);
 
-        Sprite* tileSprite = ResourceManager::GetResource<Sprite>(tilePropertiesDto.spriteResource).Value();
-        segment->tileProperties.push_back(new TileProperties(
-            Sprite(tileSprite->GetTexture(), tileBounds, tilePropertiesDto.bounds.As<float>()),
-            0));
+//        Sprite* tileSprite = ResourceManager::GetResource<Sprite>(tilePropertiesDto.spriteResource).Value();
+//        segment->tileProperties.push_back(new TileProperties(
+//            Sprite(tileSprite->GetTexture(), tileBounds, tilePropertiesDto.bounds.As<float>()),
+//            0));
     }
 
     // Load layers

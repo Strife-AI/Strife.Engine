@@ -79,9 +79,9 @@ public:
         _loadResources();
     }
 
-    void StartServer(int port, StringId mapName);
+    void StartServer(int port, const char* mapName);
     void ConnectToServer(const char* address, int port);
-    void StartLocalServer(int port, StringId mapName);
+    void StartLocalServer(int port, const char* mapName);
 
 private:
     Engine() = default;

@@ -14,6 +14,7 @@ struct ResourceSettings
     bool isHeadlessServer;
     std::string assetSettings;
     Engine* engine;
+    const char* resourceName;
 };
 
 
@@ -54,6 +55,8 @@ public:
         _baseAssetPath = path;
     }
 
+    auto GetBaseAssetPath() const { return _baseAssetPath; }
+
     BaseResource* GetResourceByStringId(StringId id)
     {
         auto resource = _resourcesByStringId.find(id.key);
@@ -79,7 +82,7 @@ private:
 };
 
 template<typename TResource>
-TResource* GetResource(const char* name)
+TResource* GetResource(const char* name, bool isFatal = true)
 {
     auto instance = NewResourceManager::GetInstance();
     auto resource = instance->GetResourceByName(name);
@@ -95,5 +98,39 @@ TResource* GetResource(const char* name)
         }
     }
 
-    FatalError("Missing resource %s of type %s\n", name, typeid(TResource).name());
+    if (isFatal)
+    {
+        FatalError("Missing resource %s of type %s\n", name, typeid(TResource).name());
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
+template<typename TResource>
+TResource* GetResource(StringId id, bool isFatal = true)
+{
+    auto instance = NewResourceManager::GetInstance();
+    auto resource = instance->GetResourceByStringId(id);
+    if (resource != nullptr)
+    {
+        return resource->Get<TResource>();
+    }
+    else if (instance->EnableDefaultAssets())
+    {
+        if (auto defaultResource = TResource::GetDefaultResource())
+        {
+            return defaultResource->template Get<TResource>();
+        }
+    }
+
+    if (isFatal)
+    {
+        FatalError("Missing resource %s of type %s\n", id.ToString(), typeid(TResource).name());
+    }
+    else
+    {
+        return nullptr;
+    }
 }

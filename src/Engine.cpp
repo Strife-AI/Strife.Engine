@@ -208,7 +208,7 @@ void ConnectCommand(ConsoleCommandBinder& binder)
 
 ConsoleCmd connectCmd("connect", ConnectCommand);
 
-void Engine::StartServer(int port, StringId mapName)
+void Engine::StartServer(int port, const char* mapName)
 {
     SLNet::SocketDescriptor sd(port, nullptr);
     auto peerInterface = SLNet::RakPeerInterface::GetInstance();
@@ -268,7 +268,7 @@ void Engine::ConnectToServer(const char* address, int port)
 
 SLNet::PacketLogger logger;
 
-void Engine::StartLocalServer(int port, StringId mapName)
+void Engine::StartLocalServer(int port, const char* mapName)
 {
     if(g_isServer.Value())
     {
