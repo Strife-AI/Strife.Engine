@@ -94,8 +94,7 @@ void Renderer::RenderSpriteRepeated(const Sprite* sprite, const Rectangle& bound
                 Sprite subSprite(
                     sprite->GetTexture(),
                     Rectangle(tileTopLeft, subTileSize),
-                    textureBounds,
-                    false);
+                    textureBounds);
 
                 auto position = RotateXY(center, tileTopLeft + subTileSize / 2, angle) - subTileSize / 2;
                 RenderSprite(&subSprite, position, depth, Vector2(1, 1), angle);
@@ -200,7 +199,7 @@ void Renderer::RenderThreeSlice(const Sprite* sprite, float cornerXSize, const R
 
         Rectangle tbounds(spriteBounds.TopLeft(), textureBounds.Size());
 
-        Sprite sprite(texture, tbounds, textureBounds, false);
+        Sprite sprite(texture, tbounds, textureBounds);
         RenderSpriteRepeated(&sprite, realSpriteBounds, depth, bounds.GetCenter(), angle);
     }
 }
