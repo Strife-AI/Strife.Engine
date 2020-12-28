@@ -4,13 +4,12 @@
 #include "FileSystem.hpp"
 #include "Logger.hpp"
 #include "Memory/Cipher.hpp"
-#include "Memory/ResourceManager.hpp"
 
 void ResourceFileWriter::Initialize(const char* outputFileName)
 {
 	_outputFileName = outputFileName;
 	_writer.WriteBlob("STRF", 4);
-	_writer.WriteInt(CONTENT_VERSION);
+	_writer.WriteInt(0);
 	_writer.WriteInt(0); // Reserve space for header offset in file
 }
 

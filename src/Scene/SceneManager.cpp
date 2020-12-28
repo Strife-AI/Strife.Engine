@@ -32,9 +32,9 @@ SceneManager::SceneManager(Engine* engine, bool isServer)
     _scene(new Scene(engine, ""_sid, isServer)),
     _isServer(isServer)
 {
-    auto emptyMapSegment = new MapSegment;
-    emptyMapSegment->name = "empty-map"_sid;
-    ResourceManager::AddResource("empty-map"_sid, emptyMapSegment);
+    auto emptyMapSegment = new TilemapResource;
+    emptyMapSegment->name = "empty-map";
+    NewResourceManager::GetInstance()->AddResource("empty-map", emptyMapSegment);
 }
 
 bool SceneManager::TrySwitchScene(const char* name)

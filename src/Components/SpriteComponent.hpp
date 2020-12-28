@@ -3,7 +3,6 @@
 #include <Resource/SpriteResource.hpp>
 #include "Renderer/Color.hpp"
 #include "Renderer/Sprite.hpp"
-#include "Memory/ResourceManager.hpp"
 #include "Scene/EntityComponent.hpp"
 
 enum class SpriteComponentFlags

@@ -4,6 +4,8 @@
 #include "ResourceFileReader.hpp"
 
 #include "Memory/Cipher.hpp"
+#include "Logger.hpp"
+#include "Memory/Crc32.hpp"
 
 std::vector<ResourceFileEntry> ResourceFileReader::LoadEntries()
 {
@@ -16,7 +18,7 @@ std::vector<ResourceFileEntry> ResourceFileReader::LoadEntries()
         FatalError("Invalid resource file");
     }
 
-    if (_reader.ReadInt() != CONTENT_VERSION)
+    if (_reader.ReadInt() != 0)
     {
         FatalError("Content file incompatible with game. Please update game and content.");
     }

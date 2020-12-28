@@ -36,23 +36,17 @@ void UiElement::SetRelativePosition(Vector2 offset)
 std::shared_ptr<BackgroundStyle> BackgroundStyle::FromNineSlice(StringId resourceId)
 {
     auto style = std::make_shared<BackgroundStyle>();
-    style->BackgroundNineSlice(ResourceManager::GetResource<NineSlice>(resourceId));
+    //style->BackgroundNineSlice(ResourceManager::GetResource<NineSlice>(resourceId));
     return style;
 }
 
 std::shared_ptr<BackgroundStyle> BackgroundStyle::FromSprite(StringId resourceId)
 {
     auto style = std::make_shared<BackgroundStyle>();
-    style->BackgroundSprite(ResourceManager::GetResource<Sprite>(resourceId));
+    //style->BackgroundSprite(ResourceManager::GetResource<Sprite>(resourceId));
     return style;
 }
 
-std::shared_ptr<BackgroundStyle> BackgroundStyle::FromSprite(Resource<Sprite> sprite)
-{
-    auto style = std::make_shared<BackgroundStyle>();
-    style->BackgroundSprite(sprite);
-    return style;
-}
 
 UiElementPtr UiElement::AddExistingChild(UiElementPtr element)
 {
@@ -157,6 +151,7 @@ void UiElement::Render(Renderer* renderer)
 {
     EnforceUpdatedLayout();
 
+#if false
     if (_backgroundStyle != nullptr)
     {
         auto bounds = GetAbsoluteBounds();
@@ -191,6 +186,7 @@ void UiElement::Render(Renderer* renderer)
             break;
         }
     }
+#endif
 
     //renderer->RenderRectangleOutline(GetAbsoluteBounds(), Color::Red(), 0);
 

@@ -2,9 +2,9 @@
 #include <cstring>
 
 #include "BinaryStreamWriter.hpp"
-#include "Memory/ResourceManager.hpp"
 #include "FileSystem.hpp"
 #include "Memory/Cipher.hpp"
+#include "Logger.hpp"
 
 void BinaryStreamWriter::WriteInt(int value)
 {
