@@ -5,7 +5,7 @@
 class SpriteFont
 {
 public:
-    SpriteFont(Resource<Sprite> fontSprite, int rows, int cols);
+    SpriteFont(SpriteResource* fontSprite, int rows, int cols);
 
     void GetCharacter(int c, Sprite* outSprite) const;
     Vector2i MeasureStringWithNewlines(const char* str, float scale) const;

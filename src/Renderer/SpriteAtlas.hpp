@@ -13,11 +13,12 @@
 class Renderer;
 class Sprite;
 struct AtlasAnimation;
+struct SpriteResource;
 
 class SpriteAtlas
 {
 public:
-    SpriteAtlas(Resource<Sprite> atlas,
+    SpriteAtlas(SpriteResource* atlas,
         const std::vector<AtlasAnimation>& animations,
         int rows,
         int cols,
@@ -39,7 +40,7 @@ public:
     const AtlasAnimation* GetAnimation(StringId name) const;
 
 private:
-    const Resource<Sprite> _atlas;
+    SpriteResource* _atlas;
     const std::vector<AtlasAnimation> _animations;
     const int _rows;
     const int _cols;

@@ -48,7 +48,7 @@ TResource* BaseResource::Get()
 class NewResourceManager
 {
 public:
-    void LoadResourceFromFile(const char* filePath, const char* resourceName);
+    void LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType = nullptr);
 
     void SetBaseAssetPath(const char* path)
     {

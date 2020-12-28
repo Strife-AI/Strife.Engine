@@ -206,12 +206,12 @@ void Renderer::RenderThreeSlice(const Sprite* sprite, float cornerXSize, const R
 
 void Renderer::RenderString(const FontSettings& fontSettings, const char* str, Vector2 topLeft, float depth)
 {
-    if (fontSettings.spriteFont.Value() == nullptr)
+    if (fontSettings.spriteFont == nullptr)
     {
         return;
     }
 
-    auto characterSize = fontSettings.spriteFont->CharacterDimension(fontSettings.scale);
+    auto characterSize = fontSettings.spriteFont->GetFont()->CharacterDimension(fontSettings.scale);
     Vector2 position = topLeft;
 
     while (*str != '\0')
@@ -224,7 +224,7 @@ void Renderer::RenderString(const FontSettings& fontSettings, const char* str, V
         else
         {
             Sprite characterSprite;
-            fontSettings.spriteFont->GetCharacter((unsigned char)*str, &characterSprite);
+            fontSettings.spriteFont->GetFont()->GetCharacter((unsigned char)*str, &characterSprite);
 
             RenderSprite(
                 &characterSprite,

@@ -113,7 +113,7 @@ bool UiDictionary::TryGetCustomProperty(const char* key, LabelStyle& outResult) 
     outResult.font.scale = style->GetValueOrDefault("scale", 1.0);
     std::string_view fontName = style->GetValueOrDefault("font", "console-font");
 
-    outResult.font.spriteFont = ResourceManager::GetResource<SpriteFont>(StringId(fontName));
+    //outResult.font.spriteFont = ResourceManager::GetResource<SpriteFont>(StringId(fontName));
     outResult.text = style->GetValueOrDefault("text", "LABEL");
 
     return true;
