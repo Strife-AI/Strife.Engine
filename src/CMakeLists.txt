@@ -140,7 +140,6 @@ add_library(Strife.Engine STATIC
  		Components/RigidBodyComponent.cpp
 
         Memory/Util.hpp        
-        
 
         "Memory/CircularQueue.hpp"
         "Net/ReplicationManager.hpp"
@@ -152,8 +151,17 @@ add_library(Strife.Engine STATIC
         "Physics/PathFinding.hpp"
         "Physics/PathFinding.cpp"
         "Scene/EntityManager.cpp"
-        
-     "Net/ServerGame.cpp" "ML/ML.hpp" "ML/ML.cpp" Components/PathFollowerComponent.cpp Components/PathFollowerComponent.hpp Components/LightComponent.hpp Net/FileTransfer.hpp Net/FileTransfer.cpp)
+        Scene/EntitySerializer.hpp
+		Scene/EntitySerializer.cpp
+
+     	"Net/ServerGame.cpp"
+		"ML/ML.hpp"
+		"ML/ML.cpp"
+		Components/PathFollowerComponent.cpp
+		Components/PathFollowerComponent.hpp
+		Components/LightComponent.hpp
+		Net/FileTransfer.hpp
+		Net/FileTransfer.cpp)
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 

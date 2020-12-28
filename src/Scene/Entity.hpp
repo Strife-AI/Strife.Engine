@@ -20,6 +20,7 @@
 
 #include "Renderer/Color.hpp"
 #include "Sound/SoundManager.hpp"
+#include "EntitySerializer.hpp"
 
 class b2Body;
 
@@ -59,52 +60,6 @@ enum class EntityFlags
     EnableServerFixedUpdate = 64,
     EnableRender = 128,
     EnableRenderHud = 256
-};
-
-enum class EntitySerializerMode
-{
-    Read,
-    Write,
-    EditorRead,
-    EditorReadWrite,
-};
-
-struct EntitySerializer;
-
-template<typename T>
-std::string SerializeEntityProperty(const T& value);
-
-template<typename T>
-T DeserializeEntityProperty(const std::string& value);
-
-template<typename T>
-void RenderEntityPropertyUi(const char* name, T& value);
-
-struct EntitySerializer
-{
-    template<typename T>
-    EntitySerializer& Add(const char* name, T& value)
-    {
-        if (mode == EntitySerializerMode::Write)
-        {
-            properties[name] = SerializeEntityProperty(value);
-        }
-        else if (mode == EntitySerializerMode::Read)
-        {
-            auto property = properties.find(name);
-            if (property != properties.end())
-            {
-                value = DeserializeEntityProperty<T>(property->second);
-            }
-        }
-        else if (mode == EntitySerializerMode::EditorReadWrite)
-        {
-            RenderEntityPropertyUi(name, value);
-        }
-    }
-
-    EntitySerializerMode mode;
-    std::unordered_map<std::string, std::string> properties;
 };
 
 struct Entity;
