@@ -1,8 +1,9 @@
 #include "BaseResource.hpp"
 #include "SpriteResource.hpp"
 #include "TilemapResource.hpp"
+#include "SpriteFontResource.hpp"
 
-void NewResourceManager::LoadResourceFromFile(const char* filePath, const char* resourceName)
+void NewResourceManager::LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType)
 {
     std::filesystem::path path = _baseAssetPath/std::filesystem::path(filePath);
     auto pathString = path.string();
@@ -14,8 +15,11 @@ void NewResourceManager::LoadResourceFromFile(const char* filePath, const char* 
 
     BaseResource* resource = nullptr;
 
-    if (path.extension() == ".png") resource = new SpriteResource;
-    else if (path.extension() == ".tmx") resource = new TilemapResource;
+    std::string type = resourceType != nullptr ? std::string(resourceType) : path.extension().string();
+
+    if (type == ".png") resource = new SpriteResource;
+    else if (type == ".tmx") resource = new TilemapResource;
+    else if (type == ".sfnt") resource = new SpriteFontResource;
 
     if (resource == nullptr)
     {

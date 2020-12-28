@@ -179,40 +179,6 @@ void AddAtlas(ResourceFileWriter& resourceWriter, const std::string& path, json&
 StringId AddTileSet(ResourceFileWriter& writer, const std::string& fileName, const std::string& resourceName, Vector2 tileSize);
 
 
-void AddSpriteFont(ResourceFileWriter& resourceWriter, const std::string& path, json& data, const std::string& resourceName)
-{
-    SpriteFontDto spriteFontDto;
-    json spriteFontContent;
-
-    if(!path.empty())
-    {
-        std::fstream spriteFontFile(path);
-        spriteFontFile >> spriteFontContent;
-        spriteFontFile.close();
-    }
-    else
-    {
-        spriteFontContent = data;
-    }
-
-    const std::vector<std::string> spriteFontKeys = {"spritePath", "rows", "cols"};
-    CheckForMissingKeys("SpriteFont (*.x2sfnt)", resourceName, spriteFontContent, spriteFontKeys);
-
-    auto spritePath = buildAssetPath(path, spriteFontContent[spriteFontKeys[0]].get<std::string>());
-
-    AddTileSet(resourceWriter, spritePath, spritePath, Vector2(16, 16));
-
-    spriteFontDto.rows = spriteFontContent[spriteFontKeys[1]];
-    spriteFontDto.cols = spriteFontContent[spriteFontKeys[2]];
-    spriteFontDto.spriteName = StringId(spritePath.c_str());
-
-    BinaryStreamWriter writer;
-    spriteFontDto.Write(writer);
-
-    auto& binaryData = writer.GetData();
-    resourceWriter.WriteResource(&binaryData[0], binaryData.size(), resourceName, "spritefont");
-}
-
 StringId AddNineSliceImage(ResourceFileWriter& writer, const std::string& fileName, const std::string& resourceName, Vector2 cornerSize);
 
 void AddNineSlice(ResourceFileWriter& resourceWriter, const std::string& path, json& data, const std::string& resourceName)
@@ -356,7 +322,7 @@ void AddContent(ResourceFileWriter& writer, const json& resources)
                 break;
 
             case "spritefont"_sid:
-                AddSpriteFont( writer, filePath, data, resourceName);
+                //AddSpriteFont( writer, filePath, data, resourceName);
                 break;
 
             case "nineslice"_sid:

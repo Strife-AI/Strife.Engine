@@ -203,16 +203,6 @@ void LoadSpriteAtlas(StringId id, gsl::span<std::byte> data)
         animations.emplace_back(animationDto);
     }
 
-    auto atlas = new SpriteAtlas(
-        atlasSprite,
-        animations,
-        atlasDto.spriteSheet.rows,
-        atlasDto.spriteSheet.cols,
-        atlasDto.topLeftCornerSize.AsVectorOfType<float>(),
-        atlasDto.spriteSheet.cellSize.AsVectorOfType<float>(),
-        atlasDto.atlasType);
-
-    ResourceManager::AddResource(id, atlas, CleanupSpriteAtlas);
 }
 
 
@@ -411,9 +401,6 @@ void LoadSpriteFont(StringId id, gsl::span<std::byte> data)
     spriteFontDto.Read(reader);
 
     auto fontSprite = ResourceManager::GetResource<Sprite>(spriteFontDto.spriteName);
-    auto font = new SpriteFont(fontSprite, spriteFontDto.rows, spriteFontDto.cols);
-
-    ResourceManager::AddResource(id, font, CleanupSpriteFont);
 }
 
 void ResourceManager::LoadResourceFile(BinaryStreamReader& fileReader)

@@ -5,6 +5,7 @@
 #include "Engine.hpp"
 #include "NineSlice.hpp"
 #include "Renderer.hpp"
+#include "Resource/SpriteResource.hpp"
 
 void SpriteAtlas::GetFrame(const int frameIndex, Sprite* outSprite) const
 {
@@ -16,7 +17,7 @@ void SpriteAtlas::GetFrame(const int frameIndex, Sprite* outSprite) const
     const Vector2 cell(col, row);
 
     *outSprite = Sprite(
-        _atlas->GetTexture(),
+        _atlas->sprite.GetTexture(),
         Rectangle(
             cell * (_cellSize + Vector2(8, 8)),
             _cellSize));

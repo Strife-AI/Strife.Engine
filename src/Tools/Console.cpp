@@ -403,7 +403,7 @@ void Console::Render(Renderer* renderer, float deltaTime)
     _autoCompleteResultsTimer -= deltaTime;
 
     auto screenSize = renderer->GetCamera()->ZoomedScreenSize();
-    auto characterSize = _fontSettings.spriteFont->CharacterDimension(_fontSettings.scale);
+    auto characterSize = _fontSettings.spriteFont->GetFont()->CharacterDimension(_fontSettings.scale);
     auto maxCharsPerLine = screenSize.x / characterSize.x;
 
     int textHeight = MaxVisibleLines * characterSize.y;
@@ -455,7 +455,7 @@ void Console::Render(Renderer* renderer, float deltaTime)
     while (y - characterSize.y > 0)
     {
         auto wrappedLine = WrapLine(_lines[lineIndex].c_str(), maxCharsPerLine);
-        auto stringSize = _fontSettings.spriteFont->MeasureStringWithNewlines(wrappedLine.c_str(), _fontSettings.scale);
+        auto stringSize = _fontSettings.spriteFont->GetFont()->MeasureStringWithNewlines(wrappedLine.c_str(), _fontSettings.scale);
         y -= stringSize.y;
         renderer->RenderString(_fontSettings, wrappedLine.c_str(), Vector2(0, y + yOffset), renderLayer);
         --lineIndex;
