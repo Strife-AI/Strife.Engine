@@ -15,14 +15,14 @@ void Read(BinaryStreamReader& reader, Polygoni& shape)
 
 void Write(BinaryStreamWriter& writer, const TilePropertiesDto& properties)
 {
-	writer.WriteInt(properties.spriteResource.key);
+	writer.WriteInt(StringId(properties.spriteResource));
 	Write(writer, properties.bounds);
 	Write(writer, properties.shape);
 }
 
 void Read(BinaryStreamReader& reader, TilePropertiesDto& outProperties)
 {
-	outProperties.spriteResource = StringId(reader.ReadInt());
+	outProperties.spriteResource = std::to_string(reader.ReadInt());
 	Read(reader, outProperties.bounds);
 	Read(reader, outProperties.shape);
 }
