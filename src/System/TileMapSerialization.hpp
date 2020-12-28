@@ -7,6 +7,7 @@
 
 #include "BinaryStreamReader.hpp"
 #include "Math/Rectangle.hpp"
+#include "Memory/StringId.hpp"
 
 class BinaryStreamWriter;
 

@@ -122,6 +122,7 @@ bool UiDictionary::TryGetCustomProperty(const char* key, LabelStyle& outResult) 
 template<>
 bool UiDictionary::TryGetCustomProperty(const char* key, BackgroundStyle& outResult) const
 {
+#if false
     UiDictionary* style = GetValueOrDefault(key, &g_emptyDictionary);
 
     UiDictionary* sprite;
@@ -179,6 +180,9 @@ bool UiDictionary::TryGetCustomProperty(const char* key, BackgroundStyle& outRes
     }
 
     return true;
+#endif
+
+    return false;
 }
 
 UiElementPtr BuildLabel(const UiDictionary& properties)

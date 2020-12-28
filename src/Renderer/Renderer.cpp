@@ -105,6 +105,7 @@ void Renderer::RenderSpriteRepeated(const Sprite* sprite, const Rectangle& bound
 
 void Renderer::RenderNineSlice(const NineSlice* nineSlice, const Rectangle& bounds, float depth)
 {
+#if false
     auto texture = nineSlice->GetSprite()->GetTexture();
     auto cornerSize = nineSlice->CornerSize();
     auto textureCornerSize = cornerSize;
@@ -161,6 +162,7 @@ void Renderer::RenderNineSlice(const NineSlice* nineSlice, const Rectangle& boun
             }
         }
     }
+#endif
 }
 
 void Renderer::RenderThreeSlice(const Sprite* sprite, float cornerXSize, const Rectangle& bounds, float depth, float angle)

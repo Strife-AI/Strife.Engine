@@ -3,7 +3,6 @@
 #include <list>
 
 #include "Math/Rectangle.hpp"
-#include "Memory/ResourceManager.hpp"
 #include "Renderer/Renderer.hpp"
 #include "System/Input.hpp"
 
@@ -35,26 +34,26 @@ struct BackgroundStyle
         type = BackgroundType::Colored;
     }
 
-    void BackgroundNineSlice(Resource<NineSlice> nineSlice_)
-    {
-        nineSlice = nineSlice_;
-        type = BackgroundType::NineSlice;
-    }
-
-    void BackgroundSprite(Resource<Sprite> sprite_)
-    {
-        sprite = sprite_;
-        type = BackgroundType::Sprite;
-    }
+//    void BackgroundNineSlice(Resource<NineSlice> nineSlice_)
+//    {
+//        nineSlice = nineSlice_;
+//        type = BackgroundType::NineSlice;
+//    }
+//
+//    void BackgroundSprite(Resource<Sprite> sprite_)
+//    {
+//        sprite = sprite_;
+//        type = BackgroundType::Sprite;
+//    }
 
     static std::shared_ptr<BackgroundStyle> FromNineSlice(StringId resourceId);
     static std::shared_ptr<BackgroundStyle> FromSprite(StringId resourceId);
-    static std::shared_ptr<BackgroundStyle> FromSprite(Resource<Sprite> sprite);
+    //static std::shared_ptr<BackgroundStyle> FromSprite(Resource<Sprite> sprite);
 
     BackgroundType type = BackgroundType::None;
     Color color;
-    Resource<NineSlice> nineSlice;
-    Resource<Sprite> sprite;
+    //Resource<NineSlice> nineSlice;
+    //Resource<Sprite> sprite;
 };
 
 enum Alignment

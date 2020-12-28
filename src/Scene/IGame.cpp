@@ -18,12 +18,7 @@ void IGame::Run()
 
         _engine->SetLoadResources([=]
         {
-            for(auto& resourcePack : _config.resourcePacks)
-            {
-                BinaryStreamReader reader;
-                reader.Open(resourcePack.c_str());
-                ResourceManager::LoadResourceFile(reader);
-            }
+
         });
 
         if (_config.userConfigFile.has_value())

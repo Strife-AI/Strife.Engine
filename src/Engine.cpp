@@ -6,8 +6,6 @@
 
 #include "Engine.hpp"
 #include "Renderer/Renderer.hpp"
-#include "Scene/Scene.hpp"
-#include "Memory/ResourceManager.hpp"
 #include <thread>
 #include "slikenet/PacketConsoleLogger.h"
 
@@ -19,7 +17,6 @@
 #include "Tools/Console.hpp"
 #include "Tools/PlotManager.hpp"
 #include "Tools/MetricsManager.hpp"
-#include "Scene/SceneManager.hpp"
 #include "Sound/SoundManager.hpp"
 #include "UI/UI.hpp"
 
@@ -57,9 +54,6 @@ Engine::Engine(const EngineConfig& config)
     Log("Initializing engine\n");
 
     Log("Running as %s\n", g_isServer.Value() ? "server" : "client");
-
-    Log("Initializing resource manager\n");
-    ResourceManager::Initialize(this);
 
     _input = Input::GetInstance();
 

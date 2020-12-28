@@ -23,6 +23,7 @@ void SpriteAtlas::GetFrame(const int frameIndex, Sprite* outSprite) const
             _cellSize));
 }
 
+#if false
 const AtlasAnimation* SpriteAtlas::GetAnimation(StringId name) const
 {
     for (int i = 0; i < _animations.size(); ++i)
@@ -105,10 +106,12 @@ void Animator::RenderFullbright(Renderer* renderer, Vector2 position, float dept
     RenderInternal(renderer, _fullbrightAtlas, _currentFullbrightAnimation, position, depth, angle);
 }
 
+#if false
 void Animator::SetSpriteAtlas(Resource<SpriteAtlas> atlas)
 {
     _atlas = atlas;
 }
+#endif
 
 void Animator::Pause()
 {
@@ -170,3 +173,4 @@ void Animator::NextFrame()
 
     RunFrameEnterCallback();
 }
+#endif

@@ -49,6 +49,10 @@ class NewResourceManager
 {
 public:
     void LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType = nullptr);
+    void AddResource(const char* name, BaseResource* resource)
+    {
+        _resourcesByStringId[StringId(name)] = std::unique_ptr<BaseResource>(resource);
+    }
 
     void SetBaseAssetPath(const char* path)
     {

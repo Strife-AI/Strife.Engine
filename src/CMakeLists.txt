@@ -14,9 +14,8 @@ add_library(Strife.Engine STATIC
         
         Math/Polygon.cpp
         Memory/Crc32.cpp
-        
-        Memory/ResourceManager.cpp
-        Physics/Physics.cpp
+
+		Physics/Physics.cpp
         Physics/ColliderHandle.cpp
         Renderer/Renderer.cpp
         Renderer/SdlManager.cpp
