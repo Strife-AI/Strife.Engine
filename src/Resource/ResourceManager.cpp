@@ -1,9 +1,9 @@
-#include "BaseResource.hpp"
+#include "ResourceManager.hpp"
 #include "SpriteResource.hpp"
 #include "TilemapResource.hpp"
 #include "SpriteFontResource.hpp"
 
-void NewResourceManager::LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType)
+void ResourceManager::LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType)
 {
     std::filesystem::path path = _baseAssetPath/std::filesystem::path(filePath);
     auto pathString = path.string();
@@ -37,14 +37,14 @@ void NewResourceManager::LoadResourceFromFile(const char* filePath, const char* 
     }
 }
 
-void NewResourceManager::AddResource(BaseResource* resource, const char* name)
+void ResourceManager::AddResource(BaseResource* resource, const char* name)
 {
     // TODO: check for duplicates
     _resourcesByStringId[StringId(name).key] = std::unique_ptr<BaseResource>(resource);
 }
 
-NewResourceManager* NewResourceManager::GetInstance()
+ResourceManager* ResourceManager::GetInstance()
 {
-    static NewResourceManager resourceManager;
+    static ResourceManager resourceManager;
     return &resourceManager;
 }

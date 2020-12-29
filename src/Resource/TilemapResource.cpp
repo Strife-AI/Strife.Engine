@@ -179,7 +179,7 @@ StringId AddEdgePadding(SDL_Surface* rawSurface, const std::string& resourceName
         }
     }
 
-    auto resourceManager = NewResourceManager::GetInstance();
+    auto resourceManager = ResourceManager::GetInstance();
     std::string file = (resourceManager->GetBaseAssetPath()/"temp.png").string();
 
     int r = IMG_SavePNG(result, file.c_str());

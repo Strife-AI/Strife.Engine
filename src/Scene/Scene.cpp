@@ -1,4 +1,4 @@
-#include <Resource/BaseResource.hpp>
+#include <Resource/ResourceManager.hpp>
 #include <Resource/TilemapResource.hpp>
 #include "Scene.hpp"
 #include "Engine.hpp"

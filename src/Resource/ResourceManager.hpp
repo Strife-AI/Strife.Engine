@@ -45,7 +45,7 @@ TResource* BaseResource::Get()
     }
 }
 
-class NewResourceManager
+class ResourceManager
 {
 public:
     void LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType = nullptr);
@@ -74,7 +74,7 @@ public:
         return GetResourceByStringId(StringId(name));
     }
 
-    static NewResourceManager* GetInstance();
+    static ResourceManager* GetInstance();
     bool EnableDefaultAssets() const { return _replaceWithDefault; }
 
 private:
@@ -88,7 +88,7 @@ private:
 template<typename TResource>
 TResource* GetResource(const char* name, bool isFatal = true)
 {
-    auto instance = NewResourceManager::GetInstance();
+    auto instance = ResourceManager::GetInstance();
     auto resource = instance->GetResourceByName(name);
     if (resource != nullptr)
     {
@@ -115,7 +115,7 @@ TResource* GetResource(const char* name, bool isFatal = true)
 template<typename TResource>
 TResource* GetResource(StringId id, bool isFatal = true)
 {
-    auto instance = NewResourceManager::GetInstance();
+    auto instance = ResourceManager::GetInstance();
     auto resource = instance->GetResourceByStringId(id);
     if (resource != nullptr)
     {

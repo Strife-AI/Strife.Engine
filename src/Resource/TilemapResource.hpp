@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BaseResource.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/MapSegment.hpp"
 
 struct TilemapResource : BaseResource
