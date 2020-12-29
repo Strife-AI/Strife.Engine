@@ -157,11 +157,11 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
         char text[1024];
         sprintf(text, "Time elapsed: %f hours", scene->relativeTime / 60.0f / 60.0f);
 
-        renderer->RenderString(
-            FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid)),
-            text,
-            Vector2(200, 200),
-            -1);
+//        renderer->RenderString(
+//            FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid)),
+//            text,
+//            Vector2(200, 200),
+//            -1);
     }
 
     renderer->RenderSpriteBatch();

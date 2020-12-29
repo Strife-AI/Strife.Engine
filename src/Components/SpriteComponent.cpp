@@ -2,7 +2,7 @@
 
 #include "Renderer.hpp"
 
-SpriteComponent::SpriteComponent(StringId spriteName)
+SpriteComponent::SpriteComponent(const char* spriteName)
 {
     SetSprite(spriteName);
 }
@@ -10,8 +10,8 @@ SpriteComponent::SpriteComponent(StringId spriteName)
 void SpriteComponent::Render(Renderer* renderer)
 {
     renderer->RenderSprite(
-        sprite.Value(),
-        owner->Center() + offsetFromCenter - sprite->Bounds().Size() * scale / 2,
+        &sprite->sprite,
+        owner->Center() + offsetFromCenter - sprite->sprite.Bounds().Size() * scale / 2,
         depth,
         scale,
         owner->Rotation(),
@@ -19,7 +19,7 @@ void SpriteComponent::Render(Renderer* renderer)
         blendColor);
 }
 
-void SpriteComponent::SetSprite(StringId name)
+void SpriteComponent::SetSprite(const char* name)
 {
-    sprite = ResourceManager::GetResource<Sprite>(name);
+    sprite = GetResource<SpriteResource>(name);
 }

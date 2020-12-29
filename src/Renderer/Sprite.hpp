@@ -13,7 +13,7 @@ public:
     }
 
     explicit Sprite(Texture* texture, const Rectangle& bounds);
-    explicit Sprite(Texture* texture, const Rectangle& bounds, const Rectangle& uvBounds, bool expandInwards = true);
+    explicit Sprite(Texture* texture, const Rectangle& bounds, const Rectangle& uvBounds);
 
     const Rectangle Bounds() const { return _bounds; }
     Texture* GetTexture() const { return _texture; }

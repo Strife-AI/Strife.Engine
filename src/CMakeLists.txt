@@ -14,9 +14,8 @@ add_library(Strife.Engine STATIC
         
         Math/Polygon.cpp
         Memory/Crc32.cpp
-        
-        Memory/ResourceManager.cpp
-        Physics/Physics.cpp
+
+		Physics/Physics.cpp
         Physics/ColliderHandle.cpp
         Renderer/Renderer.cpp
         Renderer/SdlManager.cpp
@@ -153,7 +152,7 @@ add_library(Strife.Engine STATIC
         "Physics/PathFinding.cpp"
         "Scene/EntityManager.cpp"
         
-     "Net/ServerGame.cpp" "ML/ML.hpp" "ML/ML.cpp" Components/PathFollowerComponent.cpp Components/PathFollowerComponent.hpp Components/LightComponent.hpp Net/FileTransfer.hpp Net/FileTransfer.cpp)
+     "Net/ServerGame.cpp" "ML/ML.hpp" "ML/ML.cpp" Components/PathFollowerComponent.cpp Components/PathFollowerComponent.hpp Components/LightComponent.hpp Net/FileTransfer.hpp Net/FileTransfer.cpp Resource/ResourceManager.hpp Resource/SpriteResource.hpp Resource/SpriteResource.cpp Resource/ResourceManager.cpp Resource/TilemapResource.hpp Resource/TilemapResource.cpp Resource/SpriteFontResource.hpp Resource/SpriteFontResource.cpp)
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
@@ -193,7 +192,7 @@ target_compile_definitions(Strife.Engine PUBLIC IMGUI_IMPL_OPENGL_LOADER_GL3W)
 
 find_package(Microsoft.GSL CONFIG REQUIRED)
 target_link_libraries(Strife.Engine PRIVATE Microsoft.GSL::GSL)
-
+target_link_libraries(Strife.Engine PUBLIC tmxlite)
 
 set_property(TARGET Strife.Engine PROPERTY CXX_STANDARD 17)
 
