@@ -1,5 +1,6 @@
 #include "FileTransfer.hpp"
 #include "Engine.hpp"
+#include "System/FileSystem.hpp"
 
 DEFINE_RPC(UploadFileRpc)
 {
@@ -40,16 +41,16 @@ DEFINE_RPC(UploadFileResultRpc)
     bool successful;
 };
 
-bool FileTransferService::TryUploadFile(const FileTransferService::Path& path, SLNet::AddressOrGUID serverAddress)
+bool FileTransferService::TryUploadFile(const char* path, SLNet::AddressOrGUID serverAddress)
 {
     std::vector<unsigned char> fileContents;
-    if (!TryReadFileContents(path.c_str(), fileContents))
+    if (!TryReadFileContents(path, fileContents))
     {
         return false;
     }
 
     UploadFileRpc rpc;
-    rpc.fileName = path.filename().c_str();
+    rpc.fileName = path;
     rpc.contents = std::move(fileContents);
 
     Log("Uploading file...\n");
