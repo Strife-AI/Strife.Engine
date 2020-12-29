@@ -1,4 +1,4 @@
-#include <Resource/BaseResource.hpp>
+#include <Resource/ResourceManager.hpp>
 #include "IGame.hpp"
 #include "Engine.hpp"
 #include "SceneManager.hpp"

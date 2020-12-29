@@ -3,7 +3,7 @@
 #include <optional>
 
 #include "Renderer/SpriteFont.hpp"
-#include "BaseResource.hpp"
+#include "ResourceManager.hpp"
 
 struct SpriteFontResource : BaseResource
 {

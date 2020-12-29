@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Renderer/Sprite.hpp"
-#include "BaseResource.hpp"
+#include "ResourceManager.hpp"
 
 struct SpriteResource : BaseResource
 {
