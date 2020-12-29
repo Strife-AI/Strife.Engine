@@ -4,6 +4,7 @@
 #include "BinaryStreamReader.hpp"
 #include "FileSystem.hpp"
 #include "Memory/Cipher.hpp"
+#include "Logger.hpp"
 
 void BinaryStreamReader::Open(const char* fileName)
 {

@@ -1,7 +1,8 @@
 #pragma once
+
+#include <Resource/SpriteResource.hpp>
 #include "Renderer/Color.hpp"
 #include "Renderer/Sprite.hpp"
-#include "Memory/ResourceManager.hpp"
 #include "Scene/EntityComponent.hpp"
 
 enum class SpriteComponentFlags
@@ -14,13 +15,13 @@ enum class SpriteComponentFlags
 DEFINE_COMPONENT(SpriteComponent)
 {
     SpriteComponent() = default;
-    SpriteComponent(StringId spriteName);
+    SpriteComponent(const char* spriteName);
 
     void Render(Renderer* renderer) override;
 
-    void SetSprite(StringId name);
+    void SetSprite(const char* name);
 
-    Resource<Sprite> sprite;
+    SpriteResource* sprite;
     Vector2 offsetFromCenter;
     float depth = 0;
     Vector2 scale = Vector2::Unit();

@@ -7,6 +7,7 @@
 
 #include "BinaryStreamReader.hpp"
 #include "Math/Rectangle.hpp"
+#include "Memory/StringId.hpp"
 
 class BinaryStreamWriter;
 
@@ -17,7 +18,7 @@ struct TilePropertiesDto
 	    
 	}
 
-	TilePropertiesDto(StringId spriteResource_, const Rectanglei& bounds_, const Polygoni& shape_)
+	TilePropertiesDto(const std::string& spriteResource_, const Rectanglei& bounds_, const Polygoni& shape_)
 	    : spriteResource(spriteResource_),
 	    bounds(bounds_),
 	    shape(shape_)
@@ -25,7 +26,7 @@ struct TilePropertiesDto
 	    
 	}
 
-	StringId spriteResource;
+	std::string spriteResource;
 	Rectanglei bounds;
 
 	Polygoni shape;
@@ -33,7 +34,7 @@ struct TilePropertiesDto
 
 struct ImportTileProperties
 {
-	ImportTileProperties(StringId spriteResource_, uint32_t id_, const Rectanglei& bounds_, const Polygoni& shape_, int serializationId_)
+	ImportTileProperties(const std::string& spriteResource_, uint32_t id_, const Rectanglei& bounds_, const Polygoni& shape_, int serializationId_)
 		: spriteResource(spriteResource_),
 		id(id_),
 	    bounds(bounds_),
@@ -48,7 +49,7 @@ struct ImportTileProperties
 		return TilePropertiesDto(spriteResource, bounds, shape);
 	}
 
-	StringId spriteResource;
+	std::string spriteResource;
 	uint32_t id;
 
 	Rectanglei bounds;

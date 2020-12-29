@@ -7,17 +7,17 @@
 #include "Color.hpp"
 #include "Memory/StringId.hpp"
 #include "Math/Vector2.hpp"
-#include "Memory/ResourceManager.hpp"
 #include "System/SpriteAtlasSerialization.hpp"
 
 class Renderer;
 class Sprite;
 struct AtlasAnimation;
+struct SpriteResource;
 
 class SpriteAtlas
 {
 public:
-    SpriteAtlas(Resource<Sprite> atlas,
+    SpriteAtlas(SpriteResource* atlas,
         const std::vector<AtlasAnimation>& animations,
         int rows,
         int cols,
@@ -39,7 +39,7 @@ public:
     const AtlasAnimation* GetAnimation(StringId name) const;
 
 private:
-    const Resource<Sprite> _atlas;
+    SpriteResource* _atlas;
     const std::vector<AtlasAnimation> _animations;
     const int _rows;
     const int _cols;
@@ -124,9 +124,11 @@ struct AnimationFrameCallback
     std::function<void()> callback;
 };
 
+#if false
 class Animator
 {
 public:
+#if false
     explicit Animator(Resource<SpriteAtlas> atlas)
         : _atlas(atlas),
           _currentAnimation(nullptr),
@@ -134,11 +136,13 @@ public:
           _currentFullbrightAnimation(nullptr)
     {
     }
+#endif
 
     Animator()
     {
     }
 
+#if false
     Animator(Resource<SpriteAtlas> atlas, Resource<SpriteAtlas> fullbrightAtlas)
         : _atlas(atlas),
         _fullbrightAtlas(fullbrightAtlas),
@@ -147,6 +151,7 @@ public:
     {
 
     }
+#endif
 
     StringId CurrentAnimation() const
     {
@@ -171,7 +176,7 @@ public:
     void Render(Renderer* renderer, Vector2 position, float depth, float angle = 0);
     void RenderFullbright(Renderer* renderer, Vector2 position, float depth, float angle = 0);
 
-    void SetSpriteAtlas(Resource<SpriteAtlas> atlas);
+//    void SetSpriteAtlas(Resource<SpriteAtlas> atlas);
     void Pause();
     void Resume();
     void GetCurrentFrame(Sprite& outFrame) const;
@@ -193,8 +198,8 @@ private:
 
     void RenderInternal(Renderer* renderer, Resource<SpriteAtlas> atlas, const AtlasAnimation* currentAnimation, Vector2 position, float depth, float angle);
 
-    Resource<SpriteAtlas> _atlas = nullptr;
-    Resource<SpriteAtlas> _fullbrightAtlas = nullptr;
+    //Resource<SpriteAtlas> _atlas = nullptr;
+    //Resource<SpriteAtlas> _fullbrightAtlas = nullptr;
 
     const AtlasAnimation* _currentAnimation = nullptr;
     const AtlasAnimation* _currentFullbrightAnimation = nullptr;
@@ -215,3 +220,4 @@ private:
 
     std::vector<AnimationFrameCallback> _frameCallbacks;
 };
+#endif

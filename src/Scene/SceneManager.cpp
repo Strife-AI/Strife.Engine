@@ -1,4 +1,5 @@
 #include <chrono>
+#include <Resource/TilemapResource.hpp>
 #include "Tools/Console.hpp"
 #include "Engine.hpp"
 
@@ -22,7 +23,7 @@ void MapCmd(ConsoleCommandBinder& binder)
     binder.Help("Change scene to specified map.");
 
     // TODO: map command for server mode
-    binder.GetEngine()->StartLocalServer(port, StringId(mapName));
+    binder.GetEngine()->StartLocalServer(port, mapName.c_str());
 }
 ConsoleCmd mapCmd("map", MapCmd);
 
@@ -31,22 +32,22 @@ SceneManager::SceneManager(Engine* engine, bool isServer)
     _scene(new Scene(engine, ""_sid, isServer)),
     _isServer(isServer)
 {
-    auto emptyMapSegment = new MapSegment;
-    emptyMapSegment->name = "empty-map"_sid;
-    ResourceManager::AddResource("empty-map"_sid, emptyMapSegment);
+    auto emptyMapSegment = new TilemapResource;
+    emptyMapSegment->name = "empty-map";
+    ResourceManager::GetInstance()->AddResource("empty-map", emptyMapSegment);
 }
 
-bool SceneManager::TrySwitchScene(StringId name)
+bool SceneManager::TrySwitchScene(const char* name)
 {
-    Resource<MapSegment> mapSegment;
-    if (ResourceManager::TryGetResource(name, mapSegment))
+    TilemapResource* tilemap = GetResource<TilemapResource>(name, false);
+    if (tilemap != nullptr)
     {
-        BuildNewScene(mapSegment.Value());
+        BuildNewScene(&tilemap->mapSegment);
         return true;
     }
     else
     {
-        Log("Failed to load map %s\n", name.ToString());
+        Log("Failed to load map %s\n", name);
         return false;
     }
 }
@@ -63,4 +64,19 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
     _scene->LoadMapSegment(*mapSegment);
 
     _scene->SendEvent(SceneLoadedEvent());
+}
+
+bool SceneManager::TrySwitchScene(StringId id)
+{
+    TilemapResource* tilemap = GetResource<TilemapResource>(id, false);
+    if (tilemap != nullptr)
+    {
+        BuildNewScene(&tilemap->mapSegment);
+        return true;
+    }
+    else
+    {
+        Log("Failed to load map %s\n", id.ToString());
+        return false;
+    }
 }

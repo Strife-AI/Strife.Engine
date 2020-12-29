@@ -201,7 +201,6 @@ void UiCanvas::Render(Renderer* renderer)
 
 static SoundEmitter menuEmitter;
 
-Resource<SoundEffect> UiCanvas::changeSelectedItem;
 
 void UiCanvas::Update(Input* input, float deltaTime)
 {
@@ -278,7 +277,7 @@ void UiCanvas::Update(Input* input, float deltaTime)
 
     if (playChangeSound)
     {
-        menuEmitter.channels[0].PlayGlobal(changeSelectedItem.Value(), 0, 1);
+        //menuEmitter.channels[0].PlayGlobal(changeSelectedItem.Value(), 0, 1);
     }
 
     _rootRootPanel->Update(input, deltaTime);

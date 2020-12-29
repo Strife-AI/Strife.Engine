@@ -1,3 +1,5 @@
+#include <Resource/ResourceManager.hpp>
+#include <Resource/TilemapResource.hpp>
 #include "Scene.hpp"
 #include "Engine.hpp"
 #include "Physics/Physics.hpp"
@@ -193,10 +195,10 @@ SoundManager* Scene::GetSoundManager() const
     return _engine->GetSoundManager();
 }
 
-void Scene::LoadMapSegment(StringId id)
+void Scene::LoadMapSegment(const char* name)
 {
-    auto mapSegment = ResourceManager::GetResource<MapSegment>(id);
-    LoadMapSegment(*mapSegment.Value());
+    auto mapSegment = GetResource<TilemapResource>(name);
+    LoadMapSegment(mapSegment->mapSegment);
 }
 
 void Scene::LoadMapSegment(const MapSegment& segment)

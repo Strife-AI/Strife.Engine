@@ -1,6 +1,7 @@
 #include "FrameBuffer.hpp"
 #include "GL/gl3w.h"
 #include "System/BinaryStreamReader.hpp"
+#include "System/Logger.hpp"
 
 FrameBuffer::FrameBuffer(TextureFormat format, TextureDataType dataType, int width, int height)
     : _colorBuffer(format, dataType, width, height)

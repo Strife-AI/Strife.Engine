@@ -9,7 +9,7 @@ Sprite::Sprite(Texture* texture, const Rectangle& bounds)
 
 }
 
-Sprite::Sprite(Texture* texture, const Rectangle& bounds, const Rectangle& uvBounds, bool expandInwards)
+Sprite::Sprite(Texture* texture, const Rectangle& bounds, const Rectangle& uvBounds)
     : _texture(texture),
     _bounds(bounds),
     _uvBounds(uvBounds.TopLeft() / texture->Size(), (uvBounds.Size()) / texture->Size())
