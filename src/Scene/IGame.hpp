@@ -51,7 +51,7 @@ struct GameConfig
 
     StringId defaultScene = "empty-map"_sid;
     std::string gameName;
-    std::string windowCaption;
+    std::optional<std::string> windowCaption;
     std::optional<std::string> userConfigFile;
     std::optional<std::string> devConsoleFont;
     std::vector<std::string> resourcePacks;

@@ -41,11 +41,10 @@ public:
 
     void SetScreenSize(int w, int h);
 
-    void EnableFullscreen();
-    void DisableFullscreen();
+    void SetWindowCaption(const char* title);
 
-    void EnableVsync();
-    void DisableVsync();
+    void SetFullscreen(bool isFullscreen);
+    void SetVsync(bool isEnabled);
 
     void HideCursor();
     void DisplayCursor();
@@ -68,4 +67,6 @@ private:
 
     bool _receivedQuit = false;
     bool _cursorVisible = true;
+
+    SDL_WindowFlags fullscreenType = SDL_WINDOW_FULLSCREEN;
 };
