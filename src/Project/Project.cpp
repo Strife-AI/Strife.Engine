@@ -1,0 +1,92 @@
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include "System/Logger.hpp"
+
+#include "Project.hpp"
+
+using namespace nlohmann;
+
+json LoadJsonFromFile(const std::filesystem::path& path)
+{
+    std::fstream file(path.string());
+    if (file.bad())
+    {
+        file.close();
+        FatalError("Failed to open file %s", path.c_str());
+    }
+
+    json content;
+    file >> content;
+    file.close();
+
+    return content;
+}
+
+Project::Project(const std::filesystem::path& path)
+{
+    auto content = LoadJsonFromFile(path);
+    Project project;
+
+    // Populate with resources
+    for (auto& resource : content["resources"].get<std::vector<json>>())
+    {
+        if (resource["type"].get<std::string>() == "prefab")
+        {
+            auto prefabFilePath = path.parent_path() / resource["path"].get<std::string>();
+            auto prefabFileContent = LoadJsonFromFile(prefabFilePath);
+
+            PrefabModel model;
+            for (const auto& property : prefabFileContent["properties"].get<std::vector<json>>())
+            {
+                model.properties.emplace_back(property["name"].get<std::string>(), property["value"].get<std::string>());
+            }
+
+            prefabs[StringId(resource["name"].get<std::string>())] = model;
+        }
+    }
+
+    // Generate scene models
+    for (auto& scene : content["scenes"].get<std::vector<json>>())
+    {
+        auto scenePath = path.parent_path() / scene["path"].get<std::string>();
+        auto sceneContent = LoadJsonFromFile(scenePath);
+
+        SceneModel sceneModel;
+        for (auto& entity : sceneContent["entities"].get<std::vector<json>>())
+        {
+            EntityModel model;
+
+            if (entity.contains("prefab"))
+            {
+                auto fabModel = prefabs[StringId(entity["prefab"].get<std::string>())];
+                for (auto& property : fabModel.properties)
+                {
+                    model.properties[property.first] = property.second;
+                }
+            }
+
+            if (entity.contains("properties"))
+            {
+                for (auto& property : entity["properties"].get<std::vector<json>>())
+                {
+                    model.properties[property["name"].get<std::string>()] = property["value"].get<std::string>();
+                }
+            }
+
+            sceneModel.entities.push_back(model);
+        }
+
+        scenes[StringId(sceneContent["name"].get<std::string>())] = sceneModel;
+    }
+}
+
+bool Project::TryGetScene(StringId name, SceneModel* sceneModel)
+{
+    if (scenes.find(name) != scenes.end())
+    {
+        sceneModel = &scenes[name];
+        return true;
+    }
+
+    return false;
+}

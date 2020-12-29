@@ -161,7 +161,9 @@ add_library(Strife.Engine STATIC
 		Components/PathFollowerComponent.hpp
 		Components/LightComponent.hpp
 		Net/FileTransfer.hpp
-		Net/FileTransfer.cpp)
+		Net/FileTransfer.cpp
+		Project/Project.cpp
+		Project/Project.hpp)
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
