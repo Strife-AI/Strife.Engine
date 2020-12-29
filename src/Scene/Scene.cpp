@@ -201,9 +201,9 @@ void Scene::LoadMapSegment(StringId id)
 
 void Scene::LoadMapSegment(const MapSegment& segment)
 {
-    // TODO: load entities from the editor
     auto tileMap = CreateEntity<TilemapEntity>({ 0, 0 });
     tileMap->SetMapSegment(segment);
+
 }
 
 void Scene::StartTimer(float timeSeconds, const std::function<void()>& callback)
