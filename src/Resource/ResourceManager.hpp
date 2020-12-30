@@ -18,22 +18,30 @@ struct ResourceSettings
 };
 
 
-class BaseResource
+struct BaseResource
 {
 public:
     virtual bool LoadFromFile(const ResourceSettings& settings) { return false; }
 
     template<typename TResource>
-    TResource* Get();
+    TResource* As();
 
     static BaseResource* GetDefaultResource() { return nullptr; }
 
     std::string name;
-private:
+};
+
+template<typename T>
+struct ResourceTemplate : BaseResource
+{
+    T& Get() { return _resource.value(); }
+
+protected:
+    std::optional<T> _resource;
 };
 
 template<typename TResource>
-TResource* BaseResource::Get()
+TResource* BaseResource::As()
 {
     if (auto result = dynamic_cast<TResource*>(this))
     {
@@ -92,13 +100,13 @@ TResource* GetResource(const char* name, bool isFatal = true)
     auto resource = instance->GetResourceByName(name);
     if (resource != nullptr)
     {
-        return resource->Get<TResource>();
+        return resource->As<TResource>();
     }
     else if (instance->EnableDefaultAssets())
     {
         if (auto defaultResource = TResource::GetDefaultResource())
         {
-            return defaultResource->template Get<TResource>();
+            return defaultResource->template As<TResource>();
         }
     }
 
@@ -119,13 +127,13 @@ TResource* GetResource(StringId id, bool isFatal = true)
     auto resource = instance->GetResourceByStringId(id);
     if (resource != nullptr)
     {
-        return resource->Get<TResource>();
+        return resource->As<TResource>();
     }
     else if (instance->EnableDefaultAssets())
     {
         if (auto defaultResource = TResource::GetDefaultResource())
         {
-            return defaultResource->template Get<TResource>();
+            return defaultResource->template As<TResource>();
         }
     }
 
