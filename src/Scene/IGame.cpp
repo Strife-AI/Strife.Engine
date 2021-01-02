@@ -13,9 +13,9 @@ void IGame::Run()
         EngineConfig config;
         ConfigureEngine(config);
         _engine = std::make_unique<Engine>(config);
-        _engine->SetGame(this);
 
         ConfigureGame(_config);
+        _engine->SetGame(this);
 
         _engine->SetLoadResources([=]
         {

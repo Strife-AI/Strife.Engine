@@ -15,7 +15,7 @@ bool ShaderResource::LoadFromFile(const ResourceSettings& settings)
     std::string fragmentShader;
 
     std::ifstream file(settings.path);
-    if (file.is_open())
+    if (!file.is_open())
     {
         return false;
     }
@@ -35,9 +35,11 @@ bool ShaderResource::LoadFromFile(const ResourceSettings& settings)
             {
             case ShaderType::Vertex:
                 vertexShader += "\n" + line;
+                type = ShaderType::Vertex;
                 break;
             case ShaderType::Fragment:
                 fragmentShader += "\n" + line;
+                type = ShaderType::Fragment;
                 break;
             default:
                 Log("Forgot to set shader type to vertex or fragment\n");

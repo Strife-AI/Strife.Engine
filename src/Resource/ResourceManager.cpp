@@ -2,6 +2,7 @@
 #include "SpriteResource.hpp"
 #include "TilemapResource.hpp"
 #include "SpriteFontResource.hpp"
+#include "ShaderResource.hpp"
 
 void ResourceManager::LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType)
 {
@@ -20,6 +21,7 @@ void ResourceManager::LoadResourceFromFile(const char* filePath, const char* res
     if (type == ".png") resource = new SpriteResource;
     else if (type == ".tmx") resource = new TilemapResource;
     else if (type == ".sfnt") resource = new SpriteFontResource;
+    else if (type == ".shader") resource = new ShaderResource;
 
     if (resource == nullptr)
     {
