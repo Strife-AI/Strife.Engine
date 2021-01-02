@@ -188,6 +188,8 @@ public:
 		return _componentManager;
 	}
 
+    void RenderEntities(Renderer* renderer);
+
 	float deltaTime = 0;
 	float relativeTime = 0;
 	float absoluteTime = 0;
@@ -216,8 +218,6 @@ private:
 	void DestroyScheduledEntities();
 
 	void UpdateEntities(float deltaTime);
-
-	void RenderEntities(Renderer* renderer);
 
 	void RenderHud(Renderer* renderer);
 

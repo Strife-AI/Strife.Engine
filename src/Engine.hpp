@@ -55,10 +55,7 @@ public:
     bool ActiveGame() { return _activeGame; }
     void QuitGame() { _activeGame = false; }
 
-    void SetGame(IGame* game)
-    {
-        _game = game;
-    }
+    void SetGame(IGame* game);
 
     IGame* Game() { return _game; }
 

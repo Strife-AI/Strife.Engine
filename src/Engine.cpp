@@ -66,13 +66,6 @@ Engine::Engine(const EngineConfig& config)
 
     _metricsManager = std::make_unique<MetricsManager>();
 
-    if(!g_isServer.Value())
-    {
-        Log("Initializing renderer\n");
-        _renderer = std::make_unique<Renderer>();
-        WindowSizeChangedEvent(_sdlManager->WindowSize().x, _sdlManager->WindowSize().y).Send();
-    }
-
     Log("Initializing sound\n");
     _soundManager = std::make_unique<SoundManager>(g_isServer.Value());
 
@@ -293,6 +286,18 @@ void Engine::StartSinglePlayerGame(const char* mapName)
     auto peerInterface = SLNet::RakPeerInterface::GetInstance();
     _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("0.0.0.3", 1)));
     _clientGame->sceneManager.TrySwitchScene(mapName);
+}
+
+void Engine::SetGame(IGame* game)
+{
+    _game = game;
+
+    if(!g_isServer.Value())
+    {
+        Log("Initializing renderer\n");
+        _renderer = std::make_unique<Renderer>();
+        WindowSizeChangedEvent(_sdlManager->WindowSize().x, _sdlManager->WindowSize().y).Send();
+    }
 }
 
 static void ReloadResources(ConsoleCommandBinder& binder)

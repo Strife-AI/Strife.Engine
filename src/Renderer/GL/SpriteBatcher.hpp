@@ -79,7 +79,7 @@ struct TransparentObject
         : z(z_),
         customRenderer(renderer)
     {
-        
+
     }
 
     bool operator<(const TransparentObject& rhs) const
@@ -92,6 +92,8 @@ struct TransparentObject
     float z;
     const ICustomTransparencyRenderer* customRenderer = nullptr;
 };
+
+struct SpriteShader;
 
 class SpriteBatcher
 {
@@ -107,9 +109,10 @@ public:
     void Render();
     void RenderPolygon(Polygon& polygon, Texture* texture);
 
-private:
     static constexpr int MaxVerticesPerBatch = 65536 * 2;
     static constexpr int MaxElementsPerBatch = MaxVerticesPerBatch * 4;
+
+private:
 
     static constexpr int VertexLocation = 0;
     static constexpr int TextureCoordLocation = 1;

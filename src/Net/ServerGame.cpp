@@ -139,7 +139,6 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
 
     auto camera = scene->GetCamera();
     renderer->BeginRender(scene, camera, Vector2(0, 0), renderDeltaTime, scene->relativeTime);
-    scene->RenderEntities(renderer);
 
     scene->SendEvent(RenderImguiEvent());
 
