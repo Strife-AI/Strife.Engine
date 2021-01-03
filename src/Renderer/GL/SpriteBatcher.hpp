@@ -122,8 +122,6 @@ private:
 
     SpriteShader* _shader;
 
-    unsigned int ebo;
-
     int _viewMatrixLocation;
 
     FixedSizeVector<Texture*, 512> _texturesRenderedThisFrame;
