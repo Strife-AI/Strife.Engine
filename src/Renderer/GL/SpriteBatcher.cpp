@@ -163,8 +163,8 @@ struct Vbo : IGraphicsObject
 
         switch (type)
         {
-        case VboType::Vertex: glType = GL_ARRAY_BUFFER;
-        case VboType::Element: glType = GL_ELEMENT_ARRAY_BUFFER;
+        case VboType::Vertex: glType = GL_ARRAY_BUFFER; break;
+        case VboType::Element: glType = GL_ELEMENT_ARRAY_BUFFER; break;
         default: FatalError("Unknown vbo type: %d\n", (int)type);
         }
 
@@ -251,6 +251,8 @@ struct BaseShader
         glBindVertexArray(vao);
     }
 
+    int ProgramId() const { return shader->ProgramId(); }
+
     template<typename T>
     Vbo<T>* CreateBuffer(int count, VboType type)
     {
@@ -262,13 +264,15 @@ struct BaseShader
     template<typename T, typename TSelector>
     void BindVertexAttribute(const char* name, Vbo<T>* vbo, const TSelector& selector)
     {
-        using ElementType = decltype(selector((T*)nullptr));
-        static_assert(std::is_pointer_v<ElementType>, "Return value to selector must be pointer");
+        using ElementPointerType = decltype(selector((T*)nullptr));
+        static_assert(std::is_pointer_v<ElementPointerType>, "Return value to selector must be pointer");
+        using ElementType = typename std::remove_pointer<ElementPointerType>::type;
 
         int stride = sizeof(T);
-        int offset = (unsigned char*)selector((T*)nullptr) - (unsigned char*)nullptr;
+        size_t offset = (size_t)selector((T*)nullptr);
 
-        auto attributeLocation = glGetAttribLocation(shader->ProgramId(), name);
+        auto attributeLocation = glGetAttribLocation(ProgramId(), name);
+        Log("Location: %d\n", attributeLocation);
 
         glEnableVertexAttribArray(attributeLocation);
         auto typeMetadata = GetOpenGlTypeMetadata<ElementType>();
@@ -278,7 +282,7 @@ struct BaseShader
     template<typename T>
     ShaderUniform<T> GetUniform(const char* name)
     {
-        int id = glGetUniformLocation(shader->ProgramId(), name);
+        int id = glGetUniformLocation(ProgramId(), name);
         return ShaderUniform<T>(id);
     }
 
@@ -292,14 +296,14 @@ struct SpriteShader : BaseShader
     SpriteShader(Shader* shader)
         : BaseShader(shader)
     {
-        vertices = CreateBuffer<RenderVertex>(SpriteBatcher::MaxVerticesPerBatch, VboType::Vertex);
         ebo = CreateBuffer<int>(SpriteBatcher::MaxElementsPerBatch, VboType::Element);
+        vertices = CreateBuffer<RenderVertex>(SpriteBatcher::MaxVerticesPerBatch, VboType::Vertex);
 
         BindVertexAttribute("aPos", vertices, [=](auto rv) { return &rv->position; });
-        BindVertexAttribute("texCoord", vertices, [=](auto rv) { return &rv->textureCoord; });
+        BindVertexAttribute("textureCoord", vertices, [=](auto rv) { return &rv->textureCoord; });
         BindVertexAttribute("color", vertices, [=](auto rv) { return &rv->color; });
 
-        view = GetUniform<glm::mat4>("view");
+//        view = GetUniform<glm::mat4>("view");
     }
 
     Vbo<RenderVertex>* vertices;
@@ -310,27 +314,13 @@ struct SpriteShader : BaseShader
 
 void SpriteBatcher::Initialize(Shader* shader)
 {
-    _shader = shader;
+    _shader = new SpriteShader(shader);
 
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    glGenBuffers(1, &spriteVerticesVbo);
-    glBindBuffer(GL_ARRAY_BUFFER, spriteVerticesVbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(RenderVertex) * MaxVerticesPerBatch, nullptr, GL_DYNAMIC_DRAW);
+    _viewMatrixLocation = glGetUniformLocation(shader->ProgramId(), "view");
 
     glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int) * MaxElementsPerBatch, nullptr, GL_DYNAMIC_DRAW);
-
-    glEnableVertexAttribArray(VertexLocation);
-    glVertexAttribPointer(VertexLocation, 3, GL_FLOAT, GL_FALSE, sizeof(RenderVertex), (void*)offsetof(RenderVertex, position));
-
-    glEnableVertexAttribArray(TextureCoordLocation);
-    glVertexAttribPointer(TextureCoordLocation, 2, GL_FLOAT, GL_FALSE, sizeof(RenderVertex), (void*)offsetof(RenderVertex, textureCoord));
-
-    glEnableVertexAttribArray(ColorLocation);
-    glVertexAttribPointer(ColorLocation, 4, GL_FLOAT, GL_FALSE, sizeof(RenderVertex), (void*)offsetof(RenderVertex, color));
 
     glBindVertexArray(0);
     glBindBuffer(GL_VERTEX_ARRAY, 0);
@@ -351,14 +341,14 @@ void SpriteBatcher::Initialize(Shader* shader)
 void SpriteBatcher::Render()
 {
     glViewport(0, 0, _camera->ScreenSize().x, _camera->ScreenSize().y);
-    glBindVertexArray(vao);
-    _shader->Use();
+    glBindVertexArray(_shader->vao);
+    _shader->shader->Use();
 
     glUniformMatrix4fv(_viewMatrixLocation, 1, GL_FALSE, &_camera->ViewMatrix()[0][0]);
 
     glUniform1i(glGetUniformLocation(_shader->ProgramId(), "spriteTexture"), 0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, spriteVerticesVbo);
+    glBindBuffer(GL_ARRAY_BUFFER, _shader->vertices->id);
     glBufferSubData(
         GL_ARRAY_BUFFER,
         _vertexResetSize * sizeof(RenderVertex),
@@ -444,8 +434,6 @@ void SpriteBatcher::RenderPolygon(Polygon& polygon, Texture* texture)
             }
         }
 
-        Render();
-
         return;
     }
 
@@ -472,8 +460,6 @@ void SpriteBatcher::RenderPolygon(Polygon& polygon, Texture* texture)
         renderInfo.elements.push_back(b);
         renderInfo.elements.push_back(c);
     }
-
-    Render();
 }
 
 int SpriteBatcher::UnformArrayLocation(const char* arrayName, const char* property, int index) const

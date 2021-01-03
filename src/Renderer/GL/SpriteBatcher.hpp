@@ -120,18 +120,11 @@ private:
 
     int UnformArrayLocation(const char* arrayName, const char* property, int index) const;
 
-    Shader* _shader;
+    SpriteShader* _shader;
 
-    unsigned int vao;
-    unsigned int spriteVerticesVbo;
     unsigned int ebo;
 
     int _viewMatrixLocation;
-    int _lightPositionLocation;
-    int _botLightLocation;
-    int _useLightingLocation;
-    int _lightDistanceLocation;
-    int _totalPointLightsLocation;
 
     FixedSizeVector<Texture*, 512> _texturesRenderedThisFrame;
     unsigned int _currentFrame = 0;
