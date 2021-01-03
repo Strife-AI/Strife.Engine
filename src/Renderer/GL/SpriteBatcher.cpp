@@ -272,7 +272,6 @@ struct BaseShader
         size_t offset = (size_t)selector((T*)nullptr);
 
         auto attributeLocation = glGetAttribLocation(ProgramId(), name);
-        Log("Location: %d\n", attributeLocation);
 
         glEnableVertexAttribArray(attributeLocation);
         auto typeMetadata = GetOpenGlTypeMetadata<ElementType>();
@@ -318,10 +317,6 @@ void SpriteBatcher::Initialize(Shader* shader)
 
     _viewMatrixLocation = glGetUniformLocation(shader->ProgramId(), "view");
 
-    glGenBuffers(1, &ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int) * MaxElementsPerBatch, nullptr, GL_DYNAMIC_DRAW);
-
     glBindVertexArray(0);
     glBindBuffer(GL_VERTEX_ARRAY, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -362,7 +357,7 @@ void SpriteBatcher::Render()
 
         glBindTexture(GL_TEXTURE_2D, texture->Id());
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _shader->ebo->id);
         glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(int) * renderInfo.elements.size(), renderInfo.elements.data());
 
         glDrawElements(GL_TRIANGLES, renderInfo.elements.size(), GL_UNSIGNED_INT, (void*)0);
