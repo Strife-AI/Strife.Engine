@@ -4,6 +4,7 @@
 #include "System/BinaryStreamReader.hpp"
 #include "Tools/Console.hpp"
 #include "Renderer/SdlManager.hpp"
+#include "Project/Project.hpp"
 
 void IGame::Run()
 {
@@ -41,6 +42,8 @@ void IGame::Run()
         {
             _engine->GetSdlManager()->SetWindowCaption(_config.windowCaption.value().c_str());
         }
+
+        project = std::make_shared<Project>(_config.projectFilePath);
     }
 
     // Run the game

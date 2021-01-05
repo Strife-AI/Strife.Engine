@@ -8,6 +8,7 @@
 #include "Scene.hpp"
 #include "SdlManager.hpp"
 #include "IEntityEvent.hpp"
+#include "Project/Project.hpp"
 
 void MapCmd(ConsoleCommandBinder& binder)
 {
@@ -41,7 +42,8 @@ bool SceneManager::TrySwitchScene(StringId name)
     Resource<MapSegment> mapSegment;
     if (ResourceManager::TryGetResource(name, mapSegment))
     {
-        BuildNewScene(mapSegment.Value());
+        SceneModel model = _engine->Game()->project->scenes[name.key];
+        BuildNewScene(mapSegment.Value(), &model);
         return true;
     }
     else
@@ -51,7 +53,7 @@ bool SceneManager::TrySwitchScene(StringId name)
     }
 }
 
-void SceneManager::BuildNewScene(const MapSegment* mapSegment)
+void SceneManager::BuildNewScene(const MapSegment* mapSegment, const SceneModel* sceneModel)
 {
     _scene = std::make_shared<Scene>(_engine, mapSegment->name, _isServer);
 
@@ -63,6 +65,19 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment)
 
     _scene->LoadMapSegment(*mapSegment);
 
+    if (_scene->isServer)
+    {
+        for (auto& entity : sceneModel->entities)
+        {
+            EntitySerializer serializer {
+                EntitySerializerMode::Read,
+                entity.properties
+            };
+
+            _scene->CreateEntity(entity.type, serializer);
+        }
+
+    }
 
     _scene->SendEvent(SceneLoadedEvent());
 }

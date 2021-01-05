@@ -1,5 +1,5 @@
 #pragma once
-
+#include <vector>
 #include <filesystem>
 #include <unordered_map>
 #include <Memory/StringId.hpp>
@@ -8,32 +8,31 @@
 struct PrefabModel
 {
     StringId type;
-    std::vector<std::pair<std::string, std::string>> properties;
+    std::unordered_map<std::string, std::string> properties;
 };
 
 struct EntityModel
 {
-    StringId type;
-    Vector2 positon;
-    std::unordered_map<std::string, std::string> properties;
+    EntityModel() = default;
+    StringId type = "<unknown>"_sid;
+    std::unordered_map<std::string, std::string> properties = std::unordered_map<std::string, std::string>();
 };
 
 struct SceneModel
 {
 //    std::unordered_map<std::string, std::string> properties;
-    std::vector<EntityModel> entities;
+    std::vector<EntityModel> entities = std::vector<EntityModel>();
 };
 
 class Project
 {
-    explicit Project(const std::filesystem::path& path);
-//    void ToJson(const Project& project, const std::filesystem::path& path);
-
+public:
     Project() = default;
+    explicit Project(const std::filesystem::path& path);
 
-    bool TryGetScene(StringId name, SceneModel* sceneModel);
+    std::unordered_map<unsigned int, SceneModel> scenes;
 
 private:
-    std::unordered_map<StringId, SceneModel> scenes;
-    std::unordered_map<StringId, PrefabModel> prefabs;
+
+    std::unordered_map<unsigned int, PrefabModel> prefabs;
 };
