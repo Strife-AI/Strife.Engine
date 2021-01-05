@@ -44,7 +44,9 @@ Project::Project(const std::filesystem::path& path)
                 model.properties[property["name"].get<std::string>()] = property["value"].get<std::string>();
             }
 
-            prefabs[StringId(resource["name"].get<std::string>()).key] = model;
+            model.type = StringId(prefabFileContent["entityType"].get<std::string>());
+
+            prefabs[StringId(prefabFileContent["name"].get<std::string>()).key] = model;
         }
         else
         {
