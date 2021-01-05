@@ -49,7 +49,7 @@ private:
 
     void UpdateSize() override
     {
-        _size = _labelStyle->font.spriteFont
+        _size = _labelStyle->font.spriteFont->GetFont()
             ->MeasureStringWithNewlines(_text.c_str(), 1)
             .AsVectorOfType<float>();
     }
@@ -411,7 +411,6 @@ public:
     std::function<void(Input* input, float deltaTime)> onUpdate;
     std::function<void(Renderer* renderer)> onRender;
 
-    static Resource<SoundEffect> changeSelectedItem;
     static SoundEmitter* GetSoundEmitter();
 
     static void Initialize(SoundManager* soundManager);

@@ -56,6 +56,7 @@ void ParticleRenderer::SetSpawnRegion(Rectangle spawnRegion)
 
 void ParticleRenderer::Render(SpriteBatcher* batcher, Camera* camera, float depth) const
 {
+#if false
     auto sprite = ResourceManager::GetResource<Sprite>("smoke"_sid);
 
     float scale = radius.Value();
@@ -94,6 +95,7 @@ void ParticleRenderer::Render(SpriteBatcher* batcher, Camera* camera, float dept
 
     glDepthMask(GL_TRUE);
     //glDisable(GL_BLEND);
+#endif
 }
 
 void ParticleRenderer::Update(float deltaTime)

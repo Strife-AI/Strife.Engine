@@ -16,10 +16,10 @@ public:
 
     Scene* GetScene() const { return _scene.get(); }
     std::shared_ptr<Scene> GetSceneShared() const { return _scene; }
-    bool TrySwitchScene(StringId name);
+    bool TrySwitchScene(const char* name);
+    bool TrySwitchScene(StringId id);
 
 protected:
-
     Engine* _engine;
 
 private:

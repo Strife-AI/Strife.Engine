@@ -113,7 +113,7 @@ bool UiDictionary::TryGetCustomProperty(const char* key, LabelStyle& outResult) 
     outResult.font.scale = style->GetValueOrDefault("scale", 1.0);
     std::string_view fontName = style->GetValueOrDefault("font", "console-font");
 
-    outResult.font.spriteFont = ResourceManager::GetResource<SpriteFont>(StringId(fontName));
+    //outResult.font.spriteFont = ResourceManager::GetResource<SpriteFont>(StringId(fontName));
     outResult.text = style->GetValueOrDefault("text", "LABEL");
 
     return true;
@@ -122,6 +122,7 @@ bool UiDictionary::TryGetCustomProperty(const char* key, LabelStyle& outResult) 
 template<>
 bool UiDictionary::TryGetCustomProperty(const char* key, BackgroundStyle& outResult) const
 {
+#if false
     UiDictionary* style = GetValueOrDefault(key, &g_emptyDictionary);
 
     UiDictionary* sprite;
@@ -179,6 +180,9 @@ bool UiDictionary::TryGetCustomProperty(const char* key, BackgroundStyle& outRes
     }
 
     return true;
+#endif
+
+    return false;
 }
 
 UiElementPtr BuildLabel(const UiDictionary& properties)
