@@ -123,8 +123,6 @@ add_library(Strife.Engine STATIC
         
         Sound/SoundEffect.cpp
         Memory/ResourcePool.hpp
-        Renderer/ParticleSystem.hpp
-        Renderer/ParticleSystem.cpp
         Math/Random.cpp
         Math/Random.hpp
 
@@ -152,7 +150,7 @@ add_library(Strife.Engine STATIC
         "Physics/PathFinding.cpp"
         "Scene/EntityManager.cpp"
         
-     "Net/ServerGame.cpp" "ML/ML.hpp" "ML/ML.cpp" Components/PathFollowerComponent.cpp Components/PathFollowerComponent.hpp Components/LightComponent.hpp Net/FileTransfer.hpp Net/FileTransfer.cpp Resource/ResourceManager.hpp Resource/SpriteResource.hpp Resource/SpriteResource.cpp Resource/ResourceManager.cpp Resource/TilemapResource.hpp Resource/TilemapResource.cpp Resource/SpriteFontResource.hpp Resource/SpriteFontResource.cpp Resource/ShaderResource.cpp Resource/ShaderResource.hpp Renderer/NewRenderer.cpp Renderer/NewRenderer.hpp)
+     "Net/ServerGame.cpp" "ML/ML.hpp" "ML/ML.cpp" Components/PathFollowerComponent.cpp Components/PathFollowerComponent.hpp Components/LightComponent.hpp Net/FileTransfer.hpp Net/FileTransfer.cpp Resource/ResourceManager.hpp Resource/SpriteResource.hpp Resource/SpriteResource.cpp Resource/ResourceManager.cpp Resource/TilemapResource.hpp Resource/TilemapResource.cpp Resource/SpriteFontResource.hpp Resource/SpriteFontResource.cpp Resource/ShaderResource.cpp Resource/ShaderResource.hpp Renderer/NewRenderer.cpp Renderer/NewRenderer.hpp Components/ParticleSystemComponent.hpp Components/ParticleSystemComponent.cpp)
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
