@@ -296,6 +296,7 @@ void Engine::SetGame(IGame* game)
     {
         Log("Initializing renderer\n");
         _renderer = std::make_unique<Renderer>();
+        _newRenderer = std::make_unique<NewRenderer>();
         WindowSizeChangedEvent(_sdlManager->WindowSize().x, _sdlManager->WindowSize().y).Send();
     }
 }

@@ -184,6 +184,9 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
     }
 
     plotManager->RenderPlots();
+
+    engine->GetNewRenderer()->Render();
+
     sdlManager->EndRender();
 }
 

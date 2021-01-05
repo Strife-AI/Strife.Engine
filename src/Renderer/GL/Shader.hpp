@@ -56,6 +56,7 @@ struct Vbo : IGraphicsObject
 
     void BufferSub(gsl::span<T> data)
     {
+        glBindBuffer(glType, id);
         glBufferSubData(glType, 0, data.size_bytes(), data.data());
     }
 
@@ -153,7 +154,7 @@ struct Effect
     }
 
     template<typename T, typename TSelector>
-    void BindVertexAttribute(const char* name, Vbo<T>* vbo, const TSelector& selector)
+    void BindVertexAttribute(const char* name, Vbo<T>* vbo, const TSelector& selector, int divisor = 0)
     {
         using ElementPointerType = decltype(selector((T*)nullptr));
         static_assert(std::is_pointer_v<ElementPointerType>, "Return value to selector must be pointer");
@@ -167,6 +168,11 @@ struct Effect
         glEnableVertexAttribArray(attributeLocation);
         auto typeMetadata = GetOpenGlTypeMetadata<ElementType>();
         glVertexAttribPointer(attributeLocation, typeMetadata.count, typeMetadata.type, GL_FALSE, stride, (void*)offset);
+
+        if (divisor != 0)
+        {
+            glVertexAttribDivisor(attributeLocation, divisor);
+        }
     }
 
     template<typename T>
