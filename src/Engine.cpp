@@ -6,8 +6,6 @@
 
 #include "Engine.hpp"
 #include "Renderer/Renderer.hpp"
-#include "Scene/Scene.hpp"
-#include "Memory/ResourceManager.hpp"
 #include <thread>
 #include "slikenet/PacketConsoleLogger.h"
 
@@ -19,7 +17,6 @@
 #include "Tools/Console.hpp"
 #include "Tools/PlotManager.hpp"
 #include "Tools/MetricsManager.hpp"
-#include "Scene/SceneManager.hpp"
 #include "Sound/SoundManager.hpp"
 #include "UI/UI.hpp"
 
@@ -57,9 +54,6 @@ Engine::Engine(const EngineConfig& config)
     Log("Initializing engine\n");
 
     Log("Running as %s\n", g_isServer.Value() ? "server" : "client");
-
-    Log("Initializing resource manager\n");
-    ResourceManager::Initialize(this);
 
     _input = Input::GetInstance();
 
@@ -208,7 +202,7 @@ void ConnectCommand(ConsoleCommandBinder& binder)
 
 ConsoleCmd connectCmd("connect", ConnectCommand);
 
-void Engine::StartServer(int port, StringId mapName)
+void Engine::StartServer(int port, const char* mapName)
 {
     SLNet::SocketDescriptor sd(port, nullptr);
     auto peerInterface = SLNet::RakPeerInterface::GetInstance();
@@ -268,7 +262,7 @@ void Engine::ConnectToServer(const char* address, int port)
 
 SLNet::PacketLogger logger;
 
-void Engine::StartLocalServer(int port, StringId mapName)
+void Engine::StartLocalServer(int port, const char* mapName)
 {
     if(g_isServer.Value())
     {
@@ -294,7 +288,7 @@ void Engine::StartLocalServer(int port, StringId mapName)
     _clientGame->networkInterface.SendReliable(_serverGame->localAddress, data);
 }
 
-void Engine::StartSinglePlayerGame(StringId mapName)
+void Engine::StartSinglePlayerGame(const char* mapName)
 {
     auto peerInterface = SLNet::RakPeerInterface::GetInstance();
     _clientGame = std::make_shared<ClientGame>(this, peerInterface, SLNet::AddressOrGUID(SLNet::SystemAddress("0.0.0.3", 1)));

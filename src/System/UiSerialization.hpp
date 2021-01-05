@@ -4,6 +4,7 @@
 
 #include "BinaryStreamWriter.hpp"
 #include "BinaryStreamReader.hpp"
+#include "Memory/StringId.hpp"
 
 struct NineSliceDto
 {

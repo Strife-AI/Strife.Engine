@@ -1,3 +1,4 @@
+#include <Resource/ResourceManager.hpp>
 #include "IGame.hpp"
 #include "Engine.hpp"
 #include "SceneManager.hpp"
@@ -19,12 +20,7 @@ void IGame::Run()
 
         _engine->SetLoadResources([=]
         {
-            for(auto& resourcePack : _config.resourcePacks)
-            {
-                BinaryStreamReader reader;
-                reader.Open(resourcePack.c_str());
-                ResourceManager::LoadResourceFile(reader);
-            }
+
         });
 
         if (_config.userConfigFile.has_value())
@@ -34,7 +30,7 @@ void IGame::Run()
 
         if (_config.devConsoleFont.has_value())
         {
-            auto font = ResourceManager::GetResource<SpriteFont>(StringId(_config.devConsoleFont->c_str()));
+            auto font = GetResource<SpriteFontResource>(StringId(_config.devConsoleFont->c_str()));
             _engine->GetConsole()->SetFont(FontSettings(font, 1));
         }
 

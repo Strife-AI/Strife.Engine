@@ -6,13 +6,13 @@
 #include "Math/Vector2.hpp"
 #include "SpriteFont.hpp"
 #include "Color.hpp"
+#include "Resource/SpriteFontResource.hpp"
 
 class NineSlice;
 class Sprite;
 class Scene;
 class Camera;
 struct ICustomTransparencyRenderer;
-struct SDL_Renderer;
 
 struct FontSettings
 {
@@ -23,13 +23,13 @@ struct FontSettings
 
     }
 
-    FontSettings(Resource<SpriteFont> spriteFont_, float scale_ = 1)
+    FontSettings(SpriteFontResource* spriteFont_, float scale_ = 1)
             : spriteFont(spriteFont_),
               scale(scale_)
     {
     }
 
-    Resource<SpriteFont> spriteFont;
+    SpriteFontResource* spriteFont;
     float scale;
 };
 

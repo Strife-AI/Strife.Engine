@@ -16,11 +16,8 @@
 #include "Timer.hpp"
 
 class StringId;
-
 class Renderer;
-
 class Engine;
-
 class b2World;
 
 struct IEntityFactory;
@@ -147,8 +144,7 @@ public:
 
 	SoundManager* GetSoundManager() const;
 
-	void LoadMapSegment(StringId id);
-
+	void LoadMapSegment(const char* name);
 	void LoadMapSegment(const MapSegment& segment);
 
 	void StartTimer(float timeSeconds, const std::function<void()>& callback);

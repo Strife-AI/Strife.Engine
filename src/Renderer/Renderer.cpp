@@ -94,8 +94,7 @@ void Renderer::RenderSpriteRepeated(const Sprite* sprite, const Rectangle& bound
                 Sprite subSprite(
                     sprite->GetTexture(),
                     Rectangle(tileTopLeft, subTileSize),
-                    textureBounds,
-                    false);
+                    textureBounds);
 
                 auto position = RotateXY(center, tileTopLeft + subTileSize / 2, angle) - subTileSize / 2;
                 RenderSprite(&subSprite, position, depth, Vector2(1, 1), angle);
@@ -106,6 +105,7 @@ void Renderer::RenderSpriteRepeated(const Sprite* sprite, const Rectangle& bound
 
 void Renderer::RenderNineSlice(const NineSlice* nineSlice, const Rectangle& bounds, float depth)
 {
+#if false
     auto texture = nineSlice->GetSprite()->GetTexture();
     auto cornerSize = nineSlice->CornerSize();
     auto textureCornerSize = cornerSize;
@@ -162,6 +162,7 @@ void Renderer::RenderNineSlice(const NineSlice* nineSlice, const Rectangle& boun
             }
         }
     }
+#endif
 }
 
 void Renderer::RenderThreeSlice(const Sprite* sprite, float cornerXSize, const Rectangle& bounds, float depth, float angle)
@@ -200,19 +201,19 @@ void Renderer::RenderThreeSlice(const Sprite* sprite, float cornerXSize, const R
 
         Rectangle tbounds(spriteBounds.TopLeft(), textureBounds.Size());
 
-        Sprite sprite(texture, tbounds, textureBounds, false);
+        Sprite sprite(texture, tbounds, textureBounds);
         RenderSpriteRepeated(&sprite, realSpriteBounds, depth, bounds.GetCenter(), angle);
     }
 }
 
 void Renderer::RenderString(const FontSettings& fontSettings, const char* str, Vector2 topLeft, float depth)
 {
-    if (fontSettings.spriteFont.Value() == nullptr)
+    if (fontSettings.spriteFont == nullptr)
     {
         return;
     }
 
-    auto characterSize = fontSettings.spriteFont->CharacterDimension(fontSettings.scale);
+    auto characterSize = fontSettings.spriteFont->GetFont()->CharacterDimension(fontSettings.scale);
     Vector2 position = topLeft;
 
     while (*str != '\0')
@@ -225,7 +226,7 @@ void Renderer::RenderString(const FontSettings& fontSettings, const char* str, V
         else
         {
             Sprite characterSprite;
-            fontSettings.spriteFont->GetCharacter((unsigned char)*str, &characterSprite);
+            fontSettings.spriteFont->GetFont()->GetCharacter((unsigned char)*str, &characterSprite);
 
             RenderSprite(
                 &characterSprite,

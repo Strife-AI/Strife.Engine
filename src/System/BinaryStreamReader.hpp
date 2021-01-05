@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdio>
-#include "Memory/ResourceManager.hpp"
 #include <gsl/span>
 
 class Cipher;

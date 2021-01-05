@@ -7,6 +7,7 @@ enum class NineSliceMode
     Repeat
 };
 
+#if false
 class NineSlice
 {
 public:
@@ -23,6 +24,8 @@ public:
         
     }
 
+    NineSlice() { }
+
     Sprite* GetSprite() const { return _sprite.Value(); }
     Sprite* GetCenterSprite() const { return _centerSprite.Value(); }
     Vector2 CornerSize() const { return _cornerSize; }
@@ -34,3 +37,4 @@ private:
     Vector2 _cornerSize;
     NineSliceMode _mode;
 };
+#endif

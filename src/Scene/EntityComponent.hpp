@@ -1,13 +1,11 @@
 #pragma once
+
 #include <utility>
-
-#include "Memory/Flags.hpp"
-
-#if  defined(__linux__) || defined(__APPLE__)
 #include <typeinfo>
 #include <unordered_set>
 
-#endif
+#include "Memory/Flags.hpp"
+
 
 enum class EntityComponentFlags
 {

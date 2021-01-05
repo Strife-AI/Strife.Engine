@@ -5,6 +5,7 @@
 #include "Engine.hpp"
 #include "NineSlice.hpp"
 #include "Renderer.hpp"
+#include "Resource/SpriteResource.hpp"
 
 void SpriteAtlas::GetFrame(const int frameIndex, Sprite* outSprite) const
 {
@@ -16,12 +17,13 @@ void SpriteAtlas::GetFrame(const int frameIndex, Sprite* outSprite) const
     const Vector2 cell(col, row);
 
     *outSprite = Sprite(
-        _atlas->GetTexture(),
+        _atlas->sprite.GetTexture(),
         Rectangle(
             cell * (_cellSize + Vector2(8, 8)),
             _cellSize));
 }
 
+#if false
 const AtlasAnimation* SpriteAtlas::GetAnimation(StringId name) const
 {
     for (int i = 0; i < _animations.size(); ++i)
@@ -104,10 +106,12 @@ void Animator::RenderFullbright(Renderer* renderer, Vector2 position, float dept
     RenderInternal(renderer, _fullbrightAtlas, _currentFullbrightAnimation, position, depth, angle);
 }
 
+#if false
 void Animator::SetSpriteAtlas(Resource<SpriteAtlas> atlas)
 {
     _atlas = atlas;
 }
+#endif
 
 void Animator::Pause()
 {
@@ -169,3 +173,4 @@ void Animator::NextFrame()
 
     RunFrameEnterCallback();
 }
+#endif
