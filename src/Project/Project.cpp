@@ -1,5 +1,6 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <Resource/ResourceManager.hpp>
 #include "System/Logger.hpp"
 
 #include "Project.hpp"
@@ -27,6 +28,8 @@ Project::Project(const std::filesystem::path& path)
     auto content = LoadJsonFromFile(path);
     Project project;
 
+    auto resourceManager = ResourceManager::GetInstance();
+
     // Populate with resources
     for (auto& resource : content["resources"].get<std::vector<json>>())
     {
@@ -42,6 +45,12 @@ Project::Project(const std::filesystem::path& path)
             }
 
             prefabs[StringId(resource["name"].get<std::string>()).key] = model;
+        }
+        else
+        {
+            resourceManager->LoadResourceFromFile(
+                resource["path"].get<std::string>().c_str(),
+                resource["name"].get<std::string>().c_str());
         }
     }
 
