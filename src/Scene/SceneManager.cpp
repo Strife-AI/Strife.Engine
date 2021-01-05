@@ -44,7 +44,7 @@ bool SceneManager::TrySwitchScene(const char* name)
     if (tilemap != nullptr)
     {
         SceneModel model = _engine->Game()->project->scenes[StringId(name).key];
-        BuildNewScene(&tilemap->mapSegment);
+        BuildNewScene(&tilemap->mapSegment, &model);
         return true;
     }
     else
@@ -66,18 +66,14 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment, const SceneModel*
 
     _scene->LoadMapSegment(*mapSegment);
 
-    if (_scene->isServer)
+    for (auto& entity : sceneModel->entities)
     {
-        for (auto& entity : sceneModel->entities)
-        {
-            EntitySerializer serializer {
-                EntitySerializerMode::Read,
-                entity.properties
-            };
+        EntitySerializer serializer {
+            EntitySerializerMode::Read,
+            entity.properties
+        };
 
-            _scene->CreateEntity(entity.type, serializer);
-        }
-
+        _scene->CreateEntity(entity.type, serializer);
     }
 
     _scene->SendEvent(SceneLoadedEvent());
@@ -88,7 +84,8 @@ bool SceneManager::TrySwitchScene(StringId id)
     TilemapResource* tilemap = GetResource<TilemapResource>(id, false);
     if (tilemap != nullptr)
     {
-        BuildNewScene(&tilemap->mapSegment);
+        SceneModel model = _engine->Game()->project->scenes[id];
+        BuildNewScene(&tilemap->mapSegment, &model);
         return true;
     }
     else
