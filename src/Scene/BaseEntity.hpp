@@ -30,7 +30,7 @@ namespace EntityUtil
         static void Register(EntityMetadata* metadata);
 
         StringId type;
-        Entity* (* createEntity)(Scene* scene, const EntitySerializer& serializer);
+        Entity* (*createEntity)(Scene* scene, const EntitySerializer& serializer);
     };
 }
 

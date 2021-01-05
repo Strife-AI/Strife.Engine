@@ -38,10 +38,10 @@ Project::Project(const std::filesystem::path& path)
             PrefabModel model;
             for (const auto& property : prefabFileContent["properties"].get<std::vector<json>>())
             {
-                model.properties.emplace_back(property["name"].get<std::string>(), property["value"].get<std::string>());
+                model.properties[property["name"].get<std::string>()] = property["value"].get<std::string>();
             }
 
-            prefabs[StringId(resource["name"].get<std::string>())] = model;
+            prefabs[StringId(resource["name"].get<std::string>()).key] = model;
         }
     }
 
@@ -56,13 +56,25 @@ Project::Project(const std::filesystem::path& path)
         {
             EntityModel model;
 
-            if (entity.contains("prefab"))
+            if (entity.contains("prefab")) // If it contains the prefab key, add all of the properties on the prefab onto the new entitymodel
             {
-                auto fabModel = prefabs[StringId(entity["prefab"].get<std::string>())];
+                if (prefabs.find(StringId(entity["prefab"].get<std::string>()).key) == prefabs.end())
+                {
+                    printf("Failed to find prefab!\n");
+                }
+
+                auto fabModel = prefabs[StringId(entity["prefab"].get<std::string>()).key];
+
                 for (auto& property : fabModel.properties)
                 {
                     model.properties[property.first] = property.second;
                 }
+
+                model.type = fabModel.type;
+            }
+            else
+            {
+                model.type = StringId(entity["type"].get<std::string>());
             }
 
             if (entity.contains("properties"))
@@ -76,17 +88,6 @@ Project::Project(const std::filesystem::path& path)
             sceneModel.entities.push_back(model);
         }
 
-        scenes[StringId(sceneContent["name"].get<std::string>())] = sceneModel;
+        scenes[StringId(sceneContent["name"].get<std::string>()).key] = sceneModel;
     }
-}
-
-bool Project::TryGetScene(StringId name, SceneModel* sceneModel)
-{
-    if (scenes.find(name) != scenes.end())
-    {
-        sceneModel = &scenes[name];
-        return true;
-    }
-
-    return false;
 }
