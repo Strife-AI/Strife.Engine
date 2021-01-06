@@ -172,6 +172,10 @@ public:
 	template<typename TEntity, typename ... Args>
 	TEntity* CreateEntity(const Transform& transform, Args&& ... constructorArgs);
 
+	template<typename TEntity, typename ... Args>
+	TEntity* CreateEntity(EntitySerializer& serializer, Args&& ... constructorArgs);
+
+
 	Entity* CreateEntity(StringId type, EntitySerializer& serializer);
 
 	void* AllocateMemory(int size) const;
@@ -274,6 +278,39 @@ TEntity* Scene::CreateEntity(const Transform& transform, Args&& ... constructorA
 
 	return entity;
 }
+
+template<typename TEntity, typename ... Args>
+TEntity* Scene::CreateEntity(EntitySerializer& serializer, Args&& ... constructorArgs)
+{
+	auto oldEntityUnderConstruction = entityUnderConstruction;
+
+	TEntity* entity = (TEntity*)AllocateMemory(sizeof(TEntity));
+
+	entity->scene = this;
+
+	entityUnderConstruction = entity;
+	new(entity) TEntity(std::forward<Args>(constructorArgs) ...);
+
+	Vector2 position;
+	serializer.Add("position", position);
+
+	Transform transform {position, 0.0f};
+
+	entity->_position = transform.position;
+	entity->_rotation = transform.rotation;
+	entity->type = TEntity::Type;
+	entity->scene = this;
+
+	RegisterEntity(entity);
+    ((Entity*)entity)->DoSerialize(serializer);
+
+	((Entity*)entity)->OnAdded();
+	entityUnderConstruction = oldEntityUnderConstruction;
+
+	return entity;
+}
+
+
 
 template<typename TService, typename ... Args>
 TService* Scene::AddService(Args&& ... args)
