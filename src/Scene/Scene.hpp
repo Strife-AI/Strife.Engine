@@ -292,12 +292,14 @@ TEntity* Scene::CreateEntity(EntitySerializer& serializer, Args&& ... constructo
 	new(entity) TEntity(std::forward<Args>(constructorArgs) ...);
 
 	Vector2 position;
-	serializer.Add("position", position);
+	float rotation;
 
-	Transform transform {position, 0.0f};
+	serializer
+	    .Add("position", position)
+	    .Add("rotation", rotation);
 
-	entity->_position = transform.position;
-	entity->_rotation = transform.rotation;
+	entity->_position = position;
+	entity->_rotation = rotation;
 	entity->type = TEntity::Type;
 	entity->scene = this;
 
