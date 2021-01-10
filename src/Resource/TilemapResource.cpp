@@ -437,16 +437,11 @@ MapSegmentDto ProcessMap(const std::string& path)
 
         Vector2i tileSize = Vector2i(tileSet.getTileSize().x, tileSet.getTileSize().y);
 
-        if (tileSize == Vector2i(64, 64))
-        {
-            Log("Here\n");
-        }
-
         for (const auto& tile : tileSet.getTiles())
         {
             auto tileIndex = Vector2i(tile.imagePosition.x, tile.imagePosition.y) / tileSize;
 
-            auto position = Vector2i(tile.imagePosition.x, tile.imagePosition.y) + tileIndex * Vector2i(8, 8);
+            auto position = Vector2i(tile.imagePosition.x, tile.imagePosition.y) + tileIndex * Vector2i(EdgePadding * 2);
             Polygoni shape;
 
             if (!tile.objectGroup.getObjects().empty())
