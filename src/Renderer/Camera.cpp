@@ -13,7 +13,9 @@ using namespace  glm;
 
 void Camera::RebuildViewMatrix()
 {
-    mat4 translation = translate(mat4(1), vec3(-Position().x + ScreenSize().x / 2, -Position().y + ScreenSize().y / 2, 0));
+    Vector2 pos = Vector2(round(Position().x), round(Position().y));
+
+    mat4 translation = translate(mat4(1), vec3(-pos.x + ScreenSize().x / 2, -pos.y + ScreenSize().y / 2, 0));
     mat4 scale = glm::scale(mat4x4(1), vec3(2.0f / _viewport.x, 2.0f / _viewport.y, 1));
     mat4 centerInScreen = translate(mat4(1), vec3(-1, -1, 0));
     mat4 zoom = glm::scale(mat4x4(1), vec3(_zoom, -_zoom, 1.0f));
