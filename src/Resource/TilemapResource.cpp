@@ -10,8 +10,6 @@
 #include "tmxlite/TileLayer.hpp"
 #include "SpriteResource.hpp"
 
-const Vector2i TileSize = Vector2i(32, 32);
-
 struct Coord
 {
     Coord(int position_, bool relative_ = false)
@@ -129,8 +127,28 @@ static void putpixel(SDL_Surface* surface, int x, int y, Uint32 pixel)
     }
 }
 
+static auto DetectFormatFromSdlSurface(SDL_Surface* surface)
+{
+    auto format = surface->format;
+    return SDL_MasksToPixelFormatEnum(format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+}
+
+static SDL_Surface* ConvertToRGBA(SDL_Surface* surface)
+{
+    SDL_PixelFormat* format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA32);
+    return SDL_ConvertSurface(surface, format, 0);
+}
+
 StringId AddEdgePadding(SDL_Surface* rawSurface, const std::string& resourceName, GridLayout& layout)
 {
+    auto format = DetectFormatFromSdlSurface(rawSurface);
+    SDL_Surface* convertedSurface = nullptr;
+
+    if (format != SDL_PIXELFORMAT_RGBA32)
+    {
+        convertedSurface = rawSurface = ConvertToRGBA(rawSurface);
+    }
+
     for (auto& col : layout.columns)
     {
         if (col.relative) col.position += rawSurface->w;
@@ -191,6 +209,11 @@ StringId AddEdgePadding(SDL_Surface* rawSurface, const std::string& resourceName
 
     remove(file.c_str());
 
+    if (convertedSurface != nullptr)
+    {
+        SDL_FreeSurface(convertedSurface);
+    }
+
     return StringId(resourceName);
 }
 
@@ -223,7 +246,8 @@ void LoadTileLayer(
     tmx::Map& map,
     tmx::TileLayer& layer,
     std::map<int, ImportTileProperties*>& tilePropertiesByTileId,
-    MapSegmentDto* mapSegmentDto) {
+    MapSegmentDto* mapSegmentDto,
+    Vector2 tileSize) {
     const auto& layerProperties = layer.getProperties();
 
     auto dimensions = map.getTileCount();
@@ -254,7 +278,7 @@ void LoadTileLayer(
     if (layer.getVisible())
     {
         TileMapLayerDto layerDto;
-        layerDto.tileSize = TileSize;
+        layerDto.tileSize = tileSize.AsVectorOfType<int>();
         layerDto.dimensions = Vector2i(dimensions.x, dimensions.y);
 
         for (int i = 0; i < (int)dimensions.x * dimensions.y; ++i)
@@ -288,8 +312,8 @@ void LoadTileLayer(
                     auto newColliderShape = tileProperties[i][j]->shape;
                     for (auto& point : newColliderShape.points)
                     {
-                        point.x += j * TileSize.x;
-                        point.y += i * TileSize.y;
+                        point.x += j * tileSize.x;
+                        point.y += i * tileSize.y;
                     }
 
                     mapSegmentDto->polygonalColliders.push_back(newColliderShape);
@@ -346,8 +370,8 @@ void LoadTileLayer(
                         }
                     }
 
-                    Vector2i topLeft = Vector2i(j, i) * TileSize;
-                    Vector2i bottomRight = Vector2i(j + width, i + height) * TileSize;
+                    Vector2i topLeft = Vector2i(j, i) * tileSize.AsVectorOfType<int>();
+                    Vector2i bottomRight = Vector2i(j + width, i + height) * tileSize.AsVectorOfType<int>();
 
                     mapSegmentDto->rectangleColliders.emplace_back(topLeft, bottomRight - topLeft);
                 }
@@ -388,18 +412,39 @@ MapSegmentDto ProcessMap(const std::string& path)
 
     int nextTileSerializationId = 0;
 
+    std::optional<Vector2> tileSize;
+
     for (auto& tileSet : map.getTilesets())
     {
         auto imagePath = tileSet.getImagePath();
         auto resourceName = std::filesystem::path(imagePath).filename().string() + "-tileset";
 
-        AddTileSet(imagePath, resourceName, Vector2(32, 32));
+        auto tileSetTileSize = Vector2(tileSet.getTileSize().x, tileSet.getTileSize().y);
+
+        if (!tileSize.has_value())
+        {
+            tileSize = tileSetTileSize;
+        }
+        else
+        {
+            if (tileSetTileSize != tileSize)
+            {
+                FatalError("All tilesets within a map must have the same tile size");
+            }
+        }
+
+        AddTileSet(imagePath, resourceName, tileSetTileSize);
 
         Vector2i tileSize = Vector2i(tileSet.getTileSize().x, tileSet.getTileSize().y);
 
+        if (tileSize == Vector2i(64, 64))
+        {
+            Log("Here\n");
+        }
+
         for (const auto& tile : tileSet.getTiles())
         {
-            auto tileIndex = Vector2i(tile.imagePosition.x, tile.imagePosition.y) / Vector2i(32, 32);
+            auto tileIndex = Vector2i(tile.imagePosition.x, tile.imagePosition.y) / tileSize;
 
             auto position = Vector2i(tile.imagePosition.x, tile.imagePosition.y) + tileIndex * Vector2i(8, 8);
             Polygoni shape;
@@ -436,7 +481,7 @@ MapSegmentDto ProcessMap(const std::string& path)
         if (layer->getType() == tmx::Layer::Type::Tile)
         {
             auto tileLayer = layer->getLayerAs<tmx::TileLayer>();
-            LoadTileLayer(map, tileLayer, tilePropertiesByTileId, &mapSegmentDto);
+            LoadTileLayer(map, tileLayer, tilePropertiesByTileId, &mapSegmentDto, tileSize.value());
         }
         else if (layer->getType() == tmx::Layer::Type::Object)
         {
