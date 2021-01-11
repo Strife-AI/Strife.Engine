@@ -88,6 +88,8 @@ Project::Project(const std::filesystem::path& path)
                 model.type = StringId(entity["type"].get<std::string>());
             }
 
+            model.name = entity["name"].get<std::string>();
+
             if (entity.contains("properties"))
             {
                 for (auto& property : entity["properties"].get<std::vector<json>>())

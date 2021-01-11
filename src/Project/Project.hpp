@@ -14,12 +14,15 @@ struct PrefabModel
 struct EntityModel
 {
     EntityModel() = default;
+    std::string name;
+
     StringId type = "<unknown>"_sid;
     std::unordered_map<std::string, std::string> properties = std::unordered_map<std::string, std::string>();
 };
 
 struct SceneModel
 {
+    std::string sceneName;
 //    std::unordered_map<std::string, std::string> properties;
     std::vector<EntityModel> entities = std::vector<EntityModel>();
 };
