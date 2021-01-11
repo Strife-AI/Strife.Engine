@@ -40,31 +40,35 @@ SceneManager::SceneManager(Engine* engine, bool isServer)
 
 bool SceneManager::TrySwitchScene(const char* name)
 {
-    TilemapResource* tilemap = GetResource<TilemapResource>(name, false);
-    if (tilemap != nullptr)
+    return TrySwitchScene(StringId(name));
+}
+
+bool SceneManager::TrySwitchScene(StringId id)
+{
+    auto scene = _engine->Game()->project->scenes.find(id);
+
+    if (scene != _engine->Game()->project->scenes.end())
     {
-        SceneModel model = _engine->Game()->project->scenes[StringId(name).key];
-        BuildNewScene(&tilemap->mapSegment, &model);
+        SceneModel model = _engine->Game()->project->scenes[id];
+        BuildNewScene(&model);
         return true;
     }
     else
     {
-        Log("Failed to load map %s\n", name);
+        Log("Failed to load map %s\n", id.ToString());
         return false;
     }
 }
 
-void SceneManager::BuildNewScene(const MapSegment* mapSegment, const SceneModel* sceneModel)
+void SceneManager::BuildNewScene(const SceneModel* sceneModel)
 {
-    _scene = std::make_shared<Scene>(_engine, mapSegment->name, _isServer);
+    _scene = std::make_shared<Scene>(_engine, StringId(sceneModel->sceneName), _isServer);
 
     auto screenSize = (_engine->GetSdlManager() != nullptr ? _engine->GetSdlManager()->WindowSize().AsVectorOfType<float>() : Vector2(0, 0));
     _scene->GetCamera()->SetScreenSize(screenSize);
     _scene->GetCamera()->SetZoom(screenSize.y / (1080.0f / 2));
 
     _engine->Game()->BuildScene(_scene.get());
-
-    _scene->LoadMapSegment(*mapSegment);
 
     for (auto& entity : sceneModel->entities)
     {
@@ -73,24 +77,16 @@ void SceneManager::BuildNewScene(const MapSegment* mapSegment, const SceneModel*
             entity.properties
         };
 
-        _scene->CreateEntity(entity.type, serializer);
+        if (entity.type == "tilemap"_sid)
+        {
+            TilemapResource* mapSegment = GetResource<TilemapResource>(entity.name.c_str(), false);
+            _scene->LoadMapSegment(mapSegment->mapSegment);
+        }
+        else
+        {
+            _scene->CreateEntity(entity.type, serializer);
+        }
     }
 
     _scene->SendEvent(SceneLoadedEvent());
-}
-
-bool SceneManager::TrySwitchScene(StringId id)
-{
-    TilemapResource* tilemap = GetResource<TilemapResource>(id, false);
-    if (tilemap != nullptr)
-    {
-        SceneModel model = _engine->Game()->project->scenes[id];
-        BuildNewScene(&tilemap->mapSegment, &model);
-        return true;
-    }
-    else
-    {
-        Log("Failed to load map %s\n", id.ToString());
-        return false;
-    }
 }

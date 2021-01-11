@@ -88,7 +88,7 @@ public:
 	static constexpr Vector2 Box2DToPixelsRatio = Vector2(1.0, 1.0) / PixelsToBox2DRatio;
 	static constexpr Vector2 Gravity = Vector2(0, 0) * Box2DToPixelsRatio;
 
-	Scene(Engine* engine, StringId mapSegmentName, bool isServer);
+	Scene(Engine* engine, StringId sceneName, bool isServer);
 
 	~Scene();
 
