@@ -25,7 +25,7 @@ protected:
 private:
     friend struct BaseGameInstance;
 
-    void BuildNewScene(const MapSegment* map, const SceneModel* sceneModel);
+    void BuildNewScene(const SceneModel* sceneModel);
 
     std::shared_ptr<Scene> _scene = nullptr;
     bool _isServer = false;
