@@ -15,7 +15,7 @@ Entity* Scene::entityUnderConstruction = nullptr;
 
 Scene::Scene(Engine* engine, StringId mapSegmentName, bool isServer)
     : isServer(isServer),
-      _mapSegmentName(mapSegmentName),
+      _sceneName(mapSegmentName),
       _cameraFollower(&_camera, engine->GetInput()),
       _engine(engine),
       _world(std::make_unique<b2World>(b2Vec2(0, 0))),
