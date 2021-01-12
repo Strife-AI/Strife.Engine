@@ -2,6 +2,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <filesystem>
 
 
 #include "Memory/StringId.hpp"
@@ -10,6 +11,7 @@ struct EngineConfig;
 class Scene;
 class Engine;
 class SceneManager;
+class Project;
 
 struct GameConfig
 {
@@ -49,12 +51,20 @@ struct GameConfig
         return *this;
     }
 
+    GameConfig& SetProjectFile(const std::filesystem::path& path)
+    {
+        projectFilePath = path;
+        return *this;
+    }
+
     StringId defaultScene = "empty-map"_sid;
     std::string gameName;
+    std::filesystem::path projectFilePath;
     std::optional<std::string> windowCaption;
     std::optional<std::string> userConfigFile;
     std::optional<std::string> devConsoleFont;
     std::vector<std::string> resourcePacks;
+
 };
 
 class IGame
@@ -83,6 +93,7 @@ public:
     Engine* GetEngine() { return _engine.get(); }
     void Run();
 
+    std::shared_ptr<Project> project;
 private:
     std::unique_ptr<Engine> _engine = nullptr;
     GameConfig _config;

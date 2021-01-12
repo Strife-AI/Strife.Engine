@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <nlohmann/json.hpp>
 
 #ifdef _WIN32
 #include <vcruntime_typeinfo.h>
@@ -19,6 +20,7 @@
 
 #include "Renderer/Color.hpp"
 #include "Sound/SoundManager.hpp"
+#include "EntitySerializer.hpp"
 
 class b2Body;
 
@@ -58,11 +60,6 @@ enum class EntityFlags
     EnableServerFixedUpdate = 64,
     EnableRender = 128,
     EnableRenderHud = 256
-};
-
-struct EntitySerializer
-{
-
 };
 
 struct Entity;
@@ -223,10 +220,12 @@ private:
 
     virtual void ReceiveEvent(const IEntityEvent& ev)
     {
+
     }
 
     virtual void ReceiveServerEvent(const IEntityEvent& ev)
     {
+
     }
 
     void DoTeleport();
@@ -234,12 +233,14 @@ private:
 
     virtual void DoSerialize(EntitySerializer& serializer)
     {
+
     }
 
     virtual std::pair<int, void*> GetMemoryBlock() = 0;
 
     virtual void OnSyncVarsUpdated()
     {
+
     }
 
     SyncVar<Vector2> _position{{ 0, 0 }, SyncVarInterpolation::Linear, SyncVarUpdateFrequency::Frequent,

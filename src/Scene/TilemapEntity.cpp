@@ -38,11 +38,11 @@ void TilemapEntity::Render(Renderer* renderer)
 
 void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
 {
-    static constexpr int MAX_POINTS = 32;
+    static constexpr int MAX_POINTS = 8;
 
     auto rigidBody = AddComponent<RigidBodyComponent>();
 
-    // Generate colliders polygonal colliders
+    // Generate polygonal colliders
     for (auto& polygon : mapSegment.polygonColliders)
     {
         b2Vec2 points[MAX_POINTS];
