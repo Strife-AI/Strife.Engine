@@ -88,7 +88,7 @@ public:
 	static constexpr Vector2 Box2DToPixelsRatio = Vector2(1.0, 1.0) / PixelsToBox2DRatio;
 	static constexpr Vector2 Gravity = Vector2(0, 0) * Box2DToPixelsRatio;
 
-	Scene(Engine* engine, StringId mapSegmentName, bool isServer);
+	Scene(Engine* engine, StringId sceneName, bool isServer);
 
 	~Scene();
 
@@ -116,9 +116,9 @@ public:
 		return _world.get();
 	}
 
-	StringId MapSegmentName() const
+	StringId SceneName() const
 	{
-		return _mapSegmentName;
+		return _sceneName;
 	}
 
 	auto& GetEntities()
@@ -171,6 +171,10 @@ public:
 
 	template<typename TEntity, typename ... Args>
 	TEntity* CreateEntity(const Transform& transform, Args&& ... constructorArgs);
+
+	template<typename TEntity, typename ... Args>
+	TEntity* CreateEntity(EntitySerializer& serializer, Args&& ... constructorArgs);
+
 
 	Entity* CreateEntity(StringId type, EntitySerializer& serializer);
 
@@ -234,7 +238,7 @@ private:
 		return _nextQueryId++;
 	}
 
-	StringId _mapSegmentName;
+	StringId _sceneName;
 
 	Camera _camera;
 	CameraFollower _cameraFollower;
@@ -274,6 +278,41 @@ TEntity* Scene::CreateEntity(const Transform& transform, Args&& ... constructorA
 
 	return entity;
 }
+
+template<typename TEntity, typename ... Args>
+TEntity* Scene::CreateEntity(EntitySerializer& serializer, Args&& ... constructorArgs)
+{
+	auto oldEntityUnderConstruction = entityUnderConstruction;
+
+	TEntity* entity = (TEntity*)AllocateMemory(sizeof(TEntity));
+
+	entity->scene = this;
+
+	entityUnderConstruction = entity;
+	new(entity) TEntity(std::forward<Args>(constructorArgs) ...);
+
+	Vector2 position;
+	float rotation;
+
+	serializer
+	    .Add("position", position)
+	    .Add("rotation", rotation);
+
+	entity->_position = position;
+	entity->_rotation = rotation;
+	entity->type = TEntity::Type;
+	entity->scene = this;
+
+	RegisterEntity(entity);
+    ((Entity*)entity)->DoSerialize(serializer);
+
+	((Entity*)entity)->OnAdded();
+	entityUnderConstruction = oldEntityUnderConstruction;
+
+	return entity;
+}
+
+
 
 template<typename TService, typename ... Args>
 TService* Scene::AddService(Args&& ... args)
