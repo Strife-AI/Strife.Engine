@@ -116,9 +116,9 @@ public:
 		return _world.get();
 	}
 
-	StringId MapSegmentName() const
+	StringId SceneName() const
 	{
-		return _mapSegmentName;
+		return _sceneName;
 	}
 
 	auto& GetEntities()
@@ -238,7 +238,7 @@ private:
 		return _nextQueryId++;
 	}
 
-	StringId _mapSegmentName;
+	StringId _sceneName;
 
 	Camera _camera;
 	CameraFollower _cameraFollower;
