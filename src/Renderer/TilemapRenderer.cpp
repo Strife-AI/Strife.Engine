@@ -3,6 +3,7 @@
 #include "Camera.hpp"
 #include "Renderer.hpp"
 #include "Resource/SpriteResource.hpp"
+#include "Scene/Scene.hpp"
 
 void TilemapLayerRenderer::Render(SpriteBatcher* batcher, Camera* camera, float depth) const
 {
@@ -55,11 +56,8 @@ void TilemapRenderer::Render(Renderer* renderer) const
             {
                 if (map[i][j] == nullptr) continue;
 
-                auto position = Vector2(j, i) * Vector2(32, 32);
-                auto x_Iso = position.x - position.y;
-                auto y_Iso = (position.x + position.y) / 2;
-
-                renderer->RenderSprite(&map[i][j]->sprite, Vector2(x_Iso, y_Iso), depth);
+                auto position = Scene::IsometricToOrthographic(Vector2(j, i) * layer.GetMapLayer()->tileSize.AsVectorOfType<float>() / 2);
+                renderer->RenderSprite(&map[i][j]->sprite, position, depth);
 
                 depth -= 0.00001;
             }

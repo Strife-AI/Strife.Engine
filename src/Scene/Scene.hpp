@@ -80,6 +80,12 @@ struct Transform
 
 class ReplicationManager;
 
+enum class ScenePerspective
+{
+    Orothgraphic,
+    Isometric
+};
+
 class Scene
 {
 public:
@@ -188,6 +194,13 @@ public:
 		return _componentManager;
 	}
 
+    static Vector2 IsometricToOrthographic(Vector2 vec)
+    {
+	    return Vector2(
+	        vec.x - vec.y,
+            (vec.x + vec.y) / 2);
+    }
+
     void RenderEntities(Renderer* renderer);
 
 	float deltaTime = 0;
@@ -199,6 +212,7 @@ public:
 	EntityReference<Entity> soundListener;
 	ReplicationManager* replicationManager;
 	bool isServer;
+    ScenePerspective perspective = ScenePerspective::Orothgraphic;
 
 	static Entity* entityUnderConstruction;
 
@@ -210,23 +224,14 @@ private:
 	std::vector<std::unique_ptr<ISceneService>> _services;
 
 	void MarkEntityForDestruction(Entity* entity);
-
 	void RegisterEntity(Entity* entity);
-
 	void RemoveEntity(Entity* entity);
-
 	void DestroyScheduledEntities();
-
 	void UpdateEntities(float deltaTime);
-
 	void RenderHud(Renderer* renderer);
-
 	void NotifyUpdate(float deltaTime);
-
 	void NotifyServerUpdate(float deltaTime);
-
 	void NotifyFixedUpdate();
-
 	void NotifyServerFixedUpdate();
 
 	int BeginQuery()
