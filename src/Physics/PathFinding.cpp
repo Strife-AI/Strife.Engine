@@ -117,7 +117,7 @@ void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        //Visualize(renderEvent->renderer);
+        Visualize(renderEvent->renderer);
     }
 }
 

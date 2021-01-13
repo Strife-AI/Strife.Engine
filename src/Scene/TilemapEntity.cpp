@@ -1,4 +1,5 @@
 #include <box2d/box2d.h>
+#include <glm/ext/matrix_transform.hpp>
 #include "TilemapEntity.hpp"
 
 #include "Components/RigidBodyComponent.hpp"
@@ -64,7 +65,7 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
         auto pathFinder = scene->AddService<PathFinderService>(
             mapSegment.layers[0].tileMap.Rows(),
             mapSegment.layers[0].tileMap.Cols(),
-            Vector2{ 32, 32 });
+            mapSegment.layers[0].tileSize.AsVectorOfType<float>());
 
         for (auto& rectangle : mapSegment.colliders)
         {
