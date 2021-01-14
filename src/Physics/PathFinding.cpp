@@ -189,7 +189,7 @@ void PathFinderService::Visualize(Renderer* renderer)
     {
         for(int j = 0; j < _obstacleGrid.Cols(); ++j)
         {
-            auto center = Vector2(j, i) * _tileSize + _tileSize / 2;
+            auto center = scene->isometricSettings.TileToWorld(Vector2(j, i)) + scene->isometricSettings.tileSize / 2;  //Vector2(j, i) * _tileSize + _tileSize / 2;
             auto dotSize = Vector2(4, 4);
 
             if (_obstacleGrid[i][j] != 0)

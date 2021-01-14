@@ -86,6 +86,26 @@ enum class ScenePerspective
     Isometric
 };
 
+struct IsometricSettings
+{
+    Vector2 TileToWorld(Vector2 tile) const
+    {
+        return Vector2(
+            (tile.x - tile.y) * tileSize.x / 2,
+            (tile.x + tile.y) * tileSize.y / 2);
+    }
+
+    Vector2 WorldToTile(Vector2 world) const
+    {
+        Vector2 c = world / tileSize * 2;
+        return Vector2(
+            (c.x + c.y) / 2,
+            (c.x + c.y) / 2 - c.x);
+    }
+
+    Vector2 tileSize;
+};
+
 class Scene
 {
 public:
@@ -194,13 +214,6 @@ public:
 		return _componentManager;
 	}
 
-    static Vector2 IsometricToOrthographic(Vector2 vec)
-    {
-	    return Vector2(
-	        vec.x - vec.y,
-            (vec.x + vec.y) / 2);
-    }
-
     void RenderEntities(Renderer* renderer);
 
 	float deltaTime = 0;
@@ -212,7 +225,9 @@ public:
 	EntityReference<Entity> soundListener;
 	ReplicationManager* replicationManager;
 	bool isServer;
+
     ScenePerspective perspective = ScenePerspective::Orothgraphic;
+    IsometricSettings isometricSettings;
 
 	static Entity* entityUnderConstruction;
 

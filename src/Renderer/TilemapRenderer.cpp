@@ -9,12 +9,13 @@ void TilemapLayerRenderer::Render(SpriteBatcher* batcher, Camera* camera, float 
 {
 }
 
-void TilemapRenderer::SetMapSegment(const MapSegment* mapSegment)
+void TilemapRenderer::SetMapSegment(const MapSegment* mapSegment, Scene* scene)
 {
+    _scene = scene;
+
     for (auto& layer : mapSegment->layers)
     {
-       // if (layer.layerName == "ground"_sid)
-            _layers.emplace_back(&layer);
+        _layers.emplace_back(&layer);
     }
 }
 
@@ -56,7 +57,7 @@ void TilemapRenderer::Render(Renderer* renderer) const
             {
                 if (map[i][j] == nullptr) continue;
 
-                auto position = Scene::IsometricToOrthographic(Vector2(j, i) * layer.GetMapLayer()->tileSize.AsVectorOfType<float>() / 2);
+                auto position = _scene->isometricSettings.TileToWorld(Vector2(j, i));
                 renderer->RenderSprite(&map[i][j]->sprite, position, depth);
 
                 depth -= 0.00001;
