@@ -84,7 +84,7 @@ void NeuralNetworkComponent<TNeuralNetwork>::Update(float deltaTime)
 
         if (makeDecisionsTimer <= 0)
         {
-            makeDecisionsTimer = 0;
+            makeDecisionsTimer = 1.0f / decisionsPerSecond;
             MakeDecision();
         }
     }
