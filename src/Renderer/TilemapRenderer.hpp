@@ -34,11 +34,11 @@ private:
 class TilemapRenderer
 {
 public:
-    void SetMapSegment(const MapSegment* mapSegment);
+    void SetMapSegment(const MapSegment* mapSegment, Scene* scene);
     void Render(Renderer* renderer) const;
-
     void SetOffset(Vector2 offset);
 
 private:
     std::vector<TilemapLayerRenderer> _layers;
+    Scene* _scene;
 };

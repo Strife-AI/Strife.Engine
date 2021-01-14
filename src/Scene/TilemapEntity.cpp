@@ -80,8 +80,9 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
         rigidBody->CreateBoxCollider(bounds.Size(), false, bounds.GetCenter());
     }
 
-    _renderer.SetMapSegment(&mapSegment);
+    _renderer.SetMapSegment(&mapSegment, scene);
     _renderer.SetOffset(TopLeft());
+    scene->isometricSettings.tileSize = Vector2(64, 32);
 
     _mapSegment = &mapSegment;
 }
