@@ -103,7 +103,10 @@ struct IsometricSettings
             (c.x + c.y) / 2 - c.x);
     }
 
+    float GetTileDepth(Vector2 position, int layer) const;
+
     Vector2 tileSize;
+    float baseDepth = 0;
 };
 
 class Scene

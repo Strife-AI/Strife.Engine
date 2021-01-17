@@ -1,6 +1,6 @@
 #include "SpriteComponent.hpp"
-
 #include "Renderer.hpp"
+#include "Scene/Scene.hpp"
 
 SpriteComponent::SpriteComponent(const char* spriteName)
 {
@@ -9,10 +9,15 @@ SpriteComponent::SpriteComponent(const char* spriteName)
 
 void SpriteComponent::Render(Renderer* renderer)
 {
+    auto scene = GetScene();
+    float spriteDepth = scene->perspective == ScenePerspective::Orothgraphic
+        ? depth
+        : scene->isometricSettings.GetTileDepth(owner->Center(), depth);
+
     renderer->RenderSprite(
         &sprite->sprite,
         owner->Center() + offsetFromCenter - sprite->sprite.Bounds().Size() * scale / 2,
-        depth,
+        spriteDepth,
         scale,
         owner->Rotation(),
         flags.HasFlag(SpriteComponentFlags::FlipHorizontal),

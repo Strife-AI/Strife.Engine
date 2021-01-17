@@ -29,7 +29,7 @@ FlowDirection OppositeFlowDirection(FlowDirection direction)
 
 Vector2 FlowField::GetFlowDirectionAtCell(Vector2 position)
 {
-    auto cell = (position / tileSize)
+    auto cell = position
         .Floor()
         .AsVectorOfType<float>()
         .Clamp({ 0.0f, 0.0f }, grid.Dimensions() - Vector2(1));
@@ -39,18 +39,16 @@ Vector2 FlowField::GetFlowDirectionAtCell(Vector2 position)
 
 Vector2 FlowField::GetFilteredFlowDirection(Vector2 position)
 {
-    Rectangle bounds(position, tileSize);
+    Rectangle bounds(position, Vector2(1));
 
     auto topLeft = GetFlowDirectionAtCell(bounds.TopLeft());
     auto topRight = GetFlowDirectionAtCell(bounds.TopRight());
     auto bottomLeft = GetFlowDirectionAtCell(bounds.BottomLeft());
     auto bottomRight = GetFlowDirectionAtCell(bounds.BottomRight());
 
-    auto tileTopLeft = (position / tileSize).Floor().AsVectorOfType<float>() * tileSize;
+    auto tileTopLeft = position.Floor().AsVectorOfType<float>();
 
-    auto t = (position - tileTopLeft) / tileSize;
-
-
+    auto t = position - tileTopLeft;
 
     return Lerp(
         Lerp(topLeft, topRight, t.x).Normalize(),
@@ -58,9 +56,8 @@ Vector2 FlowField::GetFilteredFlowDirection(Vector2 position)
         t.y).Normalize();
 }
 
-PathFinderService::PathFinderService(int rows, int cols, Vector2 tileSize)
-    : _obstacleGrid(rows, cols),
-    _tileSize(tileSize)
+PathFinderService::PathFinderService(int rows, int cols)
+    : _obstacleGrid(rows, cols)
 {
     _obstacleGrid.FillWithZero();
 }
@@ -70,12 +67,12 @@ void PathFinderService::AddObstacle(const Rectangle& bounds)
     auto topLeft = PixelToCellCoordinate(bounds.TopLeft()).Max({ 0, 0 });
     auto bottomRight = PixelToCellCoordinate(bounds.BottomRight());
 
-    if((int)bounds.BottomRight().x % (int)_tileSize.x != 0)
+    if(!IsApproximately(bounds.BottomRight().x, floor(bounds.BottomRight().x)))
     {
         ++bottomRight.x;
     }
 
-    if ((int)bounds.BottomRight().y % (int)_tileSize.y != 0)
+    if(!IsApproximately(bounds.BottomRight().y, floor(bounds.BottomRight().y)))
     {
         ++bottomRight.y;
     }
@@ -117,7 +114,7 @@ void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        Visualize(renderEvent->renderer);
+        //Visualize(renderEvent->renderer);
     }
 }
 
@@ -146,7 +143,7 @@ void PathFinderService::CalculatePaths()
             WorkQueue emptyQueue;
             std::swap(emptyQueue, _workQueue);
 
-            _fieldInProgress = std::make_shared<FlowField>(_obstacleGrid.Rows(), _obstacleGrid.Cols(), request.end, _tileSize);
+            _fieldInProgress = std::make_shared<FlowField>(_obstacleGrid.Rows(), _obstacleGrid.Cols(), request.end);
 
             _workQueue.push(request.endCell);
             _fieldInProgress->grid[request.endCell].direction = FlowDirection::Zero;
@@ -202,7 +199,7 @@ void PathFinderService::Visualize(Renderer* renderer)
 
 Vector2 PathFinderService::PixelToCellCoordinate(Vector2 position) const
 {
-    return (position / _tileSize).Floor().AsVectorOfType<float>();
+    return position.Floor().AsVectorOfType<float>();
 }
 
 void PathFinderService::EnqueueCellIfValid(Vector2 cell, FlowDirection fromDirection)
@@ -224,12 +221,12 @@ void PathFinderService::RemoveObstacle(const Rectangle &bounds)
     auto topLeft = PixelToCellCoordinate(bounds.TopLeft()).Max({ 0, 0 });
     auto bottomRight = PixelToCellCoordinate(bounds.BottomRight());
 
-    if((int)bounds.BottomRight().x % (int)_tileSize.x != 0)
+    if(!IsApproximately(bounds.BottomRight().x, floor(bounds.BottomRight().x)))
     {
         ++bottomRight.x;
     }
 
-    if ((int)bounds.BottomRight().y % (int)_tileSize.y != 0)
+    if(!IsApproximately(bounds.BottomRight().y, floor(bounds.BottomRight().y)))
     {
         ++bottomRight.y;
     }

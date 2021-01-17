@@ -59,18 +59,19 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
         rigidBody->CreateFixture(fixtureDef);
     }
 
+    PathFinderService* pathFinder = nullptr;
+
     // FIXME: the dimensions of the map should be calculated as part of the content pipeline
     if (!mapSegment.layers.empty())
     {
-        auto pathFinder = scene->AddService<PathFinderService>(
+        pathFinder = scene->AddService<PathFinderService>(
             mapSegment.layers[0].tileMap.Rows(),
-            mapSegment.layers[0].tileMap.Cols(),
-            mapSegment.layers[0].tileSize.AsVectorOfType<float>());
+            mapSegment.layers[0].tileMap.Cols());
 
         for (auto& rectangle : mapSegment.colliders)
         {
             auto bounds = rectangle.As<float>();
-            pathFinder->AddObstacle(bounds);
+            //pathFinder->AddObstacle(bounds);
         }
     }
 
@@ -85,4 +86,22 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
     scene->isometricSettings.tileSize = Vector2(64, 32);
 
     _mapSegment = &mapSegment;
+
+    if (pathFinder != nullptr)
+    {
+        for (auto layer : mapSegment.layers)
+        {
+            if (layer.layerName != "ground"_sid)
+            {
+                for (int i = 0; i < layer.tileMap.Rows(); ++i)
+                {
+                    for (int j = 0; j < layer.tileMap.Cols(); ++j)
+                    {
+                        if (layer.tileMap[i][j] != nullptr)
+                            pathFinder->AddObstacle(Rectangle(Vector2(j + 1, i + 1), Vector2(1)));
+                    }
+                }
+            }
+        }
+    }
 }

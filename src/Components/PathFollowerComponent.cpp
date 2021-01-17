@@ -1,5 +1,6 @@
 #include "PathFollowerComponent.hpp"
 #include "Components/RigidBodyComponent.hpp"
+#include "Renderer.hpp"
 
 void PathFollowerComponent::FixedUpdate(float deltaTime)
 {
@@ -68,13 +69,21 @@ void PathFollowerComponent::FollowFlowField()
             }
         }
 
+        useBeeLine = false;
+
         if (useBeeLine)
         {
             velocity = (flowField->target - owner->Center()).Normalize() * 200;
         }
         else
         {
-            velocity = flowField->GetFilteredFlowDirection(owner->Center() - Vector2(16, 16)) * speed;
+            velocity = flowField->GetFilteredFlowDirection(ToPathfinderPerspective(owner->Center() - Vector2(16, 16))) * speed;
+
+            if (scene->perspective == ScenePerspective::Isometric)
+            {
+                auto result = Vector2((velocity.x - velocity.y), (velocity.x + velocity.y) / 2).Normalize();
+                velocity = result * speed;
+            }
         }
 
         float dist = (flowField->target - owner->Center()).Length();
@@ -95,13 +104,17 @@ void PathFollowerComponent::FollowFlowField()
         }
 
         rigidBody->SetVelocity(velocity);
-        //Renderer::DrawDebugLine({ owner->Center(), owner->Center() + velocity, useBeeLine ? Color::Red() : Color::Green() });
+        Renderer::DrawDebugLine({ owner->Center(), owner->Center() + velocity, useBeeLine ? Color::Red() : Color::Green() });
     }
 }
 
 void PathFollowerComponent::UpdateFlowField(Vector2 newTarget)
 {
-    GetScene()->GetService<PathFinderService>()->RequestFlowField(owner->Center(), newTarget, owner);
+    currentTarget = newTarget;
+
+    auto targetPathFinderPerspective = ToPathfinderPerspective(newTarget);
+    auto centerPathFinderPerspective = ToPathfinderPerspective(owner->Center());
+    GetScene()->GetService<PathFinderService>()->RequestFlowField(centerPathFinderPerspective, targetPathFinderPerspective, owner);
 }
 
 void PathFollowerComponent::SetTarget(Vector2 position)
@@ -123,6 +136,7 @@ void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
         if (state == PathFollowerState::Stopped) return;
 
         flowField = flowFieldReady->result;
+        flowField->target = currentTarget;
         acceleration = { 0, 0 };
     }
 }
@@ -133,4 +147,13 @@ void PathFollowerComponent::FollowEntity(Entity* entity, float minDistance)
     UpdateFlowField(entity->Center());
     entityToFollow = entity;
     updateTargetTimer = 2;
+}
+
+Vector2 PathFollowerComponent::ToPathfinderPerspective(Vector2 position)
+{
+    auto scene = GetScene();
+    if (scene->perspective == ScenePerspective::Orothgraphic) return position / Vector2(32, 32);    // TODO: don't hardcode
+    else if (scene->perspective == ScenePerspective::Isometric) return scene->isometricSettings.WorldToTile(position);
+
+    return position;
 }

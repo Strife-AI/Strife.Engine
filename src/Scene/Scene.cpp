@@ -370,3 +370,13 @@ Entity* Scene::CreateEntity(StringId type, EntitySerializer& serializer)
 {
     return EntityUtil::EntityMetadata::CreateEntityFromType(type, this, serializer);
 }
+
+float IsometricSettings::GetTileDepth(Vector2 position, int layer) const
+{
+    position = position / tileSize;
+    float dz = 1e-7;
+    float maxWidth = 1000;
+    float maxHeight = 1000;
+
+    return baseDepth - (position.x + position.y * maxWidth + layer * maxWidth * maxHeight) * dz;
+}
