@@ -29,10 +29,9 @@ FlowDirection OppositeFlowDirection(FlowDirection direction);
 
 struct FlowField
 {
-    FlowField(int rows, int cols, Vector2 target_, Vector2 tileSize_)
+    FlowField(int rows, int cols, Vector2 target_)
         : grid(rows, cols),
-        target(target_),
-        tileSize(tileSize_)
+        target(target_)
     {
         
     }
@@ -42,7 +41,6 @@ struct FlowField
 
     VariableSizedGrid<FlowCell> grid;
     Vector2 target;
-    Vector2 tileSize;
 };
 
 /// <summary>
@@ -80,7 +78,7 @@ struct PathRequest
 class PathFinderService : public ISceneService
 {
 public:
-    PathFinderService(int rows, int cols, Vector2 tileSize);
+    PathFinderService(int rows, int cols);
 
     void AddObstacle(const Rectangle& bounds);
     void RemoveObstacle(const Rectangle& bounds);
@@ -99,7 +97,6 @@ private:
     using WorkQueue = std::queue<Vector2>;
 
     VariableSizedGrid<char> _obstacleGrid;
-    Vector2 _tileSize;
     std::queue<PathRequest> _requestQueue;
 
     WorkQueue _workQueue;

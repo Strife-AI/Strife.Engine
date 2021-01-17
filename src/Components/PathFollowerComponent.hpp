@@ -28,6 +28,9 @@ DEFINE_COMPONENT(PathFollowerComponent)
     void FollowFlowField();
     void UpdateFollowTarget(float deltaTime, Scene* scene);
 
+    Vector2 ToPathfinderPerspective(Vector2 position);
+    Vector2 ToWorldPerspective(Vector2 position);
+
     RigidBodyComponent* rigidBody;
     std::shared_ptr<FlowField> flowField;
     Vector2 acceleration;
@@ -36,4 +39,5 @@ DEFINE_COMPONENT(PathFollowerComponent)
     EntityReference<Entity> entityToFollow;
     float updateTargetTimer = 0;
     float speed = 200;
+    Vector2 currentTarget;
 };

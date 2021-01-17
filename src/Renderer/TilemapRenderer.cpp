@@ -46,7 +46,7 @@ DEFINE_RENDER_LAYER(20, TilemapBackgroundLayer)
 
 void TilemapRenderer::Render(Renderer* renderer) const
 {
-    auto depth = TilemapBackgroundLayer;
+    int layerId = 0;
 
     for (auto& layer : _layers)
     {
@@ -58,11 +58,11 @@ void TilemapRenderer::Render(Renderer* renderer) const
                 if (map[i][j] == nullptr) continue;
 
                 auto position = _scene->isometricSettings.TileToWorld(Vector2(j, i));
-                renderer->RenderSprite(&map[i][j]->sprite, position, depth);
-
-                depth -= 0.00001;
+                renderer->RenderSprite(&map[i][j]->sprite, position, _scene->isometricSettings.GetTileDepth(position, layerId));
             }
         }
+
+        ++layerId;
     }
 }
 
