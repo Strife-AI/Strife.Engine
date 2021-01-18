@@ -91,7 +91,7 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
     {
         for (auto layer : mapSegment.layers)
         {
-            if (layer.layerName != "ground"_sid)
+            if (layer.layerName == "slice1"_sid)
             {
                 for (int i = 0; i < layer.tileMap.Rows(); ++i)
                 {
