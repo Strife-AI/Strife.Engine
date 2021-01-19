@@ -18,9 +18,18 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment)
         {
             for (int j = 0; j < layer.Cols(); ++j)
             {
-                if (layer[i][j] != nullptr)
+                auto tile = layer[i][j];
+                if (tile != nullptr)
                 {
                     if (i > 0 && j > 0) terrain[i - 1][j - 1].height = layerId;
+
+                    for (auto& property : tile->properties)
+                    {
+                        if (property.first == "ramp")
+                        {
+                            Log("Found ramp\n");
+                        }
+                    }
                 }
 
                 terrain[i][j].flags.SetFlag(IsometricTerrainCellFlags::Solid);
