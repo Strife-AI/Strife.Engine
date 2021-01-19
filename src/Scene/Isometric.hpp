@@ -33,10 +33,9 @@ struct IsometricSettings
 
     Vector2 WorldToTile(Vector2 world) const
     {
-        Vector2 c = world / tileSize * 2;
         return Vector2(
-            (c.x + c.y) / 2,
-            (c.x + c.y) / 2 - c.x);
+        (2 * world.y + world.x),
+        (2 * world.y - world.x) / 2) / tileSize;
     }
 
     Vector2 WorldToIntegerTile(Vector2 world) const
