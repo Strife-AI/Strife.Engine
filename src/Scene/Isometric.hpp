@@ -7,11 +7,11 @@ class MapSegment;
 
 enum class IsometricTerrainCellFlags
 {
-    Solid,
-    RampNorth,
-    RampSouth,
-    RampEast,
-    RampWest
+    Solid = 1,
+    RampNorth = 2,
+    RampSouth = 4,
+    RampEast = 8,
+    RampWest = 16
 };
 
 struct IsometricTerrainCell
@@ -19,6 +19,8 @@ struct IsometricTerrainCell
     int height = 0;
     Flags<IsometricTerrainCellFlags> flags;
 };
+
+class PathFinderService;
 
 struct IsometricSettings
 {
@@ -46,7 +48,7 @@ struct IsometricSettings
     }
 
     float GetTileDepth(Vector2 position, int layer) const;
-    void BuildFromMapSegment(const MapSegment& mapSegment);
+    void BuildFromMapSegment(const MapSegment& mapSegment, PathFinderService* pathFinder);
     int GetCurrentLayer(Vector2 position) const;
 
     Vector2 tileSize;

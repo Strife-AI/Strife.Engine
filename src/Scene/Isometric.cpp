@@ -1,7 +1,8 @@
+#include <Physics/PathFinding.hpp>
 #include "Isometric.hpp"
 #include "Scene/MapSegment.hpp"
 
-void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment)
+void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFinderService* pathFinder)
 {
     // Calculate terrain size
     {
@@ -30,9 +31,37 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment)
                             Log("Found ramp\n");
                         }
                     }
-                }
 
-                terrain[i][j].flags.SetFlag(IsometricTerrainCellFlags::Solid);
+                    terrain[i][j].flags.SetFlag(IsometricTerrainCellFlags::Solid);
+                }
+            }
+        }
+    }
+
+    // Add blocked edges where there's a change in elevation
+    {
+        const Vector2 offsets[4] =
+        {
+            { 0, 1 },
+            { 0, -1 },
+            { -1, 0 },
+            { 1, 0 },
+        };
+
+        for (int i = 1; i < terrain.Rows() - 1; ++i)
+        {
+            for (int j = 1; j < terrain.Cols() - 1; ++j)
+            {
+                Vector2 from = Vector2(j, i);
+
+                for (auto offset : offsets)
+                {
+                    Vector2 to = from + offset;
+                    if (terrain[from].height != terrain[to].height)
+                    {
+                        pathFinder->AddEdge(from, to);
+                    }
+                }
             }
         }
     }

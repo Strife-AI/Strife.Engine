@@ -69,6 +69,8 @@ void PathFollowerComponent::FollowFlowField()
             }
         }
 
+        useBeeLine = false;
+
         if (useBeeLine)
         {
             velocity = (flowField->target - owner->Center()).Normalize() * 200;

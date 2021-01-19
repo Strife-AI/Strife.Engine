@@ -87,5 +87,5 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
 
     _mapSegment = &mapSegment;
 
-    scene->isometricSettings.BuildFromMapSegment(mapSegment);
+    scene->isometricSettings.BuildFromMapSegment(mapSegment, pathFinder);
 }

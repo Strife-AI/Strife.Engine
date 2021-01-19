@@ -75,14 +75,36 @@ struct PathRequest
     PathRequestStatus status = PathRequestStatus::NotStarted;
 };
 
+enum class ObstacleEdgeFlags : uint8_t
+{
+    NorthBlocked = 1,
+    SouthBlocked = 2,
+    EastBlocked = 4,
+    WestBlocked = 8
+};
+
+struct ObstacleCell
+{
+    char count = 0;
+    Flags<ObstacleEdgeFlags> flags;
+};
+
 class PathFinderService : public ISceneService
 {
 public:
     PathFinderService(int rows, int cols);
 
+    void AddEdge(Vector2 from, Vector2 to);
+    void RemoveEdge(Vector2 from, Vector2 to);
+
     void AddObstacle(const Rectangle& bounds);
     void RemoveObstacle(const Rectangle& bounds);
     void RequestFlowField(Vector2 start, Vector2 end, Entity* owner);
+
+    ObstacleCell& GetCell(Vector2 position)
+    {
+        return _obstacleGrid[position];
+    }
 
 private:
     static constexpr int MaxGridCalculationsPerTick = 32768;
@@ -92,11 +114,11 @@ private:
     void Visualize(Renderer* renderer);
 
     Vector2 PixelToCellCoordinate(Vector2 position) const;
-    void EnqueueCellIfValid(Vector2 cell, FlowDirection fromDirection);
+    void EnqueueCellIfValid(Vector2 cell, Vector2 from, FlowDirection fromDirection);
 
     using WorkQueue = std::queue<Vector2>;
 
-    VariableSizedGrid<char> _obstacleGrid;
+    VariableSizedGrid<ObstacleCell> _obstacleGrid;
     std::queue<PathRequest> _requestQueue;
 
     WorkQueue _workQueue;
