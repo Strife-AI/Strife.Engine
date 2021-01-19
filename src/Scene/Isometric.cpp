@@ -2,6 +2,16 @@
 #include "Isometric.hpp"
 #include "Scene/MapSegment.hpp"
 
+static bool TileIsRamp(TileProperties* properties)
+{
+    for (auto& property : properties->properties)
+    {
+        if (property.first == "ramp") return true;
+    }
+
+    return false;
+}
+
 void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFinderService* pathFinder)
 {
     // Calculate terrain size
@@ -22,25 +32,23 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
                 auto tile = layer[i][j];
                 if (tile != nullptr)
                 {
-                    if (i > 0 && j > 0) terrain[i - 1][j - 1].height = layerId;
-
-                    for (auto& property : tile->properties)
+                    if (!TileIsRamp(tile))
                     {
-                        if (property.first == "ramp")
-                        {
-                            Log("Found ramp\n");
-                        }
-                    }
+                        if (i > 0 && j > 0) terrain[i - 1][j - 1].height = layerId;
 
-                    terrain[i][j].flags.SetFlag(IsometricTerrainCellFlags::Solid);
+                        terrain[i][j].flags.SetFlag(IsometricTerrainCellFlags::Solid);
+                    }
+                    else
+                    {
+                        if (i > 0 && j > 0) terrain[i - 1][j - 1].height = layerId;
+                        terrain[i][j].height = layerId;
+                    }
                 }
             }
         }
     }
 
-    // Add blocked edges where there's a change in elevation
-    {
-        const Vector2 offsets[4] =
+    const Vector2 offsets[4] =
         {
             { 0, 1 },
             { 0, -1 },
@@ -48,6 +56,8 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
             { 1, 0 },
         };
 
+    // Add blocked edges where there's a change in elevation
+    {
         for (int i = 1; i < terrain.Rows() - 1; ++i)
         {
             for (int j = 1; j < terrain.Cols() - 1; ++j)
@@ -60,6 +70,47 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
                     if (terrain[from].height != terrain[to].height)
                     {
                         pathFinder->AddEdge(from, to);
+                    }
+                }
+            }
+        }
+    }
+
+    // Ramps
+    {
+        for (int layerId = 1; layerId < mapSegment.layers.size(); ++layerId)
+        {
+            auto& layer = mapSegment.layers[layerId].tileMap;
+            for (int i = 1; i < terrain.Rows() - 1; ++i)
+            {
+                for (int j = 1; j < terrain.Cols() - 1; ++j)
+                {
+                    auto tile = layer[i][j];
+                    Vector2 position(j, i);
+                    bool ramp = false;
+                    if (tile != nullptr)
+                    {
+                        for (auto& property : tile->properties)
+                        {
+                            if (property.first == "ramp")
+                            {
+                                if (property.second == "west")
+                                {
+                                    pathFinder->RemoveEdge(position, position - Vector2(1, 0));
+                                    pathFinder->RemoveEdge(position, position + Vector2(1, 0));
+                                    pathFinder->RemoveEdge(position - Vector2(1, 1), position - Vector2(0, 1));
+                                    ramp = true;
+                                }
+                            }
+                        }
+
+                        if (!ramp && terrain[i][j].height != layerId)
+                        {
+                            for (auto offset : offsets)
+                            {
+                                //pathFinder->AddEdge(position, position + offset);
+                            }
+                        }
                     }
                 }
             }

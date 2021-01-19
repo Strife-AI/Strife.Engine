@@ -114,7 +114,7 @@ void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        Visualize(renderEvent->renderer);
+        //Visualize(renderEvent->renderer);
     }
 }
 
@@ -204,9 +204,9 @@ void PathFinderService::Visualize(Renderer* renderer)
 
             for (int k = 0; k < 4; ++k)
             {
-                Vector2 offset(32, 0);
+                Vector2 offset(0, 0);
 
-                if (_obstacleGrid[i][j].flags.HasFlag(flags[k]))
+                if (_obstacleGrid[i][j].flags.HasFlag(flags[k]) || true)
                     renderer->RenderLine(points[k] + offset, points[(k + 1) % 4] + offset, Color::Red(), -1);
             }
         }
@@ -222,18 +222,32 @@ static ObstacleEdgeFlags GetDirection(Vector2 from, Vector2 to)
 {
     Vector2 diff = to - from;
     ObstacleEdgeFlags dir = ObstacleEdgeFlags::NorthBlocked;
-    if (diff == Vector2(1, 0)) dir = ObstacleEdgeFlags::EastBlocked;
-    if (diff == Vector2(-1, 0)) dir = ObstacleEdgeFlags::WestBlocked;
-    if (diff == Vector2(0, -1)) dir = ObstacleEdgeFlags::NorthBlocked;
-    if (diff == Vector2(0, 1)) dir = ObstacleEdgeFlags::SouthBlocked;
+    if (diff == Vector2(1, 0)) return ObstacleEdgeFlags::EastBlocked;
+    if (diff == Vector2(-1, 0)) return ObstacleEdgeFlags::WestBlocked;
+    if (diff == Vector2(0, -1)) return ObstacleEdgeFlags::NorthBlocked;
+    if (diff == Vector2(0, 1)) return ObstacleEdgeFlags::SouthBlocked;
 
+    FatalError("Bad dir %f %f\n", diff.x, diff.y);
     return dir;
+}
+
+static ObstacleEdgeFlags ReverseDirection(ObstacleEdgeFlags dir)
+{
+    switch (dir)
+    {
+    case ObstacleEdgeFlags::EastBlocked: return ObstacleEdgeFlags::WestBlocked;
+    case ObstacleEdgeFlags::WestBlocked: return ObstacleEdgeFlags::EastBlocked;
+    case ObstacleEdgeFlags::NorthBlocked: return ObstacleEdgeFlags::SouthBlocked;
+    case ObstacleEdgeFlags::SouthBlocked: return ObstacleEdgeFlags::NorthBlocked;
+    }
+
+    return ObstacleEdgeFlags::NorthBlocked;
 }
 
 void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from, FlowDirection fromDirection)
 {
     auto dir = GetDirection(from, cell);
-    bool directionIsBlocked = _obstacleGrid[cell].flags.HasFlag(dir);
+    bool directionIsBlocked = _obstacleGrid[from].flags.HasFlag(dir);
 
     if(cell.x >= 0
         && cell.x < _obstacleGrid.Cols()
@@ -272,19 +286,6 @@ void PathFinderService::RemoveObstacle(const Rectangle &bounds)
             --_obstacleGrid[i][j].count;
         }
     }
-}
-
-static ObstacleEdgeFlags ReverseDirection(ObstacleEdgeFlags dir)
-{
-    switch (dir)
-    {
-    case ObstacleEdgeFlags::EastBlocked: return ObstacleEdgeFlags::WestBlocked;
-    case ObstacleEdgeFlags::WestBlocked: return ObstacleEdgeFlags::EastBlocked;
-    case ObstacleEdgeFlags::NorthBlocked: return ObstacleEdgeFlags::SouthBlocked;
-    case ObstacleEdgeFlags::SouthBlocked: return ObstacleEdgeFlags::NorthBlocked;
-    }
-
-    return ObstacleEdgeFlags::NorthBlocked;
 }
 
 void PathFinderService::AddEdge(Vector2 from, Vector2 to)

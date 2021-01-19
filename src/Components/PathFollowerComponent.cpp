@@ -11,6 +11,23 @@ void PathFollowerComponent::FixedUpdate(float deltaTime)
 
     FollowFlowField();
 
+//    if (flowField != nullptr)
+//    {
+//        Log("Render\n");
+//
+//        for (int i = 0; i < flowField->grid.Rows(); ++i)
+//        {
+//            for (int j = 0; j < flowField->grid.Cols(); ++j)
+//            {
+//                auto dir = flowField->GetFilteredFlowDirection(Vector2(j, i));
+//                auto result = Vector2((dir.x - dir.y), (dir.x + dir.y) / 2).Normalize();
+//                auto start = owner->scene->isometricSettings.TileToWorld(Vector2(j + 0.5, i + 0.5));
+//                Renderer::DrawDebugLine({ start, start + result * 10, Color::Black() });
+//                Renderer::DrawDebugRectangle(Rectangle(start - Vector2(2, 2), Vector2(4, 4)), Color::Black());
+//            }
+//        }
+//    }
+
     if (state == PathFollowerState::FollowingEntity)
     {
         auto scene = GetScene();
@@ -38,6 +55,7 @@ void PathFollowerComponent::UpdateFollowTarget(float deltaTime, Scene* scene)
     {
         state = PathFollowerState::Stopped;
         flowField = nullptr;
+        Log("Field set to null because stopped\n");
     }
 }
 
@@ -77,7 +95,7 @@ void PathFollowerComponent::FollowFlowField()
         }
         else
         {
-            velocity = flowField->GetFilteredFlowDirection(ToPathfinderPerspective(owner->Center() - Vector2(16, 16))) * speed;
+            velocity = flowField->GetFlowDirectionAtCell(ToPathfinderPerspective(owner->Center() - Vector2(16, 16))) * speed;
 
             if (scene->perspective == ScenePerspective::Isometric)
             {
@@ -87,7 +105,7 @@ void PathFollowerComponent::FollowFlowField()
         }
 
         float dist = (flowField->target - owner->Center()).Length();
-        if (dist > 20)
+        if (dist > 20 && false)
         {
             velocity = rigidBody->GetVelocity().SmoothDamp(
                 velocity,
@@ -101,6 +119,7 @@ void PathFollowerComponent::FollowFlowField()
             velocity = { 0, 0 };
             acceleration = { 0, 0 };
             flowField = nullptr;
+            Log("Field set to null\n");
         }
 
         rigidBody->SetVelocity(velocity);
@@ -157,3 +176,4 @@ Vector2 PathFollowerComponent::ToPathfinderPerspective(Vector2 position)
 
     return position;
 }
+
