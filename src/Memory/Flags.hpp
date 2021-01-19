@@ -1,5 +1,7 @@
 #pragma once
 
+#include <initializer_list>
+
 template<typename TEnum>
 struct Flags
 {

@@ -87,21 +87,5 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
 
     _mapSegment = &mapSegment;
 
-    if (pathFinder != nullptr)
-    {
-        for (auto layer : mapSegment.layers)
-        {
-            if (layer.layerName == "slice1"_sid)
-            {
-                for (int i = 0; i < layer.tileMap.Rows(); ++i)
-                {
-                    for (int j = 0; j < layer.tileMap.Cols(); ++j)
-                    {
-                        if (layer.tileMap[i][j] != nullptr)
-                            pathFinder->AddObstacle(Rectangle(Vector2(j + 1, i + 1), Vector2(1)));
-                    }
-                }
-            }
-        }
-    }
+    scene->isometricSettings.BuildFromMapSegment(mapSegment);
 }
