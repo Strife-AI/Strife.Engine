@@ -83,7 +83,7 @@ void PathFinderService::AddObstacle(const Rectangle& bounds)
     {
         for(int j = topLeft.x; j < bottomRight.x; ++j)
         {
-            ++_obstacleGrid[i][j];
+            ++_obstacleGrid[i][j].count;
         }
     }
 }
@@ -98,7 +98,7 @@ void PathFinderService::RequestFlowField(Vector2 start, Vector2 end, Entity* own
     request.owner = owner;
 
     // FIXME: workaround for when ending in a solid cell
-    while(_obstacleGrid[request.endCell] != 0)
+    while(_obstacleGrid[request.endCell].count != 0)
     {
         ++request.endCell.x;
     }
@@ -114,7 +114,7 @@ void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        //Visualize(renderEvent->renderer);
+        Visualize(renderEvent->renderer);
     }
 }
 
@@ -166,7 +166,7 @@ void PathFinderService::CalculatePaths()
 
             for(auto direction : directions)
             {
-                EnqueueCellIfValid(cell + FlowDirectionToVector2(direction), direction);
+                EnqueueCellIfValid(cell + FlowDirectionToVector2(direction), cell, direction);
                 ++calculationCount;
             }
         }
@@ -186,12 +186,28 @@ void PathFinderService::Visualize(Renderer* renderer)
     {
         for(int j = 0; j < _obstacleGrid.Cols(); ++j)
         {
-            auto center = scene->isometricSettings.TileToWorld(Vector2(j, i)) + scene->isometricSettings.tileSize / 2;  //Vector2(j, i) * _tileSize + _tileSize / 2;
-            auto dotSize = Vector2(4, 4);
-
-            if (_obstacleGrid[i][j] != 0)
+            Vector2 points[4] =
             {
-                renderer->RenderRectangle(Rectangle(center - dotSize / 2, dotSize), Color::Red(), -1);
+                scene->isometricSettings.TileToWorld(Vector2(j, i)),
+                scene->isometricSettings.TileToWorld(Vector2(j + 1, i)),
+                scene->isometricSettings.TileToWorld(Vector2(j + 1, i + 1)),
+                scene->isometricSettings.TileToWorld(Vector2(j, i + 1)),
+            };
+
+            ObstacleEdgeFlags flags[4] =
+            {
+                ObstacleEdgeFlags::NorthBlocked,
+                ObstacleEdgeFlags::EastBlocked,
+                ObstacleEdgeFlags::SouthBlocked,
+                ObstacleEdgeFlags::WestBlocked
+            };
+
+            for (int k = 0; k < 4; ++k)
+            {
+                Vector2 offset(32, 0);
+
+                if (_obstacleGrid[i][j].flags.HasFlag(flags[k]))
+                    renderer->RenderLine(points[k] + offset, points[(k + 1) % 4] + offset, Color::Red(), -1);
             }
         }
     }
@@ -202,14 +218,30 @@ Vector2 PathFinderService::PixelToCellCoordinate(Vector2 position) const
     return position.Floor().AsVectorOfType<float>();
 }
 
-void PathFinderService::EnqueueCellIfValid(Vector2 cell, FlowDirection fromDirection)
+static ObstacleEdgeFlags GetDirection(Vector2 from, Vector2 to)
 {
+    Vector2 diff = to - from;
+    ObstacleEdgeFlags dir = ObstacleEdgeFlags::NorthBlocked;
+    if (diff == Vector2(1, 0)) dir = ObstacleEdgeFlags::EastBlocked;
+    if (diff == Vector2(-1, 0)) dir = ObstacleEdgeFlags::WestBlocked;
+    if (diff == Vector2(0, -1)) dir = ObstacleEdgeFlags::NorthBlocked;
+    if (diff == Vector2(0, 1)) dir = ObstacleEdgeFlags::SouthBlocked;
+
+    return dir;
+}
+
+void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from, FlowDirection fromDirection)
+{
+    auto dir = GetDirection(from, cell);
+    bool directionIsBlocked = _obstacleGrid[cell].flags.HasFlag(dir);
+
     if(cell.x >= 0
         && cell.x < _obstacleGrid.Cols()
         && cell.y >= 0
         && cell.y < _obstacleGrid.Rows()
-        && _obstacleGrid[cell] == 0
-        && _fieldInProgress->grid[cell].direction == FlowDirection::Unset)
+        && _obstacleGrid[cell].count == 0
+        && _fieldInProgress->grid[cell].direction == FlowDirection::Unset
+        && !directionIsBlocked)
     {
         _workQueue.push(cell);
         _fieldInProgress->grid[cell].direction = OppositeFlowDirection(fromDirection);
@@ -237,7 +269,36 @@ void PathFinderService::RemoveObstacle(const Rectangle &bounds)
     {
         for(int j = topLeft.x; j < bottomRight.x; ++j)
         {
-            --_obstacleGrid[i][j];
+            --_obstacleGrid[i][j].count;
         }
     }
+}
+
+static ObstacleEdgeFlags ReverseDirection(ObstacleEdgeFlags dir)
+{
+    switch (dir)
+    {
+    case ObstacleEdgeFlags::EastBlocked: return ObstacleEdgeFlags::WestBlocked;
+    case ObstacleEdgeFlags::WestBlocked: return ObstacleEdgeFlags::EastBlocked;
+    case ObstacleEdgeFlags::NorthBlocked: return ObstacleEdgeFlags::SouthBlocked;
+    case ObstacleEdgeFlags::SouthBlocked: return ObstacleEdgeFlags::NorthBlocked;
+    }
+
+    return ObstacleEdgeFlags::NorthBlocked;
+}
+
+void PathFinderService::AddEdge(Vector2 from, Vector2 to)
+{
+    // TODO: bounds check on from and to
+    auto dir = GetDirection(from, to);
+    _obstacleGrid[from].flags.SetFlag(dir);
+    _obstacleGrid[to].flags.SetFlag(ReverseDirection(dir));
+}
+
+void PathFinderService::RemoveEdge(Vector2 from, Vector2 to)
+{
+    // TODO: bounds check on from and to
+    auto dir = GetDirection(from, to);
+    _obstacleGrid[from].flags.ResetFlag(dir);
+    _obstacleGrid[to].flags.ResetFlag(ReverseDirection(dir));
 }
