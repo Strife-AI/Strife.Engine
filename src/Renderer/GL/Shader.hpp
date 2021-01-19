@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 
 #include "glcorearb.h"
 #include "gl3w.h"
