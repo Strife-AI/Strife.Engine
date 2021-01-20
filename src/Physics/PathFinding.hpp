@@ -37,10 +37,13 @@ struct FlowField
     }
 
     Vector2 GetFlowDirectionAtCell(Vector2 position);
+    Vector2 GetFlowDirectionAtCellIfNotBlocked(Vector2 from, Vector2 to);
     Vector2 GetFilteredFlowDirection(Vector2 position);
 
     VariableSizedGrid<FlowCell> grid;
     Vector2 target;
+    PathFinderService* pathFinder;
+    Vector2 ClampPosition(const Vector2& position) const;
 };
 
 /// <summary>
