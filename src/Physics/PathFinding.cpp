@@ -8,9 +8,13 @@ Vector2 FlowDirectionToVector2(FlowDirection direction)
     {
     case FlowDirection::Zero: return Vector2(0);
     case FlowDirection::North: return Vector2(0, -1);
+    case FlowDirection::NorthEast: return Vector2(1, -1);
     case FlowDirection::East: return Vector2(1, 0);
+    case FlowDirection::SouthEast: return Vector2(1, 1);
     case FlowDirection::South: return Vector2(0, 1);
+    case FlowDirection::SouthWest: return Vector2(-1, 1);
     case FlowDirection::West: return Vector2(-1, 0);
+    case FlowDirection::NorthWest: return Vector2(-1, -1);
     default: return Vector2(0);
     }
 }
@@ -50,7 +54,7 @@ FlowDirection OppositeFlowDirection(FlowDirection direction)
     }
     else
     {
-        return (FlowDirection)(((int)direction + 2) % 4);
+        return (FlowDirection)(((int)direction + 4) % 8);
     }
 }
 
@@ -271,7 +275,18 @@ Vector2 PathFinderService::PixelToCellCoordinate(Vector2 position) const
 void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from, FlowDirection fromDirection)
 {
     auto dir = GetDirection(from, cell);
-    bool directionIsBlocked = _obstacleGrid[from].flags.HasFlag(dir);
+    bool directionIsBlocked = scene->isometricSettings.terrain[from].height != scene->isometricSettings.terrain[cell].height;
+
+    if (scene->isometricSettings.terrain[cell].flags.HasFlag(IsometricTerrainCellFlags::RampWest))
+    {
+        if (directionIsBlocked && (cell - from == Vector2(-1, 0)))
+        {
+            Log("There's no way I can make it up that ramp\n");
+            directionIsBlocked = false;
+            cell = cell - Vector2(1, 1);
+            fromDirection = FlowDirection::NorthWest;
+        }
+    }
 
     if(cell.x >= 0
         && cell.x < _obstacleGrid.Cols()
@@ -283,6 +298,7 @@ void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from, FlowDirec
     {
         _workQueue.push(cell);
         _fieldInProgress->grid[cell].direction = OppositeFlowDirection(fromDirection);
+        _fieldInProgress->grid[cell].dir = from - cell;
     }
 }
 
@@ -314,6 +330,7 @@ void PathFinderService::RemoveObstacle(const Rectangle &bounds)
 
 void PathFinderService::AddEdge(Vector2 from, Vector2 to)
 {
+    return;
     // TODO: bounds check on from and to
     auto dir = GetDirection(from, to);
     _obstacleGrid[from].flags.SetFlag(dir);
@@ -322,6 +339,7 @@ void PathFinderService::AddEdge(Vector2 from, Vector2 to)
 
 void PathFinderService::RemoveEdge(Vector2 from, Vector2 to)
 {
+    return;
     // TODO: bounds check on from and to
     auto dir = GetDirection(from, to);
     _obstacleGrid[from].flags.ResetFlag(dir);

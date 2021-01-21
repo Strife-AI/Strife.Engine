@@ -40,4 +40,5 @@ DEFINE_COMPONENT(PathFollowerComponent)
     float updateTargetTimer = 0;
     float speed = 200;
     Vector2 currentTarget;
+    Vector2 intermediateTarget;
 };

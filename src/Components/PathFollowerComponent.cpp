@@ -17,7 +17,7 @@ void PathFollowerComponent::FixedUpdate(float deltaTime)
                     c = Color::Yellow();
                 }
 
-                auto dir = flowField->GetFilteredFlowDirection(Vector2(j, i)) * 16;
+                auto dir = flowField->grid[Vector2(j, i)].dir * 16;
                 auto result = Vector2((dir.x - dir.y), (dir.x + dir.y) / 2);
                 auto start = owner->scene->isometricSettings.TileToWorld(Vector2(j + 0.5, i + 0.5));
                 Renderer::DrawDebugLine({ start, start + result, Color::Black() });
@@ -100,13 +100,16 @@ void PathFollowerComponent::FollowFlowField()
         }
         else
         {
-            velocity = flowField->GetFlowDirectionAtCell(ToPathfinderPerspective(owner->Center())) * speed;
-
-            if (scene->perspective == ScenePerspective::Isometric)
+            if ((intermediateTarget - owner->Center()).Length() < 1)
             {
-                auto result = Vector2((velocity.x - velocity.y), (velocity.x + velocity.y) / 2).Normalize();
-                velocity = result * speed;
+                auto pathFinderPerspective = ToPathfinderPerspective(owner->Center());
+
+                auto nextTile = pathFinderPerspective.Floor().AsVectorOfType<float>() + flowField->grid[pathFinderPerspective].dir;
+
+                intermediateTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5));
             }
+            
+            velocity = (intermediateTarget - owner->Center()).Normalize() * speed;
         }
 
         float dist = (flowField->target - owner->Center()).Length();
@@ -135,6 +138,7 @@ void PathFollowerComponent::FollowFlowField()
 void PathFollowerComponent::UpdateFlowField(Vector2 newTarget)
 {
     currentTarget = newTarget;
+    intermediateTarget = owner->Center();
 
     auto targetPathFinderPerspective = ToPathfinderPerspective(newTarget);
     auto centerPathFinderPerspective = ToPathfinderPerspective(owner->Center());

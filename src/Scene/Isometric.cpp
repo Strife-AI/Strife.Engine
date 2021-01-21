@@ -100,7 +100,11 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
                                     pathFinder->RemoveEdge(position, position + Vector2(1, 0));
                                     pathFinder->RemoveEdge(position - Vector2(1, 1), position - Vector2(0, 1));
                                     pathFinder->AddEdge(position - Vector2(0, 1), position - Vector2(0, 2));
+                                    pathFinder->AddEdge(position + Vector2(1, -1), position + Vector2(0, -1));
                                     ramp = true;
+
+                                    terrain[i][j].flags.SetFlag(IsometricTerrainCellFlags::RampWest);
+                                    //terrain[i - 1][j - 1].flags.SetFlag(IsometricTerrainCellFlags::RampWest);
                                 }
                             }
                         }
@@ -109,7 +113,7 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
                         {
                             for (auto offset : offsets)
                             {
-                                pathFinder->AddEdge(position, position + offset);
+                                //pathFinder->AddEdge(position, position + offset);
                             }
                         }
                     }
