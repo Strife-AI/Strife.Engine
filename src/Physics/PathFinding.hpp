@@ -12,9 +12,13 @@
 enum class FlowDirection : unsigned char
 {
     North,
+    NorthEast,
     East,
+    SouthEast,
     South,
+    SouthWest,
     West,
+    NorthWest,
     Unset,
     Zero
 };
@@ -22,6 +26,7 @@ enum class FlowDirection : unsigned char
 struct FlowCell
 {
     FlowDirection direction = FlowDirection::Unset;
+    Vector2 dir;
 };
 
 Vector2 FlowDirectionToVector2(FlowDirection direction);
