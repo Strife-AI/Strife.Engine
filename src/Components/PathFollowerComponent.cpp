@@ -4,27 +4,29 @@
 
 void PathFollowerComponent::FixedUpdate(float deltaTime)
 {
-//    if (flowField != nullptr)
-//    {
-//        for (int i = 0; i < flowField->grid.Rows(); ++i)
-//        {
-//            for (int j = 0; j < flowField->grid.Cols(); ++j)
-//            {
-//                Color c = Color::Black();
-//
-//                if (Vector2(j, i) == owner->scene->isometricSettings.WorldToIntegerTile(owner->Center()))
-//                {
-//                    c = Color::Yellow();
-//                }
-//
-//                auto dir = flowField->grid[Vector2(j, i)].dir * 16;
-//                auto result = Vector2((dir.x - dir.y), (dir.x + dir.y) / 2);
-//                auto start = owner->scene->isometricSettings.TileToWorld(Vector2(j + 0.5, i + 0.5));
-//                Renderer::DrawDebugLine({ start, start + result, Color::Black() });
-//                Renderer::DrawDebugRectangle(Rectangle(start - Vector2(2, 2), Vector2(4, 4)), c);
-//            }
-//        }
-//    }
+#if false
+    if (flowField != nullptr)
+    {
+        for (int i = 0; i < flowField->grid.Rows(); ++i)
+        {
+            for (int j = 0; j < flowField->grid.Cols(); ++j)
+            {
+                Color c = Color::Black();
+
+                if (Vector2(j, i) == owner->scene->isometricSettings.WorldToIntegerTile(owner->Center()))
+                {
+                    c = Color::Yellow();
+                }
+
+                auto dir = flowField->grid[Vector2(j, i)].dir * 16;
+                auto result = Vector2((dir.x - dir.y), (dir.x + dir.y) / 2);
+                auto start = owner->scene->isometricSettings.TileToWorld(Vector2(j + 0.5, i + 0.5));
+                Renderer::DrawDebugLine({ start, start + result, Color::Black() });
+                Renderer::DrawDebugRectangle(Rectangle(start - Vector2(2, 2), Vector2(4, 4)), c);
+            }
+        }
+    }
+#endif
 
     if (state == PathFollowerState::Stopped)
     {
