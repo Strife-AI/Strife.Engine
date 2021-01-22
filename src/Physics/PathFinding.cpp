@@ -2,111 +2,12 @@
 
 #include "Renderer.hpp"
 
-Vector2 FlowDirectionToVector2(FlowDirection direction)
-{
-    switch (direction)
-    {
-    case FlowDirection::Zero: return Vector2(0);
-    case FlowDirection::North: return Vector2(0, -1);
-    case FlowDirection::NorthEast: return Vector2(1, -1);
-    case FlowDirection::East: return Vector2(1, 0);
-    case FlowDirection::SouthEast: return Vector2(1, 1);
-    case FlowDirection::South: return Vector2(0, 1);
-    case FlowDirection::SouthWest: return Vector2(-1, 1);
-    case FlowDirection::West: return Vector2(-1, 0);
-    case FlowDirection::NorthWest: return Vector2(-1, -1);
-    default: return Vector2(0);
-    }
-}
-
-static ObstacleEdgeFlags GetDirection(Vector2 from, Vector2 to)
-{
-    Vector2 diff = to - from;
-    ObstacleEdgeFlags dir = ObstacleEdgeFlags::NorthBlocked;
-    if (diff == Vector2(1, 0)) return ObstacleEdgeFlags::EastBlocked;
-    if (diff == Vector2(-1, 0)) return ObstacleEdgeFlags::WestBlocked;
-    if (diff == Vector2(0, -1)) return ObstacleEdgeFlags::NorthBlocked;
-    if (diff == Vector2(0, 1)) return ObstacleEdgeFlags::SouthBlocked;
-
-    FatalError("Bad dir %f %f\n", diff.x, diff.y);
-    return dir;
-}
-
-static ObstacleEdgeFlags ReverseDirection(ObstacleEdgeFlags dir)
-{
-    switch (dir)
-    {
-    case ObstacleEdgeFlags::EastBlocked: return ObstacleEdgeFlags::WestBlocked;
-    case ObstacleEdgeFlags::WestBlocked: return ObstacleEdgeFlags::EastBlocked;
-    case ObstacleEdgeFlags::NorthBlocked: return ObstacleEdgeFlags::SouthBlocked;
-    case ObstacleEdgeFlags::SouthBlocked: return ObstacleEdgeFlags::NorthBlocked;
-    }
-
-    return ObstacleEdgeFlags::NorthBlocked;
-}
-
-
-FlowDirection OppositeFlowDirection(FlowDirection direction)
-{
-    if(direction == FlowDirection::Unset || direction == FlowDirection::Zero)
-    {
-        return direction;
-    }
-    else
-    {
-        return (FlowDirection)(((int)direction + 4) % 8);
-    }
-}
-
-Vector2 FlowField::GetFlowDirectionAtCell(Vector2 position)
-{
-    auto cell = ClampPosition(position);
-
-    return FlowDirectionToVector2(grid[cell].direction);
-}
-
 Vector2 FlowField::ClampPosition(const Vector2& position) const
 {
     return position
         .Floor()
         .AsVectorOfType<float>()
         .Clamp({ 0.0f, 0.0f }, grid.Dimensions() - Vector2(1));
-}
-
-Vector2 FlowField::GetFlowDirectionAtCellIfNotBlocked(Vector2 from, Vector2 to)
-{
-    Vector2 fromClamped = ClampPosition(from);
-    Vector2 toClamped = ClampPosition(to);
-
-    auto& isometric = pathFinder->scene->isometricSettings;
-
-    if (isometric.terrain[fromClamped].height == isometric.terrain[toClamped].height)
-    {
-        return GetFlowDirectionAtCell(to);
-    }
-    else
-    {
-        return Vector2(0, 0);
-    }
-}
-
-Vector2 FlowField::GetFilteredFlowDirection(Vector2 position)
-{
-    Rectangle bounds(position, Vector2(1));
-
-    auto topLeft = GetFlowDirectionAtCell(bounds.TopLeft());
-    auto topRight = GetFlowDirectionAtCellIfNotBlocked(bounds.TopLeft(), bounds.TopRight());
-    auto bottomLeft = GetFlowDirectionAtCellIfNotBlocked(bounds.TopLeft(), bounds.BottomLeft());
-    auto bottomRight = GetFlowDirectionAtCellIfNotBlocked(bounds.TopLeft(), bounds.BottomRight());
-
-    auto tileTopLeft = position.Floor().AsVectorOfType<float>();
-
-    auto t = position - tileTopLeft;
-
-    return Lerp(
-        Lerp(topLeft, topRight, t.x).Normalize(),
-        Lerp(bottomLeft, bottomRight, t.x).Normalize(),
-        t.y).Normalize();
 }
 
 PathFinderService::PathFinderService(int rows, int cols)
@@ -167,7 +68,7 @@ void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        Visualize(renderEvent->renderer);
+        //Visualize(renderEvent->renderer);
     }
 }
 
@@ -200,7 +101,7 @@ void PathFinderService::CalculatePaths()
             _fieldInProgress->pathFinder = this;
 
             _workQueue.push(request.endCell);
-            _fieldInProgress->grid[request.endCell].direction = FlowDirection::Zero;
+            _fieldInProgress->grid[request.endCell].alreadyVisited = true;
 
             request.status = PathRequestStatus::InProgress;
         }
@@ -210,17 +111,18 @@ void PathFinderService::CalculatePaths()
             auto cell = _workQueue.front();
             _workQueue.pop();
 
-            const FlowDirection directions[] =
+            const Vector2 directions[] =
             {
-                FlowDirection::North,
-                FlowDirection::East,
-                FlowDirection::West,
-                FlowDirection::South,
+                Vector2(0, 1),
+                Vector2(0, -1),
+                Vector2(1, 0),
+                Vector2(-1, 0),
+                Vector2(1, 1),
             };
 
             for(auto direction : directions)
             {
-                EnqueueCellIfValid(cell + FlowDirectionToVector2(direction), cell, direction);
+                EnqueueCellIfValid(cell + direction, cell);
                 ++calculationCount;
             }
         }
@@ -272,20 +174,27 @@ Vector2 PathFinderService::PixelToCellCoordinate(Vector2 position) const
     return position.Floor().AsVectorOfType<float>();
 }
 
-void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from, FlowDirection fromDirection)
+void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from)
 {
-    auto dir = GetDirection(from, cell);
     bool directionIsBlocked = scene->isometricSettings.terrain[from].height != scene->isometricSettings.terrain[cell].height;
 
     if (scene->isometricSettings.terrain[cell].flags.HasFlag(IsometricTerrainCellFlags::RampWest))
     {
         if (directionIsBlocked && (cell - from == Vector2(-1, 0)))
         {
-            Log("There's no way I can make it up that ramp\n");
             directionIsBlocked = false;
             cell = cell - Vector2(1, 1);
-            fromDirection = FlowDirection::NorthWest;
         }
+        else if (!directionIsBlocked)
+        {
+            Log("There's no way I can make it up that ramp\n");
+            directionIsBlocked = false;
+            cell = cell + Vector2(1, 0);
+        }
+    }
+    else if (cell - from == Vector2(1, 1))
+    {
+        return;
     }
 
     if(cell.x >= 0
@@ -293,11 +202,11 @@ void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from, FlowDirec
         && cell.y >= 0
         && cell.y < _obstacleGrid.Rows()
         && _obstacleGrid[cell].count == 0
-        && _fieldInProgress->grid[cell].direction == FlowDirection::Unset
+        && !_fieldInProgress->grid[cell].alreadyVisited
         && !directionIsBlocked)
     {
         _workQueue.push(cell);
-        _fieldInProgress->grid[cell].direction = OppositeFlowDirection(fromDirection);
+        _fieldInProgress->grid[cell].alreadyVisited = true;
         _fieldInProgress->grid[cell].dir = from - cell;
     }
 }
@@ -331,17 +240,9 @@ void PathFinderService::RemoveObstacle(const Rectangle &bounds)
 void PathFinderService::AddEdge(Vector2 from, Vector2 to)
 {
     return;
-    // TODO: bounds check on from and to
-    auto dir = GetDirection(from, to);
-    _obstacleGrid[from].flags.SetFlag(dir);
-    _obstacleGrid[to].flags.SetFlag(ReverseDirection(dir));
 }
 
 void PathFinderService::RemoveEdge(Vector2 from, Vector2 to)
 {
     return;
-    // TODO: bounds check on from and to
-    auto dir = GetDirection(from, to);
-    _obstacleGrid[from].flags.ResetFlag(dir);
-    _obstacleGrid[to].flags.ResetFlag(ReverseDirection(dir));
 }
