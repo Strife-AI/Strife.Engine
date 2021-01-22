@@ -9,28 +9,11 @@
 #include "Scene/IEntityEvent.hpp"
 #include "Scene/Scene.hpp"
 
-enum class FlowDirection : unsigned char
-{
-    North,
-    NorthEast,
-    East,
-    SouthEast,
-    South,
-    SouthWest,
-    West,
-    NorthWest,
-    Unset,
-    Zero
-};
-
 struct FlowCell
 {
-    FlowDirection direction = FlowDirection::Unset;
+    bool alreadyVisited = false;
     Vector2 dir;
 };
-
-Vector2 FlowDirectionToVector2(FlowDirection direction);
-FlowDirection OppositeFlowDirection(FlowDirection direction);
 
 struct FlowField
 {
@@ -40,10 +23,6 @@ struct FlowField
     {
         
     }
-
-    Vector2 GetFlowDirectionAtCell(Vector2 position);
-    Vector2 GetFlowDirectionAtCellIfNotBlocked(Vector2 from, Vector2 to);
-    Vector2 GetFilteredFlowDirection(Vector2 position);
 
     VariableSizedGrid<FlowCell> grid;
     Vector2 target;
@@ -122,7 +101,7 @@ private:
     void Visualize(Renderer* renderer);
 
     Vector2 PixelToCellCoordinate(Vector2 position) const;
-    void EnqueueCellIfValid(Vector2 cell, Vector2 from, FlowDirection fromDirection);
+    void EnqueueCellIfValid(Vector2 cell, Vector2 from);
 
     using WorkQueue = std::queue<Vector2>;
 
