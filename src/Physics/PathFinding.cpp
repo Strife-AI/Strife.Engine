@@ -2,6 +2,7 @@
 
 #include "Renderer.hpp"
 
+
 Vector2 FlowField::ClampPosition(const Vector2& position) const
 {
     return position
@@ -119,7 +120,7 @@ void PathFinderService::CalculatePaths()
                 Vector2(0, -1),
                 Vector2(1, 0),
                 Vector2(-1, 0),
-                Vector2(1, 1),
+                Vector2(1, 1),      // For ramps
             };
 
             for(auto direction : directions)
@@ -185,23 +186,57 @@ Vector2 PathFinderService::PixelToCellCoordinate(Vector2 position) const
     return position.Floor().AsVectorOfType<float>();
 }
 
+struct RampInfo
+{
+    RampInfo(RampType rampType, Vector2 rampDirection)
+        : rampType(rampType),
+        rampDirection(rampDirection)
+    {
+
+    }
+
+    Vector2 rampDirection;
+    RampType rampType;
+};
+
+bool TryGetRampOffset(const IsometricSettings& isometricSettings, const RampInfo& ramp, Vector2 from, Vector2 to, Vector2& outOffset)
+{
+    bool directionIsBlocked = isometricSettings.terrain[from].height != isometricSettings.terrain[to].height;
+    
+    if (isometricSettings.terrain[to].rampType == ramp.rampType)
+    {
+        if (directionIsBlocked && (to - from == ramp.rampDirection))
+        {
+            outOffset = Vector2(-1, -1);
+            return true;
+        }
+        else if (!directionIsBlocked && to - from == Vector2(1, 1))
+        {
+            outOffset = -ramp.rampDirection;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static const RampInfo g_westRamp(RampType::West, Vector2(-1, 0));
+static const RampInfo g_northRamp(RampType::North, Vector2(0, -1));
+
 void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from)
 {
     bool directionIsBlocked = scene->isometricSettings.terrain[from].height != scene->isometricSettings.terrain[cell].height;
 
-    if (scene->isometricSettings.terrain[cell].flags.HasFlag(IsometricTerrainCellFlags::RampWest))
+    Vector2 rampOffset;
+    if (TryGetRampOffset(scene->isometricSettings, g_westRamp, from, cell, rampOffset))
     {
-        if (directionIsBlocked && (cell - from == Vector2(-1, 0)))
-        {
-            directionIsBlocked = false;
-            cell = cell - Vector2(1, 1);
-        }
-        else if (!directionIsBlocked)
-        {
-            //Log("There's no way I can make it up that ramp\n");
-            directionIsBlocked = false;
-            cell = cell + Vector2(1, 0);
-        }
+        directionIsBlocked = false;
+        cell = cell + rampOffset;
+    }
+    else if (TryGetRampOffset(scene->isometricSettings, g_northRamp, from, cell, rampOffset))
+    {
+        directionIsBlocked = false;
+        cell = cell + rampOffset;
     }
     else if (cell - from == Vector2(1, 1))
     {

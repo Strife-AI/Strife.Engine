@@ -5,19 +5,17 @@
 
 class MapSegment;
 
-enum class IsometricTerrainCellFlags
+enum class RampType
 {
-    Solid = 1,
-    RampNorth = 2,
-    RampSouth = 4,
-    RampEast = 8,
-    RampWest = 16
+    None,
+    West,
+    North
 };
 
 struct IsometricTerrainCell
 {
     int height = 0;
-    Flags<IsometricTerrainCellFlags> flags;
+    RampType rampType = RampType::None;
 };
 
 class PathFinderService;
