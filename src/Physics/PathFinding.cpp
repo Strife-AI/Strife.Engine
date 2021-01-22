@@ -51,6 +51,8 @@ void PathFinderService::RequestFlowField(Vector2 start, Vector2 end, Entity* own
     request.endCell = PixelToCellCoordinate(end);
     request.owner = owner;
 
+    //Log("End cell: %f, %f\n", end.x, end.y);
+
     // FIXME: workaround for when ending in a solid cell
     while(_obstacleGrid[request.endCell].count != 0)
     {
@@ -68,7 +70,7 @@ void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        //Visualize(renderEvent->renderer);
+        Visualize(renderEvent->renderer);
     }
 }
 
@@ -162,8 +164,17 @@ void PathFinderService::Visualize(Renderer* renderer)
             {
                 Vector2 offset(0, 0);
 
-                if (_obstacleGrid[i][j].flags.HasFlag(flags[k]))
+                if (_obstacleGrid[i][j].flags.HasFlag(flags[k]) || true)
                     renderer->RenderLine(points[k] + offset, points[(k + 1) % 4] + offset, Color::Red(), -1);
+            }
+
+            if (_obstacleGrid[i][j].count != 0)
+            {
+                Vector2 size(4, 4);
+                renderer->RenderRectangle(
+                    Rectangle(scene->isometricSettings.TileToWorld(Vector2(j, i) + Vector2(0.5)) - size / 2, size),
+                    Color::Red(),
+                    -1);
             }
         }
     }
@@ -187,7 +198,7 @@ void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from)
         }
         else if (!directionIsBlocked)
         {
-            Log("There's no way I can make it up that ramp\n");
+            //Log("There's no way I can make it up that ramp\n");
             directionIsBlocked = false;
             cell = cell + Vector2(1, 0);
         }

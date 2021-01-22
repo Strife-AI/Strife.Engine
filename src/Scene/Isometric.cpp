@@ -86,8 +86,6 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
                 for (int j = 1; j < terrain.Cols() - 1; ++j)
                 {
                     auto tile = layer[i][j];
-                    Vector2 position(j, i);
-                    bool ramp = false;
                     if (tile != nullptr)
                     {
                         for (auto& property : tile->properties)
@@ -96,26 +94,32 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
                             {
                                 if (property.second == "west")
                                 {
-                                    pathFinder->RemoveEdge(position, position - Vector2(1, 0));
-                                    pathFinder->RemoveEdge(position, position + Vector2(1, 0));
-                                    pathFinder->RemoveEdge(position - Vector2(1, 1), position - Vector2(0, 1));
-                                    pathFinder->AddEdge(position - Vector2(0, 1), position - Vector2(0, 2));
-                                    pathFinder->AddEdge(position + Vector2(1, -1), position + Vector2(0, -1));
-                                    ramp = true;
-
                                     terrain[i][j].flags.SetFlag(IsometricTerrainCellFlags::RampWest);
-                                    //terrain[i - 1][j - 1].flags.SetFlag(IsometricTerrainCellFlags::RampWest);
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
 
-                        if (!ramp && terrain[i][j].height != layerId)
-                        {
-                            for (auto offset : offsets)
-                            {
-                                //pathFinder->AddEdge(position, position + offset);
-                            }
-                        }
+    // Mark tiles under elevated tiles as impassible
+    {
+        for (int i = 0; i < terrain.Rows(); ++i)
+        {
+            for (int j = 0; j < terrain.Cols(); ++j)
+            {
+                int height = terrain[i][j].height;
+
+                if (!terrain[i][j].flags.HasFlag(IsometricTerrainCellFlags::RampWest) && height > 0)
+                {
+                    int x = j + 1;
+                    int y = i + 1;
+
+                    if (terrain[y][x].height != terrain[i][j].height && x < terrain.Cols() && y < terrain.Rows())
+                    {
+                        pathFinder->AddObstacle(Rectangle(x, y, 1, 1));
                     }
                 }
             }
