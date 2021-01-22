@@ -35,8 +35,6 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
                     if (!TileIsRamp(tile))
                     {
                         if (i > 0 && j > 0) terrain[i - 1][j - 1].height = layerId;
-
-                        terrain[i][j].flags.SetFlag(IsometricTerrainCellFlags::Solid);
                     }
                     else
                     {
@@ -92,10 +90,8 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
                         {
                             if (property.first == "ramp")
                             {
-                                if (property.second == "west")
-                                {
-                                    terrain[i][j].flags.SetFlag(IsometricTerrainCellFlags::RampWest);
-                                }
+                                if (property.second == "west") terrain[i][j].rampType = RampType::West;
+                                else if (property.second == "north") terrain[i][j].rampType = terrain[i][j].rampType = RampType::North;
                             }
                         }
                     }
@@ -112,7 +108,7 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
             {
                 int height = terrain[i][j].height;
 
-                if (!terrain[i][j].flags.HasFlag(IsometricTerrainCellFlags::RampWest) && height > 0)
+                if (terrain[i][j].rampType == RampType::None && height > 0)
                 {
                     int x = j + 1;
                     int y = i + 1;
