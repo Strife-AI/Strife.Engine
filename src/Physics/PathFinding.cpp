@@ -222,10 +222,45 @@ bool TryGetRampOffset(const IsometricSettings& isometricSettings, const RampInfo
 
 static const RampInfo g_westRamp(RampType::West, Vector2(-1, 0));
 static const RampInfo g_northRamp(RampType::North, Vector2(0, -1));
+static const RampInfo g_invalidRamp(RampType::None, Vector2(100, 100));
+
+static const RampInfo* GetRampInfo(RampType type)
+{
+    if (type == RampType::North) return &g_northRamp;
+    if (type == RampType::West) return &g_westRamp;
+    return &g_invalidRamp;
+}
+
 
 void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from)
 {
     bool directionIsBlocked = scene->isometricSettings.terrain[from].height != scene->isometricSettings.terrain[cell].height;
+
+    {
+        auto& below = scene->isometricSettings.terrain[from + Vector2(1)];
+        auto dir = cell - from;
+        if (below.rampType != RampType::None)
+        {
+            auto info = GetRampInfo(below.rampType);
+            if (dir != info->rampDirection && dir != -info->rampDirection && dir != Vector2(1, 1))
+            {
+                return;
+            }
+        }
+    }
+
+    {
+        auto& below = scene->isometricSettings.terrain[cell + Vector2(1)];
+        auto dir = cell - from;
+        if (below.rampType != RampType::None)
+        {
+            auto info = GetRampInfo(below.rampType);
+            if (dir != info->rampDirection && dir != -info->rampDirection)
+            {
+                return;
+            }
+        }
+    }
 
     Vector2 rampOffset;
     if (TryGetRampOffset(scene->isometricSettings, g_westRamp, from, cell, rampOffset))
