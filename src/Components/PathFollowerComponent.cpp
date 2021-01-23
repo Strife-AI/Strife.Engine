@@ -4,7 +4,7 @@
 
 void PathFollowerComponent::FixedUpdate(float deltaTime)
 {
-#if false
+#if 1
     if (flowField != nullptr)
     {
         for (int i = 0; i < flowField->grid.Rows(); ++i)
