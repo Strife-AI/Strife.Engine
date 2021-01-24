@@ -92,7 +92,7 @@ void CollisionManager::RenderColliderOutlines(Renderer* renderer)
                     Scene::Box2DToPixel(body->GetWorldPoint(edge->m_vertex1)),
                     Scene::Box2DToPixel(body->GetWorldPoint(edge->m_vertex2)),
                     Color(255, 255, 255),
-                    0);//DebugRenderLayer); FIXME MW
+                    -1);//DebugRenderLayer); FIXME MW
 
                 break;
             }
@@ -105,7 +105,7 @@ void CollisionManager::RenderColliderOutlines(Renderer* renderer)
                     auto vertex = Scene::Box2DToPixel(polygon->m_vertices[i] + body->GetPosition());
                     auto next = Scene::Box2DToPixel(polygon->m_vertices[(i + 1) % polygon->m_count] + body->GetPosition());
 
-                    renderer->RenderLine(vertex, next, Color::Red(), 0);// FIXME MW DebugRenderLayer);
+                    renderer->RenderLine(vertex, next, Color::Red(), -1);// FIXME MW DebugRenderLayer);
                 }
 
                 break;

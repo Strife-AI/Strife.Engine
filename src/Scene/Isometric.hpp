@@ -12,10 +12,16 @@ enum class RampType
     North
 };
 
+enum class TerrainCellFlags
+{
+    Unwalkable = 1
+};
+
 struct IsometricTerrainCell
 {
     int height = 0;
     RampType rampType = RampType::None;
+    Flags<TerrainCellFlags> flags;
 };
 
 class PathFinderService;
@@ -45,7 +51,7 @@ struct IsometricSettings
     }
 
     float GetTileDepth(Vector2 position, int layer) const;
-    void BuildFromMapSegment(const MapSegment& mapSegment, PathFinderService* pathFinder);
+    void BuildFromMapSegment(const MapSegment& mapSegment, PathFinderService* pathFinder, struct TilemapEntity* tilemap);
     int GetCurrentLayer(Vector2 position) const;
 
     Vector2 tileSize;

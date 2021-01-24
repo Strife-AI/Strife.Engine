@@ -1,6 +1,8 @@
 #include <Physics/PathFinding.hpp>
 #include "Isometric.hpp"
 #include "Scene/MapSegment.hpp"
+#include "Scene/TilemapEntity.hpp"
+#include "Components/RigidBodyComponent.hpp"
 
 static bool TileIsRamp(TileProperties* properties)
 {
@@ -12,7 +14,7 @@ static bool TileIsRamp(TileProperties* properties)
     return false;
 }
 
-void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFinderService* pathFinder)
+void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFinderService* pathFinder, TilemapEntity* tilemap)
 {
     // Calculate terrain size
     {
@@ -48,10 +50,10 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
 
     const Vector2 offsets[4] =
         {
-            { 0, 1 },
             { 0, -1 },
-            { -1, 0 },
             { 1, 0 },
+            { 0, 1 },
+            { -1, 0 },
         };
 
     // Add blocked edges where there's a change in elevation
@@ -116,7 +118,35 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
                     if (terrain[y][x].height != terrain[i][j].height && x < terrain.Cols() && y < terrain.Rows())
                     {
                         pathFinder->AddObstacle(Rectangle(x, y, 1, 1));
+                        terrain[y][x].flags.SetFlag(TerrainCellFlags::Unwalkable);
                     }
+                }
+            }
+        }
+    }
+
+    auto scene = pathFinder->scene;
+    auto tilemapRb = tilemap->GetComponent<RigidBodyComponent>();
+
+    for (int i = 1; i < terrain.Rows() - 1; ++i)
+    {
+        for (int j = 1; j < terrain.Cols() - 1; ++j)
+        {
+            Vector2 points[4] =
+            {
+                TileToWorld(Vector2(j, i)),
+                TileToWorld(Vector2(j + 1, i)),
+                TileToWorld(Vector2(j + 1, i + 1)),
+            };
+
+            for (int k = 0; k < 2; ++k)
+            {
+                auto to = Vector2(j, i) + offsets[k];
+                if (terrain[i][j].height != terrain[to].height || terrain[to].flags.HasFlag(TerrainCellFlags::Unwalkable) || terrain[i][j].flags.HasFlag(TerrainCellFlags::Unwalkable))
+                {
+                    auto start = points[k];
+                    auto end = points[(k + 1) % 4];
+                    tilemapRb->CreateLineCollider(start, end);
                 }
             }
         }
@@ -125,10 +155,11 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
 
 float IsometricSettings::GetTileDepth(Vector2 position, int layer) const
 {
-    position = position / tileSize;
-    float dz = 1e-7;
-    float maxWidth = 1000;
-    float maxHeight = 1000;
+    position = WorldToTile(position);
+    float maxWidth = terrain.Cols();
+    float maxHeight = terrain.Rows();
+
+    float dz = 0.1f / (maxWidth * maxHeight * 10);
 
     return baseDepth - (position.x + position.y * maxWidth + layer * maxWidth * maxHeight) * dz;
 }

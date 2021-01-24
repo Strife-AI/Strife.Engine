@@ -78,7 +78,7 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
     for (auto& rectangle : mapSegment.colliders)
     {
         auto bounds = rectangle.As<float>();
-        rigidBody->CreateBoxCollider(bounds.Size(), false, bounds.GetCenter());
+        //rigidBody->CreateBoxCollider(bounds.Size(), false, bounds.GetCenter());
     }
 
     _renderer.SetMapSegment(&mapSegment, scene);
@@ -87,5 +87,5 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
 
     _mapSegment = &mapSegment;
 
-    scene->isometricSettings.BuildFromMapSegment(mapSegment, pathFinder);
+    scene->isometricSettings.BuildFromMapSegment(mapSegment, pathFinder, this);
 }
