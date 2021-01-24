@@ -50,6 +50,14 @@ struct IsometricSettings
             .Clamp({ 0, 0}, terrain.Dimensions());
     }
 
+    void GetTileBoundaries(Vector2 tile, gsl::span<Vector2> boundaries) const
+    {
+        boundaries[0] = TileToWorld(tile);
+        boundaries[1] = TileToWorld(tile + Vector2(1, 0));
+        boundaries[2] = TileToWorld(tile + Vector2(1, 1));
+        boundaries[3] = TileToWorld(tile + Vector2(0, 1));
+    }
+
     float GetTileDepth(Vector2 position, int layer) const;
     void BuildFromMapSegment(const MapSegment& mapSegment, PathFinderService* pathFinder, struct TilemapEntity* tilemap);
     int GetCurrentLayer(Vector2 position) const;

@@ -142,11 +142,15 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
             for (int k = 0; k < 2; ++k)
             {
                 auto to = Vector2(j, i) + offsets[k];
-                if (terrain[i][j].height != terrain[to].height || terrain[to].flags.HasFlag(TerrainCellFlags::Unwalkable) || terrain[i][j].flags.HasFlag(TerrainCellFlags::Unwalkable))
+                if (terrain[i][j].height != terrain[to].height
+                    || terrain[to].flags.HasFlag(TerrainCellFlags::Unwalkable)
+                    || terrain[i][j].flags.HasFlag(TerrainCellFlags::Unwalkable)
+                    || terrain[i + 1][j + 1].rampType != RampType::None
+                    || terrain[(int)to.y + 1][(int)to.x + 1].rampType != RampType::None)
                 {
                     auto start = points[k];
                     auto end = points[(k + 1) % 4];
-                    tilemapRb->CreateLineCollider(start, end);
+                    tilemapRb->CreateLineCollider(start, end, true);
                 }
             }
         }

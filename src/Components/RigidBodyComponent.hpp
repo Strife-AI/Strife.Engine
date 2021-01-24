@@ -23,7 +23,7 @@ DEFINE_COMPONENT(RigidBodyComponent)
 
     b2Fixture* CreateBoxCollider(Vector2 size, bool isTrigger = false, Vector2 offset = Vector2(0, 0));
     b2Fixture* CreateCircleCollider(float radius, bool isTrigger = false, Vector2 offset = Vector2(0, 0));
-    b2Fixture* CreateLineCollider(Vector2 start, Vector2 end);
+    b2Fixture* CreateLineCollider(Vector2 start, Vector2 end, bool isTrigger = false);
     b2Fixture* CreateFixture(b2FixtureDef& fixtureDef);
 
     b2Body* body = nullptr;

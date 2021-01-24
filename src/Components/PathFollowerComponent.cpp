@@ -1,6 +1,7 @@
 #include "PathFollowerComponent.hpp"
 #include "Components/RigidBodyComponent.hpp"
 #include "Renderer.hpp"
+#include "Scene/TilemapEntity.hpp"
 
 void PathFollowerComponent::FixedUpdate(float deltaTime)
 {
@@ -93,7 +94,9 @@ void PathFollowerComponent::FollowFlowField()
                 break;
             }
         }
-        
+
+        useBeeLine = false;
+
         if (useBeeLine)
         {
             velocity = (flowField->target - owner->Center()).Normalize() * 200;
@@ -102,11 +105,62 @@ void PathFollowerComponent::FollowFlowField()
         {
             if ((intermediateTarget - owner->Center()).Length() < 1)
             {
-                auto pathFinderPerspective = ToPathfinderPerspective(owner->Center());
+                bool firstMove = true;
+                do
+                {
+                    Vector2 pathFinderPerspective = ToPathfinderPerspective(intermediateTarget);
 
-                auto nextTile = pathFinderPerspective.Floor().AsVectorOfType<float>() + flowField->grid[pathFinderPerspective].dir;
+                    auto dir = flowField->grid[pathFinderPerspective].dir;
 
-                intermediateTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5));
+                    if (dir == Vector2(0, 0))
+                    {
+                        intermediateTarget = currentTarget;
+                        break;
+                    }
+
+                    auto nextTile = pathFinderPerspective.Floor().AsVectorOfType<float>() + dir;
+                    auto nextTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5));
+
+                    Vector2 checkPoints[1];
+                    //scene->isometricSettings.GetTileBoundaries(nextTile, checkPoints);
+                    checkPoints[0] = nextTarget;
+
+                    bool fail = false;
+
+                    checkPoints[0] -= Vector2(0, 1);
+                    checkPoints[1] += Vector2(1, 0);
+                    checkPoints[2] += Vector2(0, 1);
+                    checkPoints[3] -= Vector2(1, 0);
+
+                    for (auto point : checkPoints)
+                    {
+                        RaycastResult result;
+                        if (scene->Raycast(owner->Center(), nextTarget, result, true, [=](const ColliderHandle& handle)
+                        {
+                            return handle.OwningEntity()->Is<TilemapEntity>();
+                        }))
+                        {
+                            if (!firstMove)
+                            {
+                                fail = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (fail)
+                    {
+                        break;
+                    }
+
+                    firstMove = false;
+                    intermediateTarget = nextTarget;
+
+                    if (nextTile == scene->isometricSettings.WorldToTile(currentTarget))
+                    {
+                        break;
+                    }
+                } while(true);
             }
 
             velocity = (intermediateTarget - owner->Center()).Normalize() * speed;
