@@ -4,7 +4,7 @@
 
 void PathFollowerComponent::FixedUpdate(float deltaTime)
 {
-#if 1
+#if 0
     if (flowField != nullptr)
     {
         for (int i = 0; i < flowField->grid.Rows(); ++i)
@@ -93,9 +93,7 @@ void PathFollowerComponent::FollowFlowField()
                 break;
             }
         }
-
-        useBeeLine = false;
-
+        
         if (useBeeLine)
         {
             velocity = (flowField->target - owner->Center()).Normalize() * 200;
@@ -115,7 +113,7 @@ void PathFollowerComponent::FollowFlowField()
         }
 
         float dist = (flowField->target - owner->Center()).Length();
-        if (dist > 20 && false)
+        if (dist > 20)
         {
             velocity = rigidBody->GetVelocity().SmoothDamp(
                 velocity,

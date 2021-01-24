@@ -127,7 +127,7 @@ b2Fixture* RigidBodyComponent::CreateLineCollider(Vector2 start, Vector2 end)
 {
     b2EdgeShape edge;
 
-    edge.SetTwoSided(edge.m_vertex1, edge.m_vertex2);
+    edge.SetTwoSided(b2Vec2(start.x, start.y), b2Vec2(end.x, end.y));
 
     b2FixtureDef fixtureDef;
     fixtureDef.isSensor = false;
