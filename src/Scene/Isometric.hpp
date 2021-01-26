@@ -58,6 +58,8 @@ struct IsometricSettings
         boundaries[3] = TileToWorld(tile + Vector2(0, 1));
     }
 
+
+
     float GetTileDepth(Vector2 position, int layer) const;
     void BuildFromMapSegment(const MapSegment& mapSegment, PathFinderService* pathFinder, struct TilemapEntity* tilemap);
     int GetCurrentLayer(Vector2 position) const;

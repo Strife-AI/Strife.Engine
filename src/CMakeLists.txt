@@ -162,7 +162,7 @@ add_library(Strife.Engine STATIC
 		Project/Project.cpp
 		Project/Project.hpp
 		Resource/ResourceManager.hpp Resource/SpriteResource.hpp Resource/SpriteResource.cpp Resource/ResourceManager.cpp Resource/TilemapResource.hpp Resource/TilemapResource.cpp Resource/SpriteFontResource.hpp Resource/SpriteFontResource.cpp
-		Resource/ShaderResource.cpp Resource/ShaderResource.hpp Renderer/NewRenderer.cpp Renderer/NewRenderer.hpp Components/ParticleSystemComponent.hpp Components/ParticleSystemComponent.cpp Scene/Isometric.hpp Scene/Isometric.cpp)
+		Resource/ShaderResource.cpp Resource/ShaderResource.hpp Renderer/NewRenderer.cpp Renderer/NewRenderer.hpp Components/ParticleSystemComponent.hpp Components/ParticleSystemComponent.cpp Scene/Isometric.hpp Scene/Isometric.cpp Components/IsometricSpriteComponent.hpp Components/IsometricSpriteComponent.cpp)
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
