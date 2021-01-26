@@ -210,7 +210,7 @@ void ServerGame::HandleNewConnection(SLNet::Packet* packet)
 
     response.Write(PacketType::NewConnectionResponse);
     response.Write(clientId);
-    response.Write(sceneManager.GetScene()->MapSegmentName().key);
+    response.Write(sceneManager.GetScene()->SceneName().key);
     networkInterface.SendReliable(packet->systemAddress, response);
 
     Log("Client %d connected\n", clientId);
