@@ -18,6 +18,7 @@ DEFINE_COMPONENT(PathFollowerComponent)
 
     }
 
+    void OnAdded() override;
     void SetTarget(Vector2 position);
     void Stop(bool loseVelocity);
     void FollowEntity(Entity* entity, float minDistance);
@@ -41,4 +42,5 @@ DEFINE_COMPONENT(PathFollowerComponent)
     float speed = 200;
     Vector2 currentTarget;
     Vector2 intermediateTarget;
+    int currentLayer;
 };

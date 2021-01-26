@@ -71,7 +71,7 @@ void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        //Visualize(renderEvent->renderer);
+        Visualize(renderEvent->renderer);
     }
 }
 
@@ -141,6 +141,7 @@ void PathFinderService::CalculatePaths()
 
 void PathFinderService::Visualize(Renderer* renderer)
 {
+    return;
     for(int i = 0; i < _obstacleGrid.Rows(); ++i)
     {
         for(int j = 0; j < _obstacleGrid.Cols(); ++j)
@@ -165,16 +166,18 @@ void PathFinderService::Visualize(Renderer* renderer)
             {
                 Vector2 offset(0, 0);
 
-                if (_obstacleGrid[i][j].flags.HasFlag(flags[k]) || true)
-                    renderer->RenderLine(points[k] + offset, points[(k + 1) % 4] + offset, Color::Red(), -1);
+                //if (_obstacleGrid[i][j].flags.HasFlag(flags[k]) || true)
+                //    renderer->RenderLine(points[k] + offset, points[(k + 1) % 4] + offset, Color::Red(), -1);
             }
 
-            if (_obstacleGrid[i][j].count != 0)
+            if (_obstacleGrid[i][j].count != 0 || true)
             {
+                Color colors[3] = {Color::Green(), Color::Yellow(), Color::Red()};
+
                 Vector2 size(4, 4);
                 renderer->RenderRectangle(
                     Rectangle(scene->isometricSettings.TileToWorld(Vector2(j, i) + Vector2(0.5)) - size / 2, size),
-                    Color::Red(),
+                    colors[(int)scene->isometricSettings.terrain[Vector2(j, i)].height],
                     -1);
             }
         }

@@ -3,6 +3,11 @@
 #include "Renderer.hpp"
 #include "Scene/TilemapEntity.hpp"
 
+void PathFollowerComponent::OnAdded()
+{
+    currentLayer = GetScene()->isometricSettings.GetCurrentLayer(owner->Center());
+}
+
 void PathFollowerComponent::FixedUpdate(float deltaTime)
 {
 #if 0
@@ -75,29 +80,7 @@ void PathFollowerComponent::FollowFlowField()
     {
         Vector2 velocity;
 
-        Vector2 points[4];
-        owner->Bounds().GetPoints(points);
-
-        bool useBeeLine = true;
-        for (auto p : points)
-        {
-            RaycastResult result;
-            if (scene->Raycast(p, flowField->target, result, false, [=](auto collider)
-            {
-                return collider.OwningEntity() !=
-                       owner;
-            })
-                && (state != PathFollowerState::FollowingEntity ||
-                    result.handle.OwningEntity() != entityToFollow.GetValueOrNull()))
-            {
-                useBeeLine = false;
-                break;
-            }
-        }
-
-        useBeeLine = false;
-
-        if (useBeeLine)
+        if (false)
         {
             velocity = (flowField->target - owner->Center()).Normalize() * 200;
         }
@@ -105,6 +88,10 @@ void PathFollowerComponent::FollowFlowField()
         {
             if ((intermediateTarget - owner->Center()).Length() < 1)
             {
+                // TODO: this is kind of hacky, but we only change the current layer once we arrive at the intermediate target.
+                // The assumption is that we don't change layers when bee-lining.
+                currentLayer = scene->isometricSettings.terrain[ToPathfinderPerspective(intermediateTarget)].height;
+
                 bool firstMove = true;
                 do
                 {
@@ -122,20 +109,20 @@ void PathFollowerComponent::FollowFlowField()
                     auto nextTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5));
 
                     Vector2 checkPoints[1];
-                    //scene->isometricSettings.GetTileBoundaries(nextTile, checkPoints);
+//                    scene->isometricSettings.GetTileBoundaries(nextTile, checkPoints);
                     checkPoints[0] = nextTarget;
 
                     bool fail = false;
 
-                    checkPoints[0] -= Vector2(0, 1);
-                    checkPoints[1] += Vector2(1, 0);
-                    checkPoints[2] += Vector2(0, 1);
-                    checkPoints[3] -= Vector2(1, 0);
+//                    checkPoints[0] -= Vector2(0, 1);
+//                    checkPoints[1] += Vector2(1, 0);
+//                    checkPoints[2] += Vector2(0, 1);
+//                    checkPoints[3] -= Vector2(1, 0);
 
                     for (auto point : checkPoints)
                     {
                         RaycastResult result;
-                        if (scene->Raycast(owner->Center(), nextTarget, result, true, [=](const ColliderHandle& handle)
+                        if (scene->Raycast(owner->Center(), point, result, true, [=](const ColliderHandle& handle)
                         {
                             return handle.OwningEntity()->Is<TilemapEntity>();
                         }))
@@ -150,6 +137,7 @@ void PathFollowerComponent::FollowFlowField()
 
                     if (fail)
                     {
+                        Log("Failed to simplify\n");
                         break;
                     }
 
@@ -216,6 +204,11 @@ void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
     if (auto flowFieldReady = ev.Is<FlowFieldReadyEvent>())
     {
         if (state == PathFollowerState::Stopped) return;
+        if (!flowFieldReady->result->grid[ToPathfinderPerspective(currentTarget)].alreadyVisited)
+        {
+            // Failed to find a path
+            return;
+        }
 
         flowField = flowFieldReady->result;
         flowField->target = currentTarget;
@@ -239,4 +232,3 @@ Vector2 PathFollowerComponent::ToPathfinderPerspective(Vector2 position)
 
     return position;
 }
-
