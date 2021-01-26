@@ -130,7 +130,6 @@ b2Fixture* RigidBodyComponent::CreateLineCollider(Vector2 start, Vector2 end, bo
     edge.SetTwoSided(b2Vec2(start.x, start.y), b2Vec2(end.x, end.y));
 
     b2FixtureDef fixtureDef;
-    fixtureDef.isSensor = false;
     fixtureDef.shape = &edge;
     fixtureDef.isSensor = isTrigger;
 
@@ -191,4 +190,22 @@ b2Fixture* RigidBodyComponent::CreateFixture(b2FixtureDef& fixtureDef)
     body->ResetMassData();
 
     return fixture;
+}
+
+b2Fixture* RigidBodyComponent::CreatePolygonCollider(gsl::span<Vector2> points, bool isTrigger)
+{
+    b2PolygonShape shape;
+    shape.m_count = points.size();
+
+    for (int i = 0; i < points.size(); ++i)
+    {
+        shape.m_vertices[i] = b2Vec2(points[i].x, points[i].y);
+    }
+
+    b2FixtureDef fixtureDef;
+    fixtureDef.isSensor = isTrigger;
+    fixtureDef.shape = &shape;
+    fixtureDef.isSensor = isTrigger;
+
+    return CreateFixture(fixtureDef);
 }
