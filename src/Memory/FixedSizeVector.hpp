@@ -23,6 +23,16 @@ public:
         return _size;
     }
 
+    bool Empty() const
+    {
+        return _size == 0;
+    }
+
+    bool Full() const
+    {
+        return _size == MaxSize;
+    }
+
     const T& operator[](int index) const
     {
         return _data[index];

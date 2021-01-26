@@ -351,6 +351,16 @@ public:
         }
     }
 
+    bool operator==(EntityReference& reference)
+    {
+        return _entityHeader == reference._entityHeader && _entityId == reference._entityId;
+    }
+
+    bool operator==(TEntity* entity)
+    {
+        return _entityHeader->entity == entity;
+    }
+
     bool IsValid() const
     {
         return _entityHeader->id == _entityId;
