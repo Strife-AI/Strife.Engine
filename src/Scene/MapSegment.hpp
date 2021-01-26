@@ -16,15 +16,17 @@
 
 struct TileProperties
 {
-    TileProperties(const Sprite& sprite_, int id_)
+    TileProperties(const Sprite& sprite_, int id_, const std::map<std::string, std::string>& properties)
         : sprite(sprite_),
-    id(id_)
+        id(id_),
+        properties(properties)
     {
 
     }
 
     Sprite sprite;
     int id;
+    std::map<std::string, std::string> properties;
 };
 
 struct MapLayer

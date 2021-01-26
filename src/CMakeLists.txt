@@ -123,8 +123,6 @@ add_library(Strife.Engine STATIC
         
         Sound/SoundEffect.cpp
         Memory/ResourcePool.hpp
-        Renderer/ParticleSystem.hpp
-        Renderer/ParticleSystem.cpp
         Math/Random.cpp
         Math/Random.hpp
 
@@ -163,7 +161,8 @@ add_library(Strife.Engine STATIC
 		Net/FileTransfer.cpp
 		Project/Project.cpp
 		Project/Project.hpp
-		Resource/ResourceManager.hpp Resource/SpriteResource.hpp Resource/SpriteResource.cpp Resource/ResourceManager.cpp Resource/TilemapResource.hpp Resource/TilemapResource.cpp Resource/SpriteFontResource.hpp Resource/SpriteFontResource.cpp)
+		Resource/ResourceManager.hpp Resource/SpriteResource.hpp Resource/SpriteResource.cpp Resource/ResourceManager.cpp Resource/TilemapResource.hpp Resource/TilemapResource.cpp Resource/SpriteFontResource.hpp Resource/SpriteFontResource.cpp
+		Resource/ShaderResource.cpp Resource/ShaderResource.hpp Renderer/NewRenderer.cpp Renderer/NewRenderer.hpp Components/ParticleSystemComponent.hpp Components/ParticleSystemComponent.cpp Scene/Isometric.hpp Scene/Isometric.cpp)
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 

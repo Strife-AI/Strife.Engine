@@ -1,3 +1,4 @@
+#include <Resource/ShaderResource.hpp>
 #include "Renderer.hpp"
 #include "Camera.hpp"
 #include "Engine.hpp"
@@ -303,14 +304,14 @@ void Renderer::DoRendering()
             RenderRectangle(rect.rect, rect.color, -1, 0);
         }
 
-        if (!_scene->GetEngine()->IsPaused()) _debugRectangles.clear();
+        _debugRectangles.clear();
 
         for (auto& line : _debugLines)
         {
             RenderLine(line.start, line.end, line.color, -1);
         }
 
-        if (!_scene->GetEngine()->IsPaused()) _debugLines.clear();
+        _debugLines.clear();
     }
 
     if (g_useLighting.Value())
@@ -322,6 +323,8 @@ void Renderer::DoRendering()
 
         glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
         glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+
+        _scene->RenderEntities(this);
         _spriteBatcher.Render();
 
         _deferredLightingColorBuffer->Unbind();
@@ -348,6 +351,7 @@ void Renderer::DoRendering()
         glClearColor(0, 0, 0, 1);
         glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
+        _scene->RenderEntities(this);
         _spriteBatcher.Render();
     }
 
@@ -445,59 +449,8 @@ void Renderer::RenderCustomTransparency(const ICustomTransparencyRenderer* rende
 
 void Renderer::InitializeSpriteBatcher()
 {
-    const char* vertexShader = R"(
-#version 330 core
-
-uniform mat4x4 view;
-
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec2 textureCoord;
-layout (location = 2) in vec4 color;
-
-out vec2 TexCoord;
-out vec4 Color;
-out vec2 FragPosition;
-
-void main()
-{
-    gl_Position = view * vec4(aPos, 1.0);
-    TexCoord = textureCoord;
-    Color = color;
-    FragPosition = aPos.xy;
-})";
-
-    const char* fragmentShader = R"(
-#version 330 core
-
-uniform sampler2D spriteTexture;
-uniform sampler2D shadowMap;
-
-in vec2 TexCoord;
-in vec4 Color;
-in vec2 FragPosition;
-
-out vec4 FragColor;
-
-void main()
-{
-    vec4 texel = texture(spriteTexture, TexCoord);
-
-    if(texel.a == 0) discard;
-
-    if(Color.a == 1)
-    {
-        float a = step(0.2, texel.a);
-
-        FragColor = vec4(Color.rgb, a);
-    }
-    else
-    {
-        FragColor = vec4(mix(texel.rgb, Color.rgb, min(Color.a, 1)), texel.a);
-    }
-})";
-
-    _spriteShader.Compile(vertexShader, fragmentShader);
-    _spriteBatcher.Initialize(&_spriteShader);
+    auto spriteShader = GetResource<ShaderResource>("sprite-shader");
+    _spriteBatcher.Initialize(&spriteShader->Get());
 }
 
 void Renderer::ResizeScreen(int w, int h)

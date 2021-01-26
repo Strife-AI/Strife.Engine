@@ -71,6 +71,13 @@ constexpr T Lerp(const T& min, const T& max, float t)
     return min + (max - min) * t;
 }
 
+template<typename T>
+int Sign(T val)
+{
+    return (T(0) < val) - (val < T(0));
+}
+
+
 static inline bool IsApproximately(float value, float desiredValue, float tolerance = 0.00001f)
 {
     return Abs(value - desiredValue) <= tolerance;

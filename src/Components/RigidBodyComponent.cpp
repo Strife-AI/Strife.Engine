@@ -123,15 +123,16 @@ b2Fixture* RigidBodyComponent::CreateCircleCollider(float radius, bool isTrigger
     return CreateFixture(fixtureDef);
 }
 
-b2Fixture* RigidBodyComponent::CreateLineCollider(Vector2 start, Vector2 end)
+b2Fixture* RigidBodyComponent::CreateLineCollider(Vector2 start, Vector2 end, bool isTrigger)
 {
     b2EdgeShape edge;
 
-    edge.SetTwoSided(edge.m_vertex1, edge.m_vertex2);
+    edge.SetTwoSided(b2Vec2(start.x, start.y), b2Vec2(end.x, end.y));
 
     b2FixtureDef fixtureDef;
     fixtureDef.isSensor = false;
     fixtureDef.shape = &edge;
+    fixtureDef.isSensor = isTrigger;
 
     return CreateFixture(fixtureDef);
 }

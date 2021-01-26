@@ -139,7 +139,6 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
 
     auto camera = scene->GetCamera();
     renderer->BeginRender(scene, camera, Vector2(0, 0), renderDeltaTime, scene->relativeTime);
-    scene->RenderEntities(renderer);
 
     scene->SendEvent(RenderImguiEvent());
 
@@ -185,6 +184,9 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
     }
 
     plotManager->RenderPlots();
+
+    engine->GetNewRenderer()->Render();
+
     sdlManager->EndRender();
 }
 
@@ -501,7 +503,7 @@ ServerGame::ServerGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface,
     : BaseGameInstance(engine, raknetInterface, localAddress_, true)
 {
     isHeadless = true;
-    targetTickRate = 30;
+    targetTickRate = 60;//30;
 
     rpcManager.Register<ServerSetPlayerInfoRpc>();
     fileTransferService.RegisterRpc();
