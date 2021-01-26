@@ -49,7 +49,7 @@ bool SceneManager::TrySwitchScene(StringId id)
 
     if (scene != _engine->Game()->project->scenes.end())
     {
-        SceneModel model = _engine->Game()->project->scenes[id];
+        SceneModel& model = _engine->Game()->project->scenes[id];
         BuildNewScene(&model);
         return true;
     }
