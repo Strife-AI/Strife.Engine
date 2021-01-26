@@ -304,14 +304,14 @@ void Renderer::DoRendering()
             RenderRectangle(rect.rect, rect.color, -1, 0);
         }
 
-        if (!_scene->GetEngine()->IsPaused()) _debugRectangles.clear();
+        _debugRectangles.clear();
 
         for (auto& line : _debugLines)
         {
             RenderLine(line.start, line.end, line.color, -1);
         }
 
-        if (!_scene->GetEngine()->IsPaused()) _debugLines.clear();
+        _debugLines.clear();
     }
 
     if (g_useLighting.Value())

@@ -18,35 +18,38 @@ struct TilePropertiesDto
 	    
 	}
 
-	TilePropertiesDto(const std::string& spriteResource_, const Rectanglei& bounds_, const Polygoni& shape_)
+	TilePropertiesDto(const std::string& spriteResource_, const Rectanglei& bounds_, const Polygoni& shape_, std::map<std::string, std::string> properties)
 	    : spriteResource(spriteResource_),
 	    bounds(bounds_),
-	    shape(shape_)
+	    shape(shape_),
+	    properties(properties)
 	{
 	    
 	}
 
 	std::string spriteResource;
 	Rectanglei bounds;
-
 	Polygoni shape;
+	std::map<std::string, std::string> properties;
 };
 
 struct ImportTileProperties
 {
-	ImportTileProperties(const std::string& spriteResource_, uint32_t id_, const Rectanglei& bounds_, const Polygoni& shape_, int serializationId_)
+	ImportTileProperties(const std::string& spriteResource_, uint32_t id_, const Rectanglei& bounds_, const Polygoni& shape_, int serializationId_,
+	    std::map<std::string, std::string> properties)
 		: spriteResource(spriteResource_),
 		id(id_),
 	    bounds(bounds_),
 	    shape(shape_),
-	    serializationId(serializationId_)
+	    serializationId(serializationId_),
+	    properties(properties)
 	{
 
 	}
 
 	TilePropertiesDto ToTilePropertiesDto()
 	{
-		return TilePropertiesDto(spriteResource, bounds, shape);
+		return TilePropertiesDto(spriteResource, bounds, shape, properties);
 	}
 
 	std::string spriteResource;
@@ -56,6 +59,7 @@ struct ImportTileProperties
 	Polygoni  shape;
 
 	int serializationId;
+	std::map<std::string, std::string> properties;
 };
 
 struct TileMapLayerDto
