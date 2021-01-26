@@ -3,6 +3,7 @@
 
 #include "Math/Vector2.hpp"
 #include "Scene/EntityComponent.hpp"
+#include "gsl/span"
 
 DEFINE_COMPONENT(RigidBodyComponent)
 {
@@ -24,6 +25,7 @@ DEFINE_COMPONENT(RigidBodyComponent)
     b2Fixture* CreateBoxCollider(Vector2 size, bool isTrigger = false, Vector2 offset = Vector2(0, 0));
     b2Fixture* CreateCircleCollider(float radius, bool isTrigger = false, Vector2 offset = Vector2(0, 0));
     b2Fixture* CreateLineCollider(Vector2 start, Vector2 end, bool isTrigger = false);
+    b2Fixture* CreatePolygonCollider(gsl::span<Vector2> points, bool isTrigger = false);
     b2Fixture* CreateFixture(b2FixtureDef& fixtureDef);
 
     b2Body* body = nullptr;
