@@ -143,40 +143,36 @@ void SpriteBatcher::BeginRender(Camera* camera)
     _vertices.clear();
 }
 
+struct SpriteShader : Effect
+{
+    SpriteShader(Shader* shader)
+        : Effect(shader)
+    {
+        ebo = CreateBuffer<int>(SpriteBatcher::MaxElementsPerBatch, VboType::Element);
+        vertices = CreateBuffer<RenderVertex>(SpriteBatcher::MaxVerticesPerBatch, VboType::Vertex);
+
+        BindVertexAttribute("aPos", vertices, [=](auto rv) { return &rv->position; });
+        BindVertexAttribute("textureCoord", vertices, [=](auto rv) { return &rv->textureCoord; });
+        BindVertexAttribute("color", vertices, [=](auto rv) { return &rv->color; });
+
+//        view = GetUniform<glm::mat4>("view");
+    }
+
+    Vbo<RenderVertex>* vertices;
+    Vbo<int>* ebo;
+
+    ShaderUniform<glm::mat4> view;
+};
+
 void SpriteBatcher::Initialize(Shader* shader)
 {
-    _shader = shader;
+    _shader = new SpriteShader(shader);
 
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    glGenBuffers(1, &spriteVerticesVbo);
-    glBindBuffer(GL_ARRAY_BUFFER, spriteVerticesVbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(RenderVertex) * MaxVerticesPerBatch, nullptr, GL_DYNAMIC_DRAW);
-
-    glGenBuffers(1, &ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int) * MaxElementsPerBatch, nullptr, GL_DYNAMIC_DRAW);
-
-    glEnableVertexAttribArray(VertexLocation);
-    glVertexAttribPointer(VertexLocation, 3, GL_FLOAT, GL_FALSE, sizeof(RenderVertex), (void*)offsetof(RenderVertex, position));
-
-    glEnableVertexAttribArray(TextureCoordLocation);
-    glVertexAttribPointer(TextureCoordLocation, 2, GL_FLOAT, GL_FALSE, sizeof(RenderVertex), (void*)offsetof(RenderVertex, textureCoord));
-
-    glEnableVertexAttribArray(ColorLocation);
-    glVertexAttribPointer(ColorLocation, 4, GL_FLOAT, GL_FALSE, sizeof(RenderVertex), (void*)offsetof(RenderVertex, color));
+    _viewMatrixLocation = glGetUniformLocation(shader->ProgramId(), "view");
 
     glBindVertexArray(0);
     glBindBuffer(GL_VERTEX_ARRAY, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    _viewMatrixLocation = glGetUniformLocation(_shader->ProgramId(), "view");
-    _lightPositionLocation = glGetUniformLocation(_shader->ProgramId(), "lightPosition");
-    _botLightLocation = glGetUniformLocation(_shader->ProgramId(), "botLightPosition");
-    _useLightingLocation = glGetUniformLocation(_shader->ProgramId(), "useLighting");
-    _lightDistanceLocation = glGetUniformLocation(_shader->ProgramId(), "lightDistance");
-    _totalPointLightsLocation = glGetUniformLocation(_shader->ProgramId(), "totalPointLights");
 
     _solidColor = std::make_unique<Texture>(Color(0, 0, 0, 255), 1, 1);
 
@@ -193,14 +189,14 @@ void SpriteBatcher::Initialize(Shader* shader)
 void SpriteBatcher::Render()
 {
     glViewport(0, 0, _camera->ScreenSize().x, _camera->ScreenSize().y);
-    glBindVertexArray(vao);
-    _shader->Use();
+    glBindVertexArray(_shader->vao);
+    _shader->shader->Use();
 
     glUniformMatrix4fv(_viewMatrixLocation, 1, GL_FALSE, &_camera->ViewMatrix()[0][0]);
 
     glUniform1i(glGetUniformLocation(_shader->ProgramId(), "spriteTexture"), 0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, spriteVerticesVbo);
+    glBindBuffer(GL_ARRAY_BUFFER, _shader->vertices->id);
     glBufferSubData(
         GL_ARRAY_BUFFER,
         _vertexResetSize * sizeof(RenderVertex),
@@ -214,7 +210,7 @@ void SpriteBatcher::Render()
 
         glBindTexture(GL_TEXTURE_2D, texture->Id());
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _shader->ebo->id);
         glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(int) * renderInfo.elements.size(), renderInfo.elements.data());
 
         glDrawElements(GL_TRIANGLES, renderInfo.elements.size(), GL_UNSIGNED_INT, (void*)0);

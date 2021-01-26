@@ -14,6 +14,7 @@
 #include "Memory/FreeList.hpp"
 #include "MapSegment.hpp"
 #include "Timer.hpp"
+#include "Isometric.hpp"
 
 class StringId;
 class Renderer;
@@ -79,6 +80,12 @@ struct Transform
 };
 
 class ReplicationManager;
+
+enum class ScenePerspective
+{
+    Orothgraphic,
+    Isometric
+};
 
 class Scene
 {
@@ -192,6 +199,8 @@ public:
 		return _componentManager;
 	}
 
+    void RenderEntities(Renderer* renderer);
+
 	float deltaTime = 0;
 	float relativeTime = 0;
 	float absoluteTime = 0;
@@ -201,6 +210,9 @@ public:
 	EntityReference<Entity> soundListener;
 	ReplicationManager* replicationManager;
 	bool isServer;
+
+    ScenePerspective perspective = ScenePerspective::Orothgraphic;
+    IsometricSettings isometricSettings;
 
 	static Entity* entityUnderConstruction;
 
@@ -212,25 +224,14 @@ private:
 	std::vector<std::unique_ptr<ISceneService>> _services;
 
 	void MarkEntityForDestruction(Entity* entity);
-
 	void RegisterEntity(Entity* entity);
-
 	void RemoveEntity(Entity* entity);
-
 	void DestroyScheduledEntities();
-
 	void UpdateEntities(float deltaTime);
-
-	void RenderEntities(Renderer* renderer);
-
 	void RenderHud(Renderer* renderer);
-
 	void NotifyUpdate(float deltaTime);
-
 	void NotifyServerUpdate(float deltaTime);
-
 	void NotifyFixedUpdate();
-
 	void NotifyServerFixedUpdate();
 
 	int BeginQuery()

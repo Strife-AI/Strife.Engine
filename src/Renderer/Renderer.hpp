@@ -115,7 +115,6 @@ private:
     Shader _lineShader;
 
     SpriteBatcher _spriteBatcher;
-    Shader _spriteShader;
 
     LightManager _lightManager;
 

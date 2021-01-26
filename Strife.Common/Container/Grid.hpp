@@ -44,6 +44,11 @@ public:
         return _data[CalculateIndex(index.x, index.y)];
     }
 
+    const T& operator[](Vector2 index) const
+    {
+        return _data[CalculateIndex(index.x, index.y)];
+    }
+
     void FillWithZero()
     {
         memset(_data, 0, _rows * _cols * sizeof(T));
@@ -131,10 +136,22 @@ template<typename T>
 class VariableSizedGrid : public Grid<T>
 {
 public:
+    VariableSizedGrid()
+        : Grid<T>(0, 0, nullptr)
+    {
+
+    }
+
     VariableSizedGrid(int rows, int cols)
         : Grid<T>(rows, cols, new T[rows * cols])
     {
 
+    }
+
+    void SetSize(int rows, int cols)
+    {
+        delete [] this->_data;
+        this->Set(rows, cols, new T[rows * cols]);
     }
 
     ~VariableSizedGrid()

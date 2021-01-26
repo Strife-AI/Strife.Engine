@@ -18,6 +18,7 @@ DEFINE_COMPONENT(PathFollowerComponent)
 
     }
 
+    void OnAdded() override;
     void SetTarget(Vector2 position);
     void Stop(bool loseVelocity);
     void FollowEntity(Entity* entity, float minDistance);
@@ -28,6 +29,9 @@ DEFINE_COMPONENT(PathFollowerComponent)
     void FollowFlowField();
     void UpdateFollowTarget(float deltaTime, Scene* scene);
 
+    Vector2 ToPathfinderPerspective(Vector2 position);
+    Vector2 ToWorldPerspective(Vector2 position);
+
     RigidBodyComponent* rigidBody;
     std::shared_ptr<FlowField> flowField;
     Vector2 acceleration;
@@ -36,4 +40,7 @@ DEFINE_COMPONENT(PathFollowerComponent)
     EntityReference<Entity> entityToFollow;
     float updateTargetTimer = 0;
     float speed = 200;
+    Vector2 currentTarget;
+    Vector2 intermediateTarget;
+    int currentLayer;
 };

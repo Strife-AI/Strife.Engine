@@ -1,4 +1,5 @@
 #include <box2d/box2d.h>
+#include <glm/ext/matrix_transform.hpp>
 #include "TilemapEntity.hpp"
 
 #include "Components/RigidBodyComponent.hpp"
@@ -58,29 +59,33 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
         rigidBody->CreateFixture(fixtureDef);
     }
 
+    PathFinderService* pathFinder = nullptr;
+
     // FIXME: the dimensions of the map should be calculated as part of the content pipeline
     if (!mapSegment.layers.empty())
     {
-        auto pathFinder = scene->AddService<PathFinderService>(
+        pathFinder = scene->AddService<PathFinderService>(
             mapSegment.layers[0].tileMap.Rows(),
-            mapSegment.layers[0].tileMap.Cols(),
-            Vector2{ 32, 32 });
+            mapSegment.layers[0].tileMap.Cols());
 
         for (auto& rectangle : mapSegment.colliders)
         {
             auto bounds = rectangle.As<float>();
-            pathFinder->AddObstacle(bounds);
+            //pathFinder->AddObstacle(bounds);
         }
     }
 
     for (auto& rectangle : mapSegment.colliders)
     {
         auto bounds = rectangle.As<float>();
-        rigidBody->CreateBoxCollider(bounds.Size(), false, bounds.GetCenter());
+        //rigidBody->CreateBoxCollider(bounds.Size(), false, bounds.GetCenter());
     }
 
-    _renderer.SetMapSegment(&mapSegment);
+    _renderer.SetMapSegment(&mapSegment, scene);
     _renderer.SetOffset(TopLeft());
+    scene->isometricSettings.tileSize = Vector2(64, 32);
 
     _mapSegment = &mapSegment;
+
+    scene->isometricSettings.BuildFromMapSegment(mapSegment, pathFinder, this);
 }
