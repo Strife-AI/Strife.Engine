@@ -457,12 +457,19 @@ MapSegmentDto ProcessMap(const std::string& path)
                 }
             }
 
+            std::map<std::string, std::string> properties;
+            for (const auto& property : tile.properties)
+            {
+                properties[property.getName()] = GetTmxPropertyValue(property);
+            }
+
             auto tileProperties = new ImportTileProperties(
                 resourceName,
                 tile.ID,
                 Rectanglei(position, tileSize),
                 shape,
-                nextTileSerializationId++);
+                nextTileSerializationId++,
+                properties);
 
             tilePropertiesByTileId[tile.ID + tileSet.getFirstGID()] = tileProperties;
             localTileIdByGlobalId[tile.ID + tileSet.getFirstGID()] = tile.ID;
@@ -506,7 +513,8 @@ void DtoToSegment(MapSegment* segment, MapSegmentDto& segmentDto)
         Sprite* tileSprite = &GetResource<SpriteResource>(tilePropertiesDto.spriteResource.c_str())->sprite;
         segment->tileProperties.push_back(new TileProperties(
             Sprite(tileSprite->GetTexture(), tileBounds, tilePropertiesDto.bounds.As<float>()),
-            0));
+            0,
+            tilePropertiesDto.properties));
     }
 
     // Load layers

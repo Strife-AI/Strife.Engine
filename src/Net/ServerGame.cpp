@@ -503,7 +503,7 @@ ServerGame::ServerGame(Engine* engine, SLNet::RakPeerInterface* raknetInterface,
     : BaseGameInstance(engine, raknetInterface, localAddress_, true)
 {
     isHeadless = true;
-    targetTickRate = 30;
+    targetTickRate = 60;//30;
 
     rpcManager.Register<ServerSetPlayerInfoRpc>();
     fileTransferService.RegisterRpc();
