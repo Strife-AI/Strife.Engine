@@ -15,7 +15,7 @@ Entity* Scene::entityUnderConstruction = nullptr;
 
 Scene::Scene(Engine* engine, StringId mapSegmentName, bool isServer)
     : isServer(isServer),
-      _mapSegmentName(mapSegmentName),
+      _sceneName(mapSegmentName),
       _cameraFollower(&_camera, engine->GetInput()),
       _engine(engine),
       _world(std::make_unique<b2World>(b2Vec2(0, 0))),
@@ -203,9 +203,9 @@ void Scene::LoadMapSegment(const char* name)
 
 void Scene::LoadMapSegment(const MapSegment& segment)
 {
-    // TODO: load entities from the editor
     auto tileMap = CreateEntity<TilemapEntity>({ 0, 0 });
     tileMap->SetMapSegment(segment);
+
 }
 
 void Scene::StartTimer(float timeSeconds, const std::function<void()>& callback)

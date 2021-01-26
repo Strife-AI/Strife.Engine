@@ -35,10 +35,15 @@ Run the bootstrap script for your respective platform
 ```powershell
 ./bootstrap-vcpkg.bat
 ```
-* For Mac and Linux:
+* For Linux:
 ```shell
 ./bootstrap-vcpkg.sh
 ```
+* For macOS 10.14 above using the Apple Clang compiler:
+```shell
+./bootstrap-vcpkg.sh --allowAppleClang
+```
+
 Install dependencies:
 ```shell
 ./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet {x64-windows, x64-linux, x64-osx}

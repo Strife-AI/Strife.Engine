@@ -9,6 +9,7 @@
 #include "Scene.hpp"
 #include "SdlManager.hpp"
 #include "IEntityEvent.hpp"
+#include "Project/Project.hpp"
 
 void MapCmd(ConsoleCommandBinder& binder)
 {
@@ -39,39 +40,17 @@ SceneManager::SceneManager(Engine* engine, bool isServer)
 
 bool SceneManager::TrySwitchScene(const char* name)
 {
-    TilemapResource* tilemap = GetResource<TilemapResource>(name, false);
-    if (tilemap != nullptr)
-    {
-        BuildNewScene(&tilemap->mapSegment);
-        return true;
-    }
-    else
-    {
-        Log("Failed to load map %s\n", name);
-        return false;
-    }
-}
-
-void SceneManager::BuildNewScene(const MapSegment* mapSegment)
-{
-    _scene = std::make_shared<Scene>(_engine, mapSegment->name, _isServer);
-
-    auto screenSize = (_engine->GetSdlManager() != nullptr ? _engine->GetSdlManager()->WindowSize().AsVectorOfType<float>() : Vector2(0, 0));
-    _scene->GetCamera()->SetScreenSize(screenSize);
-    _scene->GetCamera()->SetZoom(screenSize.y / (1080.0f / 2));
-
-    _engine->Game()->BuildScene(_scene.get());
-    _scene->LoadMapSegment(*mapSegment);
-
-    _scene->SendEvent(SceneLoadedEvent());
+    return TrySwitchScene(StringId(name));
 }
 
 bool SceneManager::TrySwitchScene(StringId id)
 {
-    TilemapResource* tilemap = GetResource<TilemapResource>(id, false);
-    if (tilemap != nullptr)
+    auto scene = _engine->Game()->project->scenes.find(id);
+
+    if (scene != _engine->Game()->project->scenes.end())
     {
-        BuildNewScene(&tilemap->mapSegment);
+        SceneModel model = _engine->Game()->project->scenes[id];
+        BuildNewScene(&model);
         return true;
     }
     else
@@ -79,4 +58,35 @@ bool SceneManager::TrySwitchScene(StringId id)
         Log("Failed to load map %s\n", id.ToString());
         return false;
     }
+}
+
+void SceneManager::BuildNewScene(const SceneModel* sceneModel)
+{
+    _scene = std::make_shared<Scene>(_engine, StringId(sceneModel->sceneName), _isServer);
+
+    auto screenSize = (_engine->GetSdlManager() != nullptr ? _engine->GetSdlManager()->WindowSize().AsVectorOfType<float>() : Vector2(0, 0));
+    _scene->GetCamera()->SetScreenSize(screenSize);
+    _scene->GetCamera()->SetZoom(screenSize.y / (1080.0f / 2));
+
+    _engine->Game()->BuildScene(_scene.get());
+
+    for (auto& entity : sceneModel->entities)
+    {
+        EntitySerializer serializer {
+            EntitySerializerMode::Read,
+            entity.properties
+        };
+
+        if (entity.type == "tilemap"_sid)
+        {
+            TilemapResource* mapSegment = GetResource<TilemapResource>(entity.name.c_str(), false);
+            _scene->LoadMapSegment(mapSegment->mapSegment);
+        }
+        else
+        {
+            _scene->CreateEntity(entity.type, serializer);
+        }
+    }
+
+    _scene->SendEvent(SceneLoadedEvent());
 }
