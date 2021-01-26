@@ -101,6 +101,7 @@ Project::Project(const std::filesystem::path& path)
             sceneModel.entities.push_back(model);
         }
 
-        scenes[StringId(sceneContent["name"].get<std::string>()).key] = sceneModel;
+        sceneModel.sceneName = sceneContent["name"].get<std::string>();
+        scenes[StringId(sceneModel.sceneName).key] = sceneModel;
     }
 }
