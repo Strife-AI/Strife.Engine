@@ -150,7 +150,13 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
                 {
                     auto start = points[k];
                     auto end = points[(k + 1) % 4];
-                    tilemapRb->CreateLineCollider(start, end, true);
+
+                    bool addAsTrigger = terrain[i][j].rampType != RampType::None
+                        || terrain[to].rampType != RampType::None
+                        || terrain[i + 1][j + 1].rampType != RampType::None
+                        || terrain[to + Vector2(1)].rampType != RampType::None;
+
+                    tilemapRb->CreateLineCollider(start, end, addAsTrigger);
                 }
             }
         }
@@ -166,7 +172,7 @@ float IsometricSettings::GetTileDepth(Vector2 position, int layer) const
     float maxLayers = 10;
     float dz = 0.1f / (maxWidth * maxHeight * maxLayers);
 
-    return baseDepth - (position.x + position.y + layer * maxWidth * maxHeight) * dz; //(position.x * maxLayers + position.y * maxWidth * maxLayers + layer) * dz;
+    return baseDepth - (position.x + position.y + layer * maxWidth * maxHeight) * dz;
 }
 
 int IsometricSettings::GetCurrentLayer(Vector2 position) const
