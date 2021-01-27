@@ -166,7 +166,7 @@ float IsometricSettings::GetTileDepth(Vector2 position, int layer) const
     float maxLayers = 10;
     float dz = 0.1f / (maxWidth * maxHeight * maxLayers);
 
-    return baseDepth - (position.x * maxLayers + position.y * maxWidth * maxLayers + layer) * dz;
+    return baseDepth - (position.x + position.y + layer * maxWidth * maxHeight) * dz; //(position.x * maxLayers + position.y * maxWidth * maxLayers + layer) * dz;
 }
 
 int IsometricSettings::GetCurrentLayer(Vector2 position) const
