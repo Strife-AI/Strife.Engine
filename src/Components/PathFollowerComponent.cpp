@@ -86,11 +86,12 @@ void PathFollowerComponent::FollowFlowField()
         }
         else
         {
+            currentLayer = scene->isometricSettings.terrain[ToPathfinderPerspective(owner->Center())].height;
+
             if ((intermediateTarget - owner->Center()).Length() < 1)
             {
                 // TODO: this is kind of hacky, but we only change the current layer once we arrive at the intermediate target.
                 // The assumption is that we don't change layers when bee-lining.
-                currentLayer = scene->isometricSettings.terrain[ToPathfinderPerspective(intermediateTarget)].height;
 
                 bool firstMove = true;
                 do
@@ -108,9 +109,9 @@ void PathFollowerComponent::FollowFlowField()
                     auto nextTile = pathFinderPerspective.Floor().AsVectorOfType<float>() + dir;
                     auto nextTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5));
 
-                    Vector2 checkPoints[1];
-//                    scene->isometricSettings.GetTileBoundaries(nextTile, checkPoints);
-                    checkPoints[0] = nextTarget;
+                    Vector2 checkPoints[5];
+                    scene->isometricSettings.GetTileBoundaries(nextTile, checkPoints);
+                    checkPoints[4] = nextTarget;
 
                     bool fail = false;
 
@@ -124,7 +125,8 @@ void PathFollowerComponent::FollowFlowField()
                         RaycastResult result;
                         if (scene->Raycast(owner->Center(), point, result, true, [=](const ColliderHandle& handle)
                         {
-                            return handle.OwningEntity()->Is<TilemapEntity>();
+                            return handle.OwningEntity()->Is<TilemapEntity>()
+                                || !handle.IsTrigger();
                         }))
                         {
                             if (!firstMove)
@@ -137,7 +139,6 @@ void PathFollowerComponent::FollowFlowField()
 
                     if (fail)
                     {
-                        Log("Failed to simplify\n");
                         break;
                     }
 
@@ -168,8 +169,7 @@ void PathFollowerComponent::FollowFlowField()
         {
             velocity = { 0, 0 };
             acceleration = { 0, 0 };
-            flowField = nullptr;
-            Log("Field set to null\n");
+            Stop(true);
         }
 
         rigidBody->SetVelocity(velocity);
@@ -197,6 +197,9 @@ void PathFollowerComponent::Stop(bool loseVelocity)
 {
     state = PathFollowerState::Stopped;
     if (loseVelocity) rigidBody->SetVelocity({ 0, 0 });
+
+    rigidBody->body->SetType(b2_staticBody);
+    flowField = nullptr;
 }
 
 void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
@@ -213,6 +216,7 @@ void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
         flowField = flowFieldReady->result;
         flowField->target = currentTarget;
         acceleration = { 0, 0 };
+        rigidBody->body->SetType(b2_dynamicBody);
     }
 }
 
