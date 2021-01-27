@@ -122,8 +122,6 @@ void PathFollowerComponent::FollowFlowField()
 
                     for (auto point : checkPoints)
                     {
-                        Renderer::DrawDebugLine({ owner->Center(), point, Color::Orange() });
-
                         RaycastResult result;
                         if (scene->Raycast(owner->Center(), point, result, true, [=](const ColliderHandle& handle)
                         {
@@ -141,7 +139,6 @@ void PathFollowerComponent::FollowFlowField()
 
                     if (fail)
                     {
-                        Log("Failed to simplify\n");
                         break;
                     }
 
@@ -173,7 +170,6 @@ void PathFollowerComponent::FollowFlowField()
             velocity = { 0, 0 };
             acceleration = { 0, 0 };
             flowField = nullptr;
-            Log("Field set to null\n");
         }
 
         rigidBody->SetVelocity(velocity);
