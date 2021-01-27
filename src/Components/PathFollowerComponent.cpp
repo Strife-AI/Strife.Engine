@@ -169,7 +169,7 @@ void PathFollowerComponent::FollowFlowField()
         {
             velocity = { 0, 0 };
             acceleration = { 0, 0 };
-            flowField = nullptr;
+            Stop(true);
         }
 
         rigidBody->SetVelocity(velocity);
@@ -197,6 +197,9 @@ void PathFollowerComponent::Stop(bool loseVelocity)
 {
     state = PathFollowerState::Stopped;
     if (loseVelocity) rigidBody->SetVelocity({ 0, 0 });
+
+    rigidBody->body->SetType(b2_staticBody);
+    flowField = nullptr;
 }
 
 void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
@@ -213,6 +216,7 @@ void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
         flowField = flowFieldReady->result;
         flowField->target = currentTarget;
         acceleration = { 0, 0 };
+        rigidBody->body->SetType(b2_dynamicBody);
     }
 }
 
