@@ -86,11 +86,12 @@ void PathFollowerComponent::FollowFlowField()
         }
         else
         {
+            currentLayer = scene->isometricSettings.terrain[ToPathfinderPerspective(owner->Center())].height;
+
             if ((intermediateTarget - owner->Center()).Length() < 1)
             {
                 // TODO: this is kind of hacky, but we only change the current layer once we arrive at the intermediate target.
                 // The assumption is that we don't change layers when bee-lining.
-                currentLayer = scene->isometricSettings.terrain[ToPathfinderPerspective(intermediateTarget)].height;
 
                 bool firstMove = true;
                 do
@@ -108,9 +109,9 @@ void PathFollowerComponent::FollowFlowField()
                     auto nextTile = pathFinderPerspective.Floor().AsVectorOfType<float>() + dir;
                     auto nextTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5));
 
-                    Vector2 checkPoints[1];
-//                    scene->isometricSettings.GetTileBoundaries(nextTile, checkPoints);
-                    checkPoints[0] = nextTarget;
+                    Vector2 checkPoints[5];
+                    scene->isometricSettings.GetTileBoundaries(nextTile, checkPoints);
+                    checkPoints[4] = nextTarget;
 
                     bool fail = false;
 
@@ -121,10 +122,13 @@ void PathFollowerComponent::FollowFlowField()
 
                     for (auto point : checkPoints)
                     {
+                        Renderer::DrawDebugLine({ owner->Center(), point, Color::Orange() });
+
                         RaycastResult result;
                         if (scene->Raycast(owner->Center(), point, result, true, [=](const ColliderHandle& handle)
                         {
-                            return handle.OwningEntity()->Is<TilemapEntity>();
+                            return handle.OwningEntity()->Is<TilemapEntity>()
+                                || !handle.IsTrigger();
                         }))
                         {
                             if (!firstMove)
