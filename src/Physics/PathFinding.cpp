@@ -71,7 +71,7 @@ void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        Visualize(renderEvent->renderer);
+        //Visualize(renderEvent->renderer);
     }
 }
 
@@ -141,7 +141,6 @@ void PathFinderService::CalculatePaths()
 
 void PathFinderService::Visualize(Renderer* renderer)
 {
-    return;
     for(int i = 0; i < _obstacleGrid.Rows(); ++i)
     {
         for(int j = 0; j < _obstacleGrid.Cols(); ++j)
@@ -170,7 +169,7 @@ void PathFinderService::Visualize(Renderer* renderer)
                     renderer->RenderLine(points[k] + offset, points[(k + 1) % 4] + offset, Color::Red(), -1);
             }
 
-            if (_obstacleGrid[i][j].count != 0)
+            if (_obstacleGrid[i][j].count != 0 || true)
             {
                 Color colors[3] = {Color::Green(), Color::Yellow(), Color::Red()};
 
