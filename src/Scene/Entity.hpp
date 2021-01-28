@@ -352,14 +352,14 @@ public:
         }
     }
 
-    bool operator==(EntityReference& reference)
+    bool operator==(const EntityReference& rhs) const
     {
-        return _entityHeader == reference._entityHeader && _entityId == reference._entityId;
+        return _entityHeader == rhs._entityHeader && _entityId == rhs._entityId;
     }
 
-    bool operator==(TEntity* entity)
+    bool operator==(const TEntity* rhs) const
     {
-        return _entityHeader->entity == entity;
+        return _entityHeader->entity == rhs;
     }
 
     bool IsValid() const
