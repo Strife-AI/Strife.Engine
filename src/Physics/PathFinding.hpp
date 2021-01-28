@@ -87,6 +87,7 @@ public:
     void AddObstacle(const Rectangle& bounds);
     void RemoveObstacle(const Rectangle& bounds);
     void RequestFlowField(Vector2 start, Vector2 end, Entity* owner);
+    void Visualize(Renderer* renderer);
 
     ObstacleCell& GetCell(Vector2 position)
     {
@@ -94,11 +95,10 @@ public:
     }
 
 private:
-    static constexpr int MaxGridCalculationsPerTick = 32768;
+    static constexpr int MaxGridCalculationsPerTick = 32768 * 8;
 
     void ReceiveEvent(const IEntityEvent& ev) override;
     void CalculatePaths();
-    void Visualize(Renderer* renderer);
 
     Vector2 PixelToCellCoordinate(Vector2 position) const;
     void EnqueueCellIfValid(Vector2 cell, Vector2 from);
