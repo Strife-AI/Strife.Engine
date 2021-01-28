@@ -42,5 +42,5 @@ DEFINE_COMPONENT(PathFollowerComponent)
     float speed = 200;
     Vector2 currentTarget;
     Vector2 intermediateTarget;
-    int currentLayer;
+    SyncVar<uint8_t> currentLayer = 0;
 };
