@@ -169,7 +169,7 @@ void PathFinderService::Visualize(Renderer* renderer)
                     renderer->RenderLine(points[k] + offset, points[(k + 1) % 4] + offset, Color::Red(), -1);
             }
 
-            if (_obstacleGrid[i][j].count != 0 || true)
+            if (_obstacleGrid[i][j].count != 0)
             {
                 Color colors[3] = {Color::Green(), Color::Yellow(), Color::Red()};
 
