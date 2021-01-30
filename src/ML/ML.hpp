@@ -408,6 +408,7 @@ private:
 };
 
 void RenderGridSensorOutput(Grid<uint64_t>& grid, Vector2 center, Vector2 cellSize, SensorObjectDefinition* objectDefinition, Renderer* renderer, float depth);
+void RenderGridSensorOutputIsometric(Grid<uint64_t>& grid, Vector2 center, Vector2 cellSize, SensorObjectDefinition* objectDefinition, Renderer* renderer, float depth);
 
 template<int Rows, int Cols>
 struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
@@ -451,7 +452,15 @@ struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
             SensorOutput output;
             Read(output);
             output.Decompress(decompressed);
-            RenderGridSensorOutput(decompressed, GridCenter(), cellSize, sensorObjectDefinition.get(), renderer, -1);
+
+            if (this->GetScene()->perspective == ScenePerspective::Orothgraphic)
+            {
+                RenderGridSensorOutput(decompressed, GridCenter(), cellSize, sensorObjectDefinition.get(), renderer, -1);
+            }
+            else if (this->GetScene()->perspective == ScenePerspective::Isometric)
+            {
+                RenderGridSensorOutputIsometric(decompressed, GridCenter(), cellSize, sensorObjectDefinition.get(), renderer, -1);
+            }
         }
     }
 

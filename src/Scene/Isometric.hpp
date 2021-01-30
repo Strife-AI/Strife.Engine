@@ -35,6 +35,13 @@ struct IsometricSettings
             (tile.x + tile.y) * tileSize.y / 2);
     }
 
+    static Vector2 TileToWorldCustomSize(Vector2 tile, Vector2 tileSize)
+    {
+        return Vector2(
+            (tile.x - tile.y) * tileSize.x / 2,
+            (tile.x + tile.y) * tileSize.y / 2);
+    }
+
     Vector2 WorldToTile(Vector2 world) const
     {
         return Vector2(
