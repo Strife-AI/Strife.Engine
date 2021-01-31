@@ -89,3 +89,8 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
 
     scene->isometricSettings.BuildFromMapSegment(mapSegment, pathFinder, this);
 }
+
+void WalkableTerrainEntity::OnAdded()
+{
+    rigidBody = AddComponent<RigidBodyComponent>();
+}
