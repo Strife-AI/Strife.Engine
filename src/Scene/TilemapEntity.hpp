@@ -19,3 +19,11 @@ private:
     TilemapRenderer _renderer;
     AmbientLight light;
 };
+
+DEFINE_ENTITY(WalkableTerrainEntity, "walkable-terrain")
+{
+    void OnAdded() override;
+
+    int height = 0;
+    RigidBodyComponent* rigidBody;
+};
