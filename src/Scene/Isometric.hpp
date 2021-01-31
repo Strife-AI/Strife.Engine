@@ -49,9 +49,24 @@ struct IsometricSettings
         (2 * world.y - world.x) / 2) / tileSize;
     }
 
+    static Vector2 WorldToTile(Vector2 world, Vector2 tileSize)
+    {
+        return Vector2(
+            (2 * world.y + world.x),
+            (2 * world.y - world.x) / 2) / tileSize;
+    }
+
     Vector2 WorldToIntegerTile(Vector2 world) const
     {
         return WorldToTile(world)
+            .Floor()
+            .AsVectorOfType<float>()
+            .Clamp({ 0, 0}, terrain.Dimensions());
+    }
+
+    Vector2 WorldToIntegerTile(Vector2 world, Vector2 tileSize) const
+    {
+        return WorldToTile(world, tileSize)
             .Floor()
             .AsVectorOfType<float>()
             .Clamp({ 0, 0}, terrain.Dimensions());

@@ -276,6 +276,15 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
     SensorObjectDefinition* objectDefinition,
     Entity* self);
 
+gsl::span<uint64_t> ReadGridSensorRectanglesIsometric(
+    Scene* scene,
+    Vector2 center,
+    Vector2 cellSize,
+    int rows,
+    int cols,
+    SensorObjectDefinition* objectDefinition,
+    Entity* self);
+
 void DecompressGridSensorOutput(gsl::span<const uint64_t> compressedRectangles, Grid<uint64_t>& outGrid, SensorObjectDefinition* objectDefinition);
 
 template<int Rows, int Cols>
@@ -432,16 +441,32 @@ struct GridSensorComponent : ComponentTemplate<GridSensorComponent<Rows, Cols>>
 
     void Read(SensorOutput& output)
     {
-        auto sensorGridRectangles = ReadGridSensorRectangles(
-            this->GetScene(),
-            GridCenter(),
-            cellSize,
-            Rows,
-            Cols,
-            sensorObjectDefinition.get(),
-            this->owner);
+        if (this->GetScene()->perspective == ScenePerspective::Orothgraphic)
+        {
+            auto sensorGridRectangles = ReadGridSensorRectangles(
+                this->GetScene(),
+                GridCenter(),
+                cellSize,
+                Rows,
+                Cols,
+                sensorObjectDefinition.get(),
+                this->owner);
 
-        output.SetRectangles(sensorGridRectangles);
+            output.SetRectangles(sensorGridRectangles);
+        }
+        else if (this->GetScene()->perspective == ScenePerspective::Isometric)
+        {
+            auto sensorGridRectangles = ReadGridSensorRectanglesIsometric(
+                this->GetScene(),
+                GridCenter(),
+                cellSize,
+                Rows,
+                Cols,
+                sensorObjectDefinition.get(),
+                this->owner);
+
+            output.SetRectangles(sensorGridRectangles);
+        }
     }
 
     void Render(Renderer* renderer) override
