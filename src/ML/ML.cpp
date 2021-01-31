@@ -98,7 +98,7 @@ gsl::span<uint64_t> ReadGridSensorRectangles(
     return gsl::span<uint64_t>(outputStorage, outputSize);
 }
 
-Rectangle GetIsometricBounds(b2Fixture* fixture, IsometricSettings* isometric)
+Rectangle GetIsometricBounds(b2Fixture* fixture, IsometricSettings* isometric, Vector2 tileSize)
 {
     auto shape = fixture->GetShape();
     auto body = fixture->GetBody();
@@ -114,14 +114,26 @@ Rectangle GetIsometricBounds(b2Fixture* fixture, IsometricSettings* isometric)
         for (int i = 0; i < polygon->m_count; ++i)
         {
             auto v = body->GetWorldPoint(polygon->m_vertices[i]);
-            auto v2 = isometric->WorldToIntegerTile(Vector2(v.x, v.y));
+            auto v2 = isometric->WorldToTile(Scene::Box2DToPixel(v), tileSize);
 
             min = min.Min(v2);
             max = max.Max(v2);
         }
 
-        return Rectangle(min, max - min).Scale(Scene::Box2DToPixelsRatio);
+        return Rectangle(min, max - min);
     }
+
+    case b2Shape::e_edge:
+    {
+        auto edge = static_cast<const b2EdgeShape*>(shape);
+        auto a = Scene::Box2DToPixel(body->GetWorldPoint(edge->m_vertex1));
+        auto b = Scene::Box2DToPixel(body->GetWorldPoint(edge->m_vertex2));
+
+        return Rectangle::FromPoints(
+            isometric->WorldToTile(a, tileSize),
+            isometric->WorldToTile(b, tileSize));
+    }
+
 
     case b2Shape::e_circle:
     {
@@ -132,16 +144,6 @@ Rectangle GetIsometricBounds(b2Fixture* fixture, IsometricSettings* isometric)
 
         return Rectangle(center2 - size, size * 2).Scale(Scene::Box2DToPixelsRatio);
     }
-
-    case b2Shape::e_edge:
-    {
-        auto edge = static_cast<const b2EdgeShape*>(shape);
-        auto a = Scene::Box2DToPixel(body->GetWorldPoint(edge->m_vertex1));
-        auto b = Scene::Box2DToPixel(body->GetWorldPoint(edge->m_vertex2));
-
-        return Rectangle::FromPoints(a, b);
-    }
-
 
     default:
         FatalError("Unsupported fixture type: %d", (int)shape->GetType());
@@ -161,6 +163,7 @@ gsl::span<uint64_t> ReadGridSensorRectanglesIsometric(
     Vector2 topLeft =  ((center - gridSizePixels / 2) / cellSize).Round() * cellSize;
 
     Rectangle gridPixelBounds(topLeft, gridSizePixels);
+    auto topLeftTile = scene->isometricSettings.WorldToTile(center - cellSize.YVector() * rows / 2, cellSize);
 
     const int maxRectangles = 8192;
     static ColliderHandle colliderPool[maxRectangles];
@@ -178,20 +181,27 @@ gsl::span<uint64_t> ReadGridSensorRectanglesIsometric(
             continue;
         }
 
-        auto colliderBounds = collider.Bounds();
+        auto colliderBounds = GetIsometricBounds(collider.GetFixture(), &scene->isometricSettings, cellSize);
+        auto min = colliderBounds.TopLeft();
+        auto max = colliderBounds.BottomRight();
+        auto topLeft = (min - topLeftTile).Floor().AsVectorOfType<float>();
+        auto size = max - min;
+        auto sizeInt = max.Floor() - min.Floor();
 
-        auto topLeft = scene->isometricSettings.WorldToIntegerTile(gridPixelBounds.TopLeft() - gridPixelBounds.TopLeft());
-        auto bottomRight = PixelToCellCoordinate(gridPixelBounds.TopLeft(), cellSize, colliderBounds.BottomRight());
+        if (floor(size.x) != size.x) ++sizeInt.x;
+        if (floor(size.y) != size.y) ++sizeInt.y;
 
-        if ((int)colliderBounds.BottomRight().x % (int)cellSize.x != 0)
-        {
-            ++bottomRight.x;
-        }
+        auto bottomRight = topLeft + sizeInt.AsVectorOfType<float>();
 
-        if ((int)colliderBounds.BottomRight().y % (int)cellSize.y != 0)
-        {
-            ++bottomRight.y;
-        }
+//        if ((int)colliderBounds.BottomRight().x % (int)cellSize.x != 0)
+//        {
+//            ++bottomRight.x;
+//        }
+//
+//        if ((int)colliderBounds.BottomRight().y % (int)cellSize.y != 0)
+//        {
+//            ++bottomRight.y;
+//        }
 
         int type = objectDefinition->GetEntitySensorObject(collider.OwningEntity()->type.key).id;
 
@@ -311,8 +321,6 @@ void RenderGridSensorOutputIsometric(Grid<uint64_t>& grid, Vector2 center, Vecto
                 };
 
                 renderer->GetSpriteBatcher()->RenderSolidPolygon(points, 4, -1, color);
-
-                //renderer->RenderRectangle(Rectangle(cellTopLeft, cellSize), , -1, 0);
             }
         }
     }
