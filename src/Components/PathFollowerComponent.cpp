@@ -153,6 +153,7 @@ void PathFollowerComponent::FollowFlowField()
                     {
                         break;
                     }
+                    break;
                 } while(true);
             }
 
