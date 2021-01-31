@@ -159,8 +159,10 @@ gsl::span<uint64_t> ReadGridSensorRectanglesIsometric(
     SensorObjectDefinition* objectDefinition,
     Entity* self)
 {
+    center = IsometricSettings::TileToWorldCustomSize(IsometricSettings::WorldToTile(center, cellSize).Floor().AsVectorOfType<float>(), cellSize);
+
     Vector2 gridSizePixels = cellSize * Vector2(cols, rows);
-    Vector2 topLeft =  ((center - gridSizePixels / 2) / cellSize).Round() * cellSize;
+    Vector2 topLeft =  (center - gridSizePixels / 2).RoundTo(cellSize);
 
     Rectangle gridPixelBounds(topLeft, gridSizePixels);
     auto topLeftTile = scene->isometricSettings.WorldToTile(center - cellSize.YVector() * rows / 2, cellSize);
@@ -192,16 +194,6 @@ gsl::span<uint64_t> ReadGridSensorRectanglesIsometric(
         if (floor(size.y) != size.y) ++sizeInt.y;
 
         auto bottomRight = topLeft + sizeInt.AsVectorOfType<float>();
-
-//        if ((int)colliderBounds.BottomRight().x % (int)cellSize.x != 0)
-//        {
-//            ++bottomRight.x;
-//        }
-//
-//        if ((int)colliderBounds.BottomRight().y % (int)cellSize.y != 0)
-//        {
-//            ++bottomRight.y;
-//        }
 
         int type = objectDefinition->GetEntitySensorObject(collider.OwningEntity()->type.key).id;
 
@@ -290,9 +282,12 @@ void RenderGridSensorOutputIsometric(Grid<uint64_t>& grid, Vector2 center, Vecto
     Vector2 gridTopLeft = ((center - gridSize / 2) / cellSize).Round() * cellSize;
     Vector2 gridBottomRight = gridTopLeft + gridSize;
 
+    Vector2 gridSizePixels = cellSize * grid.Dimensions();
+    Vector2 topLeft = IsometricSettings::TileToWorldCustomSize(IsometricSettings::WorldToTile(center, cellSize).Floor().AsVectorOfType<float>(), cellSize);
+
     auto transform = [=](Vector2 tile)
     {
-        return IsometricSettings::TileToWorldCustomSize(tile - grid.Dimensions() / 2, cellSize) + center;
+        return IsometricSettings::TileToWorldCustomSize(tile - grid.Dimensions() / 2, cellSize) + topLeft;
     };
 
     for(int i = 0; i < grid.Rows(); ++i)
@@ -327,11 +322,11 @@ void RenderGridSensorOutputIsometric(Grid<uint64_t>& grid, Vector2 center, Vecto
 
     for(int i = 0; i < grid.Rows() + 1; ++i)
     {
-        renderer->RenderLine(transform(Vector2(0, i)), transform(Vector2(grid.Cols(), i)), Color::Gray(), depth);
+        renderer->RenderLine(transform(Vector2(0, i)), transform(Vector2(grid.Cols(), i)), Color::Black(), depth);
     }
 
     for(int i = 0; i < grid.Cols() + 1; ++i)
     {
-        renderer->RenderLine(transform(Vector2(i, 0)), transform(Vector2(i, grid.Rows())), Color::Gray(), depth);
+        renderer->RenderLine(transform(Vector2(i, 0)), transform(Vector2(i, grid.Rows())), Color::Black(), depth);
     }
 }
