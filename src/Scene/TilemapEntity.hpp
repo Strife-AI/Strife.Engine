@@ -38,7 +38,7 @@ DEFINE_ENTITY(WalkableTerrainEntity2, "walkable-terrain-2")
     RigidBodyComponent* rigidBody;
 };
 
-DEFINE_ENTITY(RampEntity, "walkable-terrain-2")
+DEFINE_ENTITY(RampEntity, "ramp")
 {
     void OnAdded() override;
     RigidBodyComponent* rigidBody;
