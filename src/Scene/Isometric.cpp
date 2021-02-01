@@ -159,7 +159,7 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
                                             || terrain[i + 1][j + 1].rampType != RampType::None
                                             || terrain[to + Vector2(1)].rampType != RampType::None;
 
-                        //tilemapRb->CreateLineCollider(start, end, addAsTrigger);
+                        tilemapRb->CreateLineCollider(start, end, addAsTrigger);
                     }
                 }
             }

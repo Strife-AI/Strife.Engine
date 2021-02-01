@@ -138,11 +138,15 @@ Rectangle GetIsometricBounds(b2Fixture* fixture, IsometricSettings* isometric, V
     case b2Shape::e_circle:
     {
         auto circle = static_cast<const b2CircleShape*>(shape);
-        auto center = body->GetWorldPoint(circle->m_p);
-        auto center2 = Vector2(center.x, center.y);
-        auto size = Vector2(circle->m_radius, circle->m_radius);
+        auto center = Scene::Box2DToPixel(body->GetWorldPoint(circle->m_p));
+        float radius = circle->m_radius * Scene::Box2DToPixelsRatio.x;
+        float diagonal = radius * sqrt(2) / 2;
 
-        return Rectangle(center2 - size, size * 2).Scale(Scene::Box2DToPixelsRatio);
+        auto p1 = isometric->WorldToTile(center - Vector2(diagonal), tileSize);
+        auto p2 = isometric->WorldToTile(center + Vector2(diagonal), tileSize);
+
+        return Rectangle::FromPoints(p1, p2);
+
     }
 
     default:
@@ -178,7 +182,13 @@ gsl::span<uint64_t> ReadGridSensorRectanglesIsometric(
     {
         auto& collider = overlappingColliders[i];
 
-        if(collider.OwningEntity() == self)
+        if (collider.OwningEntity() == self)
+        {
+            continue;
+        }
+
+        auto& definition = objectDefinition->GetEntitySensorObject(collider.OwningEntity()->type.key);
+        if (collider.IsTrigger() && !definition.allowTriggers)
         {
             continue;
         }
@@ -195,7 +205,7 @@ gsl::span<uint64_t> ReadGridSensorRectanglesIsometric(
 
         auto bottomRight = topLeft + sizeInt.AsVectorOfType<float>();
 
-        int type = objectDefinition->GetEntitySensorObject(collider.OwningEntity()->type.key).id;
+        int type = definition.id;
 
         outputStorage[outputSize++] = PackCompressedRectangle(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y, type);
     }
