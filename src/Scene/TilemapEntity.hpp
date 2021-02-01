@@ -20,10 +20,26 @@ private:
     AmbientLight light;
 };
 
-DEFINE_ENTITY(WalkableTerrainEntity, "walkable-terrain")
+DEFINE_ENTITY(WalkableTerrainEntity0, "walkable-terrain-0")
 {
     void OnAdded() override;
+    RigidBodyComponent* rigidBody;
+};
 
-    int height = 0;
+DEFINE_ENTITY(WalkableTerrainEntity1, "walkable-terrain-1")
+{
+    void OnAdded() override;
+    RigidBodyComponent* rigidBody;
+};
+
+DEFINE_ENTITY(WalkableTerrainEntity2, "walkable-terrain-2")
+{
+    void OnAdded() override;
+    RigidBodyComponent* rigidBody;
+};
+
+DEFINE_ENTITY(RampEntity, "walkable-terrain-2")
+{
+    void OnAdded() override;
     RigidBodyComponent* rigidBody;
 };
