@@ -151,9 +151,16 @@ struct SensorObjectDefinition
             return *this;
         }
 
+        SensorObject& AllowTriggers()
+        {
+            allowTriggers = true;
+            return *this;
+        }
+
         Color color;
         float priority;
         int id;
+        bool allowTriggers = false;
     };
 
     template<typename TEntity>
