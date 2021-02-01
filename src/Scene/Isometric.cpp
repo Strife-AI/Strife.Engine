@@ -126,38 +126,68 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
     }
 
     auto scene = pathFinder->scene;
-    auto tilemapRb = tilemap->GetComponent<RigidBodyComponent>();
 
-    for (int i = 1; i < terrain.Rows() - 1; ++i)
+    // Add line collider between walkable/unwalkable ares
     {
-        for (int j = 1; j < terrain.Cols() - 1; ++j)
+        auto tilemapRb = tilemap->GetComponent<RigidBodyComponent>();
+
+        for (int i = 1; i < terrain.Rows() - 1; ++i)
         {
-            Vector2 points[4] =
+            for (int j = 1; j < terrain.Cols() - 1; ++j)
             {
-                TileToWorld(Vector2(j, i)),
-                TileToWorld(Vector2(j + 1, i)),
-                TileToWorld(Vector2(j + 1, i + 1)),
-            };
+                Vector2 points[4] =
+                    {
+                        TileToWorld(Vector2(j, i)),
+                        TileToWorld(Vector2(j + 1, i)),
+                        TileToWorld(Vector2(j + 1, i + 1)),
+                    };
 
-            for (int k = 0; k < 2; ++k)
-            {
-                auto to = Vector2(j, i) + offsets[k];
-                if (terrain[i][j].height != terrain[to].height
-                    || terrain[to].flags.HasFlag(TerrainCellFlags::Unwalkable)
-                    || terrain[i][j].flags.HasFlag(TerrainCellFlags::Unwalkable)
-                    || terrain[i + 1][j + 1].rampType != RampType::None
-                    || terrain[(int)to.y + 1][(int)to.x + 1].rampType != RampType::None)
+                for (int k = 0; k < 2; ++k)
                 {
-                    auto start = points[k];
-                    auto end = points[(k + 1) % 4];
-
-                    bool addAsTrigger = terrain[i][j].rampType != RampType::None
-                        || terrain[to].rampType != RampType::None
+                    auto to = Vector2(j, i) + offsets[k];
+                    if (terrain[i][j].height != terrain[to].height
+                        || terrain[to].flags.HasFlag(TerrainCellFlags::Unwalkable)
+                        || terrain[i][j].flags.HasFlag(TerrainCellFlags::Unwalkable)
                         || terrain[i + 1][j + 1].rampType != RampType::None
-                        || terrain[to + Vector2(1)].rampType != RampType::None;
+                        || terrain[(int)to.y + 1][(int)to.x + 1].rampType != RampType::None)
+                    {
+                        auto start = points[k];
+                        auto end = points[(k + 1) % 4];
 
-                    tilemapRb->CreateLineCollider(start, end, addAsTrigger);
+                        bool addAsTrigger = terrain[i][j].rampType != RampType::None
+                                            || terrain[to].rampType != RampType::None
+                                            || terrain[i + 1][j + 1].rampType != RampType::None
+                                            || terrain[to + Vector2(1)].rampType != RampType::None;
+
+                        tilemapRb->CreateLineCollider(start, end, addAsTrigger);
+                    }
                 }
+            }
+        }
+    }
+
+    // Create walkable ares for the grid sensor
+    {
+        auto walkable0 = scene->CreateEntity<WalkableTerrainEntity0>({});
+        auto walkable1 = scene->CreateEntity<WalkableTerrainEntity1>({});
+        auto walkable2 = scene->CreateEntity<WalkableTerrainEntity2>({});
+        auto rampEntity = scene->CreateEntity<RampEntity>({});
+
+        for (int i = 0; i < terrain.Rows(); ++i)
+        {
+            for (int j = 0; j < terrain.Cols(); ++j)
+            {
+                Vector2 points[4];
+                GetTileBoundaries(Vector2(j, i), points);
+
+                if (terrain[i][j].rampType != RampType::None)
+                {
+                    rampEntity->rigidBody->CreatePolygonCollider(points, true);
+                }
+
+                if (terrain[i][j].height == 0) walkable0->rigidBody->CreatePolygonCollider(points, true);
+                if (terrain[i][j].height == 1) walkable1->rigidBody->CreatePolygonCollider(points, true);
+                if (terrain[i][j].height == 2) walkable2->rigidBody->CreatePolygonCollider(points, true);
             }
         }
     }

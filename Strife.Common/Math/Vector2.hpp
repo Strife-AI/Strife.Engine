@@ -141,6 +141,11 @@ struct Vector2Template
         return Vector2Template(0, y);
     }
 
+    Vector2Template RoundTo(Vector2Template multiple) const
+    {
+        return (*this / multiple).Round() * multiple;
+    }
+
     static Vector2Template Zero()
     {
         return Vector2Template(0, 0);

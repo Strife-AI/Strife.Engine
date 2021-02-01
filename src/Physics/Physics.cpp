@@ -82,7 +82,7 @@ void CollisionManager::RenderColliderOutlines(Renderer* renderer)
             {
                 auto circle = static_cast<b2CircleShape*>(shape);
 
-                renderer->RenderCircleOutline(Scene::Box2DToPixel(body->GetWorldPoint(circle->m_p)), circle->m_radius * Scene::Box2DToPixelsRatio.x, Color(0, 255, 0), 0);// FIXME MW DebugRenderLayer);
+                renderer->RenderCircleOutline(Scene::Box2DToPixel(body->GetWorldPoint(circle->m_p)), circle->m_radius * Scene::Box2DToPixelsRatio.x, Color(0, 255, 0), -1);// FIXME MW DebugRenderLayer);
                 break;
             }
             case b2Shape::e_edge:
