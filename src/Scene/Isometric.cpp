@@ -168,20 +168,26 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
 
     // Create walkable ares for the grid sensor
     {
-        auto walkable = scene->CreateEntity<WalkableTerrainEntity>({});
-        walkable->height = 1;
+        auto walkable0 = scene->CreateEntity<WalkableTerrainEntity0>({});
+        auto walkable1 = scene->CreateEntity<WalkableTerrainEntity1>({});
+        auto walkable2 = scene->CreateEntity<WalkableTerrainEntity2>({});
+        auto rampEntity = scene->CreateEntity<RampEntity>({});
 
         for (int i = 0; i < terrain.Rows(); ++i)
         {
             for (int j = 0; j < terrain.Cols(); ++j)
             {
-                if (terrain[i][j].height == 1)
-                {
-                    Vector2 points[4];
-                    GetTileBoundaries(Vector2(j, i), points);
+                Vector2 points[4];
+                GetTileBoundaries(Vector2(j, i), points);
 
-                    walkable->rigidBody->CreatePolygonCollider(points, true);
+                if (terrain[i][j].rampType != RampType::None)
+                {
+                    rampEntity->rigidBody->CreatePolygonCollider(points, true);
                 }
+
+                if (terrain[i][j].height == 0) walkable0->rigidBody->CreatePolygonCollider(points, true);
+                if (terrain[i][j].height == 1) walkable1->rigidBody->CreatePolygonCollider(points, true);
+                if (terrain[i][j].height == 2) walkable2->rigidBody->CreatePolygonCollider(points, true);
             }
         }
     }
