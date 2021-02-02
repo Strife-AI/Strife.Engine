@@ -194,6 +194,9 @@ struct Entity
     TComponent* AddComponent(Args&& ...args);
     template<typename TComponent>
     TComponent* GetComponent(bool fatalIfMissing = true);
+    template<typename TComponent>
+    bool TryGetComponent(TComponent*& component);
+
     void RemoveComponent(IEntityComponent* component);
 
     int id;
@@ -308,6 +311,23 @@ TComponent* Entity::GetComponent(bool fatalIfMissing)
         return nullptr;
     }
 }
+
+template<typename TComponent>
+bool Entity::TryGetComponent(TComponent*& out)
+{
+    TComponent* component = GetComponent<TComponent>(false);
+
+    if (component != nullptr)
+    {
+        out = component;
+    }
+    else
+    {
+        out = nullptr;
+        return false;
+    }
+}
+
 
 struct InvalidEntityHeader
 {
