@@ -43,7 +43,7 @@ struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeural
 
     void SetNetwork(const char* name);
 
-    void StartMakingDecision();
+    bool StartMakingDecision();
 
     StrifeML::NetworkContext<NetworkType>* networkContext = nullptr;
     std::shared_ptr<StrifeML::MakeDecisionWorkItem<TNeuralNetwork>> decisionInProgress;
@@ -88,9 +88,9 @@ void NeuralNetworkComponent<TNeuralNetwork>::Update(float deltaTime)
         if (makeDecisionsTimer <= 0)
         {      	
             makeDecisionsTimer = 1.0f / decisionsPerSecond;
-            StartMakingDecision();
+            auto wasStarted = StartMakingDecision();
 
-        	if (mode == NeuralNetworkMode::ReinforcementLearning && inputsCollected > TNeuralNetwork::SequenceLength)
+        	if (wasStarted && mode == NeuralNetworkMode::ReinforcementLearning && inputsCollected > TNeuralNetwork::SequenceLength)
 	        {
 		        SampleType sample;
 	        	sample.input = previousInput;
@@ -109,20 +109,20 @@ void NeuralNetworkComponent<TNeuralNetwork>::Update(float deltaTime)
 }
 
 template <typename TNeuralNetwork>
-void NeuralNetworkComponent<TNeuralNetwork>::StartMakingDecision()
+bool NeuralNetworkComponent<TNeuralNetwork>::StartMakingDecision()
 {
     // Don't allow making more than one decision at a time
     if (decisionInProgress != nullptr
         && !decisionInProgress->IsComplete())
     {
-        return;
+        return false;
     }
 
     if (collectInput == nullptr
         || networkContext == nullptr
         || networkContext->decider == nullptr)
     {
-        return;
+        return false;
     }
 
 	if (mode == NeuralNetworkMode::ReinforcementLearning && inputsCollected > TNeuralNetwork::SequenceLength)
@@ -145,6 +145,8 @@ void NeuralNetworkComponent<TNeuralNetwork>::StartMakingDecision()
     {
 	    decisionInProgress = networkContext->decider->MakeDecision(decisionInput, TNeuralNetwork::SequenceLength);
     }
+	
+	return true;
 }
 
 struct SensorObjectDefinition
