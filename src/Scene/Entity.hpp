@@ -315,17 +315,18 @@ TComponent* Entity::GetComponent(bool fatalIfMissing)
 template<typename TComponent>
 bool Entity::TryGetComponent(TComponent*& out)
 {
+    if (this->isDestroyed) return false;
+
     TComponent* component = GetComponent<TComponent>(false);
 
     if (component != nullptr)
     {
         out = component;
+        return true;
     }
-    else
-    {
-        out = nullptr;
-        return false;
-    }
+
+    out = nullptr;
+    return false;
 }
 
 
