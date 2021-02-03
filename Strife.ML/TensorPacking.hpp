@@ -154,6 +154,16 @@ namespace StrifeML
         }
     };
 
+    template<>
+    struct TorchPacker<float_t>
+    {
+        static float_t* Pack(const float_t& value, float_t* outPtr)
+        {
+            *outPtr = value;
+            return outPtr + 1;
+        }
+    };
+	
     template<typename TCell, typename TorchType>
     struct TorchPacker<Grid<TCell>, TorchType>
     {
@@ -238,7 +248,15 @@ namespace StrifeML
         auto torchType = GetTorchType<CellType>();
         auto t = torch::empty(dims, torchType);
 
-        auto outPtr = reinterpret_cast<CellType*>(t.template data_ptr<std::make_signed_t<CellType>>());
+        CellType* outPtr;
+        if constexpr (std::is_integral_v<CellType>)
+        {
+	        outPtr = reinterpret_cast<CellType*>(t.template data_ptr<std::make_signed_t<CellType>>());
+        }
+        else
+        {
+	        outPtr = t.template data_ptr<CellType>();
+        }
 
         for (int i = 0; i < grid.Rows(); ++i)
         {
