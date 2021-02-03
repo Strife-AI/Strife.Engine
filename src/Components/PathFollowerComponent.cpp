@@ -73,7 +73,6 @@ void PathFollowerComponent::UpdateFollowTarget(float deltaTime, Scene* scene)
     {
         state = PathFollowerState::Stopped;
         flowField = nullptr;
-        Log("Field set to null because stopped\n");
     }
 }
 

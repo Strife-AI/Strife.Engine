@@ -19,3 +19,27 @@ private:
     TilemapRenderer _renderer;
     AmbientLight light;
 };
+
+DEFINE_ENTITY(WalkableTerrainEntity0, "walkable-terrain-0")
+{
+    void OnAdded() override;
+    RigidBodyComponent* rigidBody;
+};
+
+DEFINE_ENTITY(WalkableTerrainEntity1, "walkable-terrain-1")
+{
+    void OnAdded() override;
+    RigidBodyComponent* rigidBody;
+};
+
+DEFINE_ENTITY(WalkableTerrainEntity2, "walkable-terrain-2")
+{
+    void OnAdded() override;
+    RigidBodyComponent* rigidBody;
+};
+
+DEFINE_ENTITY(RampEntity, "ramp")
+{
+    void OnAdded() override;
+    RigidBodyComponent* rigidBody;
+};
