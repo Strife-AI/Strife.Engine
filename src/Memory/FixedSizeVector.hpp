@@ -88,6 +88,14 @@ public:
 
     void PushBackUnique(const T& item);
 
+    void PushBackUniqueIfRoom(const T& item)
+    {
+        if (_size < MaxSize)
+        {
+            PushBackUnique(item);
+        }
+    }
+
     void PopBack()
     {
         assert(_size > 0);
