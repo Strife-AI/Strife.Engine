@@ -113,35 +113,7 @@ void PathFollowerComponent::FollowFlowField()
                     auto nextTile = pathFinderPerspective.Floor().AsVectorOfType<float>() + dir;
                     auto nextTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5));
 
-                    Vector2 checkPoints[5];
-                    scene->isometricSettings.GetTileBoundaries(nextTile, checkPoints);
-                    checkPoints[4] = nextTarget;
-
-                    bool fail = false;
-
-//                    checkPoints[0] -= Vector2(0, 1);
-//                    checkPoints[1] += Vector2(1, 0);
-//                    checkPoints[2] += Vector2(0, 1);
-//                    checkPoints[3] -= Vector2(1, 0);
-
-                    for (auto point : checkPoints)
-                    {
-                        RaycastResult result;
-                        if (scene->Raycast(owner->Center(), point, result, true, [=](const ColliderHandle& handle)
-                        {
-                            return handle.OwningEntity()->Is<TilemapEntity>()
-                                || !handle.IsTrigger();
-                        }))
-                        {
-                            if (!firstMove)
-                            {
-                                fail = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (fail)
+                    if (!CanBeeline(owner->Center(), nextTarget) && !firstMove)
                     {
                         break;
                     }
@@ -238,4 +210,29 @@ Vector2 PathFollowerComponent::ToPathfinderPerspective(Vector2 position)
     else if (scene->perspective == ScenePerspective::Isometric) return scene->isometricSettings.WorldToTile(position);
 
     return position;
+}
+
+bool PathFollowerComponent::CanBeeline(Vector2 from, Vector2 to)
+{
+    bool fail = false;
+    Vector2 checkPoints[5];
+    auto scene = GetScene();
+    auto toTile = scene->isometricSettings.WorldToIntegerTile(to);
+    scene->isometricSettings.GetTileBoundaries(toTile, checkPoints);
+    checkPoints[4] = to;
+
+    for (auto point : checkPoints)
+    {
+        RaycastResult result;
+        if (scene->Raycast(owner->Center(), point, result, true, [=](const ColliderHandle& handle)
+        {
+            return handle.OwningEntity()->Is<TilemapEntity>()
+                   || !handle.IsTrigger();
+        }))
+        {
+            return false;
+        }
+    }
+
+    return true;
 }

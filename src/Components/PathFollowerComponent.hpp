@@ -28,6 +28,7 @@ DEFINE_COMPONENT(PathFollowerComponent)
     void ReceiveEvent(const IEntityEvent& ev);
     void FollowFlowField();
     void UpdateFollowTarget(float deltaTime, Scene* scene);
+    bool CanBeeline(Vector2 from, Vector2 to);
 
     Vector2 ToPathfinderPerspective(Vector2 position);
     Vector2 ToWorldPerspective(Vector2 position);
