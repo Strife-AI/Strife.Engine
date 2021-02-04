@@ -10,6 +10,20 @@ enum class PathFollowerState
     FollowingEntity
 };
 
+enum class PathFollowerPathType
+{
+    None,
+    FlowField,
+    Beeline,
+};
+
+struct PathFollowerPath
+{
+    std::shared_ptr<FlowField> flowField;
+    Vector2 target;
+    PathFollowerPathType type;
+};
+
 DEFINE_COMPONENT(PathFollowerComponent)
 {
     PathFollowerComponent(RigidBodyComponent* rigidBody)
@@ -34,7 +48,7 @@ DEFINE_COMPONENT(PathFollowerComponent)
     Vector2 ToWorldPerspective(Vector2 position);
 
     RigidBodyComponent* rigidBody;
-    std::shared_ptr<FlowField> flowField;
+    PathFollowerPath currentPath;
     Vector2 acceleration;
     bool arrived = true;
     PathFollowerState state = PathFollowerState::Stopped;

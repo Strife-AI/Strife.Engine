@@ -43,6 +43,13 @@ void PathFollowerComponent::FixedUpdate(float deltaTime)
 
         return;
     }
+    else
+    {
+        if (rigidBody->body->GetType() != b2_dynamicBody)
+        {
+            rigidBody->body->SetType(b2_dynamicBody);
+        }
+    }
 
     FollowFlowField();
 
@@ -64,103 +71,114 @@ void PathFollowerComponent::UpdateFollowTarget(float deltaTime, Scene* scene)
             UpdateFlowField(target->Center());
             updateTargetTimer = 2;
         }
-        else if (flowField != nullptr)
+        else
         {
-            flowField->target = target->Center();
+            currentPath.target = target->Center();
         }
     }
     else
     {
         state = PathFollowerState::Stopped;
-        flowField = nullptr;
     }
 }
 
 void PathFollowerComponent::FollowFlowField()
 {
     auto scene = GetScene();
+    Vector2 velocity;
 
-    if (flowField != nullptr)
+    if (currentPath.type == PathFollowerPathType::None)
     {
-        Vector2 velocity;
-
-        if (false)
-        {
-            velocity = (flowField->target - owner->Center()).Normalize() * 200;
-        }
-        else
-        {
-            currentLayer = scene->isometricSettings.terrain[ToPathfinderPerspective(owner->Center())].height;
-
-            if ((intermediateTarget - owner->Center()).Length() < 1)
-            {
-                // TODO: this is kind of hacky, but we only change the current layer once we arrive at the intermediate target.
-                // The assumption is that we don't change layers when bee-lining.
-
-                bool firstMove = true;
-                do
-                {
-                    Vector2 pathFinderPerspective = ToPathfinderPerspective(intermediateTarget);
-
-                    auto dir = flowField->grid[pathFinderPerspective].dir;
-
-                    if (dir == Vector2(0, 0))
-                    {
-                        intermediateTarget = currentTarget;
-                        break;
-                    }
-
-                    auto nextTile = pathFinderPerspective.Floor().AsVectorOfType<float>() + dir;
-                    auto nextTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5));
-
-                    if (!CanBeeline(owner->Center(), nextTarget) && !firstMove)
-                    {
-                        break;
-                    }
-
-                    firstMove = false;
-                    intermediateTarget = nextTarget;
-
-                    if (nextTile == scene->isometricSettings.WorldToTile(currentTarget))
-                    {
-                        break;
-                    }
-                } while(true);
-            }
-
-            velocity = (intermediateTarget - owner->Center()).Normalize() * speed;
-        }
-
-        float dist = (flowField->target - owner->Center()).Length();
-        if (dist > 20)
-        {
-            velocity = rigidBody->GetVelocity().SmoothDamp(
-                velocity,
-                acceleration,
-                0.05,
-                Scene::PhysicsDeltaTime);
-        }
-
-        if (dist <= 1)
-        {
-            velocity = { 0, 0 };
-            acceleration = { 0, 0 };
-            Stop(true);
-        }
-
-        rigidBody->SetVelocity(velocity);
-        //Renderer::DrawDebugLine({ owner->Center(), owner->Center() + velocity, useBeeLine ? Color::Red() : Color::Green() });
+        return;
     }
+    else if (currentPath.type == PathFollowerPathType::FlowField)
+    {
+        if (currentPath.flowField == nullptr) return;
+
+        currentLayer = scene->isometricSettings.terrain[ToPathfinderPerspective(owner->Center())].height;
+
+        if ((intermediateTarget - owner->Center()).Length() < 1)
+        {
+            // TODO: this is kind of hacky, but we only change the current layer once we arrive at the intermediate target.
+            // The assumption is that we don't change layers when bee-lining.
+
+            bool firstMove = true;
+            do
+            {
+                Vector2 pathFinderPerspective = ToPathfinderPerspective(intermediateTarget);
+
+                auto dir = currentPath.flowField->grid[pathFinderPerspective].dir;
+
+                if (dir == Vector2(0, 0))
+                {
+                    intermediateTarget = currentTarget;
+                    break;
+                }
+
+                auto nextTile = pathFinderPerspective.Floor().AsVectorOfType<float>() + dir;
+                auto nextTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5));
+
+                if (!CanBeeline(owner->Center(), nextTarget) && !firstMove)
+                {
+                    break;
+                }
+
+                firstMove = false;
+                intermediateTarget = nextTarget;
+
+                if (nextTile == scene->isometricSettings.WorldToTile(currentTarget))
+                {
+                    break;
+                }
+            } while(true);
+        }
+
+        velocity = (intermediateTarget - owner->Center()).Normalize() * speed;
+    }
+    else if (currentPath.type == PathFollowerPathType::Beeline)
+    {
+        velocity = (currentPath.target - owner->Center()).Normalize() * speed;
+    }
+
+    float dist = (currentPath.target - owner->Center()).Length();
+    if (dist > 20)
+    {
+        velocity = rigidBody->GetVelocity().SmoothDamp(
+            velocity,
+            acceleration,
+            0.05,
+            Scene::PhysicsDeltaTime);
+    }
+
+    if (dist <= 1)
+    {
+        velocity = { 0, 0 };
+        acceleration = { 0, 0 };
+        Stop(true);
+    }
+
+    rigidBody->SetVelocity(velocity);
+    //Renderer::DrawDebugLine({ owner->Center(), owner->Center() + velocity, useBeeLine ? Color::Red() : Color::Green() });
 }
 
 void PathFollowerComponent::UpdateFlowField(Vector2 newTarget)
 {
-    currentTarget = newTarget;
-    intermediateTarget = owner->Center();
+    if (!CanBeeline(owner->Center(), newTarget))
+    {
+        currentTarget = newTarget;
+        intermediateTarget = owner->Center();
+        currentPath.type = PathFollowerPathType::FlowField;
 
-    auto targetPathFinderPerspective = ToPathfinderPerspective(newTarget);
-    auto centerPathFinderPerspective = ToPathfinderPerspective(owner->Center());
-    GetScene()->GetService<PathFinderService>()->RequestFlowField(centerPathFinderPerspective, targetPathFinderPerspective, owner);
+        auto targetPathFinderPerspective = ToPathfinderPerspective(newTarget);
+        auto centerPathFinderPerspective = ToPathfinderPerspective(owner->Center());
+        GetScene()->GetService<PathFinderService>()->RequestFlowField(centerPathFinderPerspective, targetPathFinderPerspective, owner);
+    }
+    else
+    {
+        currentPath.target = newTarget;
+        currentPath.type = PathFollowerPathType::Beeline;
+        currentPath.flowField = nullptr;
+    }
 }
 
 void PathFollowerComponent::SetTarget(Vector2 position)
@@ -173,25 +191,24 @@ void PathFollowerComponent::Stop(bool loseVelocity)
 {
     state = PathFollowerState::Stopped;
     if (loseVelocity) rigidBody->SetVelocity({ 0, 0 });
-
-    flowField = nullptr;
+    currentPath.type = PathFollowerPathType::None;
+    currentPath.flowField = nullptr;
 }
 
 void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
 {
     if (auto flowFieldReady = ev.Is<FlowFieldReadyEvent>())
     {
-        if (state == PathFollowerState::Stopped) return;
+        //if (state == PathFollowerState::Stopped) return;
         if (!flowFieldReady->result->grid[ToPathfinderPerspective(currentTarget)].alreadyVisited)
         {
             // Failed to find a path
             //return;
         }
 
-        flowField = flowFieldReady->result;
-        flowField->target = currentTarget;
+        currentPath.flowField = flowFieldReady->result;
+        currentPath.target = currentTarget;
         acceleration = { 0, 0 };
-        rigidBody->body->SetType(b2_dynamicBody);
     }
 }
 
@@ -214,7 +231,6 @@ Vector2 PathFollowerComponent::ToPathfinderPerspective(Vector2 position)
 
 bool PathFollowerComponent::CanBeeline(Vector2 from, Vector2 to)
 {
-    bool fail = false;
     Vector2 checkPoints[5];
     auto scene = GetScene();
     auto toTile = scene->isometricSettings.WorldToIntegerTile(to);
