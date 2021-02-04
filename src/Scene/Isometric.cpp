@@ -193,16 +193,16 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
     }
 }
 
-float IsometricSettings::GetTileDepth(Vector2 position, int layer) const
+float IsometricSettings::GetTileDepth(Vector2 position, int layer, std::optional<int> layerOffset) const
 {
-    position = WorldToTile(position) + Vector2(layer);
+    position = WorldToTile(position) + (layerOffset.has_value() ? Vector2(layerOffset.value()) : Vector2(layer));
     float maxWidth = terrain.Cols();
     float maxHeight = terrain.Rows();
 
     float maxLayers = 10;
     float dz = 0.1f / (maxWidth * maxHeight * maxLayers);
 
-    return baseDepth - (position.x + position.y + layer * maxWidth * maxHeight) * dz;
+    return baseDepth - (position.x + position.y) * dz * maxLayers - layer * dz;
 }
 
 int IsometricSettings::GetCurrentLayer(Vector2 position) const

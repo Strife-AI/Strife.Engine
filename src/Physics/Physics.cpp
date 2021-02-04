@@ -73,7 +73,7 @@ void CollisionManager::RenderColliderOutlines(Renderer* renderer)
     {
         for (auto fixture = body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
         {
-            //if (fixture->IsSensor()) continue;;
+            if (fixture->IsSensor()) continue;;
 
             auto shape = fixture->GetShape();
             switch (shape->GetType())

@@ -213,7 +213,7 @@ void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
         if (!flowFieldReady->result->grid[ToPathfinderPerspective(currentTarget)].alreadyVisited)
         {
             // Failed to find a path
-            return;
+            //return;
         }
 
         flowField = flowFieldReady->result;

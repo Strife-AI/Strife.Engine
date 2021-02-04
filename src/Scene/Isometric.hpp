@@ -82,7 +82,7 @@ struct IsometricSettings
 
 
 
-    float GetTileDepth(Vector2 position, int layer) const;
+    float GetTileDepth(Vector2 position, int layer, std::optional<int> layerOffset = std::nullopt) const;
     void BuildFromMapSegment(const MapSegment& mapSegment, PathFinderService* pathFinder, struct TilemapEntity* tilemap);
     int GetCurrentLayer(Vector2 position) const;
 
