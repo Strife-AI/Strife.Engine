@@ -16,6 +16,7 @@ DEFINE_COMPONENT(IsometricSpriteComponent)
     void Render(Renderer* renderer) override;
 
     int layer = 0;
+    std::optional<int> layerOffset;
     SpriteResource* sprite = nullptr;
     Vector2 offsetFromCenter;
     Vector2 baseSize;
