@@ -18,14 +18,12 @@ struct FlowCell
 struct FlowField
 {
     FlowField(int rows, int cols, Vector2 target_)
-        : grid(rows, cols),
-        target(target_)
+        : grid(rows, cols)
     {
         
     }
 
     VariableSizedGrid<FlowCell> grid;
-    Vector2 target;
     PathFinderService* pathFinder;
     Vector2 ClampPosition(const Vector2& position) const;
 };
