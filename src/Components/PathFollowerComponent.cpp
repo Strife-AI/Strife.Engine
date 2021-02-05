@@ -1,3 +1,4 @@
+#include <LightAnimations.hpp>
 #include "PathFollowerComponent.hpp"
 #include "Components/RigidBodyComponent.hpp"
 #include "Renderer.hpp"
@@ -116,7 +117,8 @@ void PathFollowerComponent::FollowFlowField()
                 }
 
                 auto nextTile = pathFinderPerspective.Floor().AsVectorOfType<float>() + dir;
-                auto nextTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5));
+                auto nextTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5)); //+ Rand(
+//                    Vector2(-10), Vector2(10));
 
                 if (!CanBeeline(owner->Center(), nextTarget) && !firstMove)
                 {
@@ -214,6 +216,11 @@ void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
 
 void PathFollowerComponent::FollowEntity(Entity* entity, float minDistance)
 {
+    if (state == PathFollowerState::FollowingEntity && entity == entityToFollow.GetValueOrNull())
+    {
+        return;
+    }
+
     state = PathFollowerState::FollowingEntity;
     UpdateFlowField(entity->Center());
     entityToFollow = entity;
