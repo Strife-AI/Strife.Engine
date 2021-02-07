@@ -1,4 +1,7 @@
 #pragma once
+
+#include <array>
+
 #include "ML/ML.hpp"
 
 namespace StrifeML
@@ -52,7 +55,6 @@ namespace StrifeML
         {
             return Dimensions<2>(grid.Rows(), grid.Cols()).Union(DimensionCalculator<TCell>::Dims(grid[0][0]));
         }
-
     };
 
     template<int Rows, int Cols>
@@ -62,7 +64,15 @@ namespace StrifeML
         {
             return Dimensions<2>(Rows, Cols).Union(DimensionCalculator<int>::Dims(0));
         }
+    };
 
+    template<typename T, std::size_t Size>
+    struct DimensionCalculator<std::array<T, Size>>
+    {
+        static constexpr auto Dims(const std::array<T, Size>& arr)
+        {
+            return Dimensions<1>((int64_t)Size).Union(DimensionCalculator<T>::Dims(arr[0]));
+        }
     };
 
     template<typename T>
@@ -73,12 +83,6 @@ namespace StrifeML
             return Dimensions<1>(span.size()).Union(DimensionCalculator<T>::Dims(span[0]));
         }
 
-    };
-
-    template<typename ...TArgs>
-    struct DimensionCalculator<std::tuple<TArgs...>>
-    {
-// TODO: implement for tuple
     };
 
     template<typename T, typename Enable = void>
@@ -99,6 +103,13 @@ namespace StrifeML
     {
         using Type = uint64_t;
     };
+
+    template<typename T, std::size_t Size>
+    struct GetCellType<std::array<T, Size>>
+    {
+        using Type = T;
+    };
+
     template<typename T>
     struct GetCellType<gsl::span<T>>
     {
@@ -183,11 +194,34 @@ namespace StrifeML
                         outPtr = TorchPacker<TCell, TorchType>::Pack(value[i][j], outPtr);
                     }
                 }
-            }
 
-            return outPtr + value.Rows() * value.Cols();
+                return outPtr;
+            }
         }
     };
+
+    template<typename T, std::size_t  Size, typename TorchType>
+    struct TorchPacker<std::array<T, Size>, TorchType>
+    {
+        static TorchType* Pack(const std::array<T, Size>& value, TorchType* outPtr)
+        {
+            if constexpr (std::is_arithmetic_v<T>)
+            {
+                memcpy(outPtr, &value[0], Size * sizeof(T));
+                return outPtr + Size;
+            }
+            else
+            {
+                for (int i = 0; i < Size; ++i)
+                {
+                    outPtr = TorchPacker<T, TorchType>::Pack(value[i], outPtr);
+                }
+
+                return outPtr;
+            }
+        }
+    };
+
 
     template<int Rows, int Cols>
     struct TorchPacker<GridSensorOutput<Rows, Cols>, uint64_t>
