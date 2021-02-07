@@ -1,13 +1,15 @@
 #pragma once
 #include <memory>
 #include <queue>
-
+#include <vector>
 
 #include "Math/Rectangle.hpp"
 #include "Math/Vector2.hpp"
 #include "Container/Grid.hpp"
 #include "Scene/IEntityEvent.hpp"
 #include "Scene/Scene.hpp"
+
+struct PathFollowerComponent;
 
 struct FlowCell
 {
@@ -91,6 +93,8 @@ public:
     {
         return _obstacleGrid[position];
     }
+
+    std::vector<PathFollowerComponent*> pathFollowers;
 
 private:
     static constexpr int MaxGridCalculationsPerTick = 32768 * 8;

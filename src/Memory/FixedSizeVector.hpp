@@ -137,6 +137,20 @@ public:
         return false;
     }
 
+    template<typename TFunc>
+    bool Any(const TFunc& func)
+    {
+        for (int i = 0; i < _size; ++i)
+        {
+            if (func(_data[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 private:
     T _data[MaxSize];
     int _size;

@@ -33,6 +33,7 @@ DEFINE_COMPONENT(PathFollowerComponent)
     }
 
     void OnAdded() override;
+    void OnRemoved() override;
     void SetTarget(Vector2 position);
     void Stop(bool loseVelocity);
     void FollowEntity(Entity* entity, float minDistance);

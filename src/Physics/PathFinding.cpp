@@ -1,7 +1,6 @@
 #include "PathFinding.hpp"
-
 #include "Renderer.hpp"
-
+#include "Components/PathFollowerComponent.hpp"
 
 Vector2 FlowField::ClampPosition(const Vector2& position) const
 {
@@ -95,6 +94,14 @@ void PathFinderService::CalculatePaths()
             continue;
         }
 
+        {
+            for (auto pathFollower : pathFollowers)
+            {
+                if (pathFollower->owner == owner) continue;
+                ++_obstacleGrid[scene->isometricSettings.WorldToIntegerTile(pathFollower->owner->Center())].count;
+            }
+        }
+
         if(request.status == PathRequestStatus::NotStarted)
         {
             WorkQueue emptyQueue;
@@ -135,6 +142,14 @@ void PathFinderService::CalculatePaths()
             owner->SendEvent(FlowFieldReadyEvent(_fieldInProgress));
             _fieldInProgress = nullptr;
             _requestQueue.pop();
+        }
+
+        {
+            for (auto pathFollower : pathFollowers)
+            {
+                if (pathFollower->owner == owner) continue;
+                --_obstacleGrid[scene->isometricSettings.WorldToIntegerTile(pathFollower->owner->Center())].count;
+            }
         }
     }
 }
