@@ -45,6 +45,15 @@ namespace StrifeML
         }
     };
 
+	template<>
+    struct DimensionCalculator<Vector2>
+    {
+        static constexpr auto Dims(const Vector2& value)
+        {
+            return Dimensions<1>(2);
+        }
+    };
+
     template<typename TCell>
     struct DimensionCalculator<Grid<TCell>>
     {
@@ -89,6 +98,13 @@ namespace StrifeML
     {
         using Type = T;
     };
+
+    template<>
+    struct GetCellType<Vector2>
+    {
+        using Type = float;
+    };
+	
     template<typename TCell>
     struct GetCellType<Grid<TCell>>
     {
@@ -161,6 +177,17 @@ namespace StrifeML
         {
             *outPtr = value;
             return outPtr + 1;
+        }
+    };
+
+	template<>
+    struct TorchPacker<Vector2, float>
+    {
+        static float_t* Pack(const Vector2& value, float_t* outPtr)
+        {
+            *outPtr++ = value.x;
+            *outPtr++ = value.y;
+            return outPtr;
         }
     };
 	

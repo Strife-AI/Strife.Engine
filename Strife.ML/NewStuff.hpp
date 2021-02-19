@@ -500,6 +500,7 @@ namespace StrifeML
             newNetworkLock.Lock();
             auto result = newNetwork;
             newNetwork = nullptr;
+        	 // todo brendan
             newNetworkLock.Unlock();
             return result;
         }
