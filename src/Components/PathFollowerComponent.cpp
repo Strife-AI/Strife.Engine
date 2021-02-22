@@ -78,7 +78,7 @@ void PathFollowerComponent::FollowFlowField()
             return;
         }
 
-        if ((intermediateTarget - owner->Center()).Length() < 1)
+        if (currentPath.nextPathIndex == -1 || (intermediateTarget - pathFindingPosition).Length() < 0.1f)
         {
             if (currentPath.nextPathIndex + 1 < currentPath.path.size())
             {
@@ -88,36 +88,42 @@ void PathFollowerComponent::FollowFlowField()
 
         tileTarget = currentPath.path[currentPath.nextPathIndex];
 
-        auto targetPosition = scene->isometricSettings.TileToWorld(tileTarget
-            - Vector2(scene->GetService<PathFinderService>()->GetCell(tileTarget).height) + Vector2(0.5));
+        velocity = (tileTarget - pathFindingPosition).Normalize() * 4;
 
-        velocity = (targetPosition - owner->Center()).Normalize() * speed;
-
-        intermediateTarget = targetPosition;
+        intermediateTarget = tileTarget;
     }
     else if (currentPath.type == PathFollowerPathType::Beeline)
     {
         velocity = (currentPath.target - owner->Center()).Normalize() * speed;
     }
 
-    float dist = (currentPath.target - owner->Center()).Length();
-    if (dist > 20)
-    {
-        velocity = rigidBody->GetVelocity().SmoothDamp(
-            velocity,
-            acceleration,
-            0.05,
-            Scene::PhysicsDeltaTime);
-    }
+//    float dist = (currentPath.target - owner->Center()).Length();
+//    if (dist > 20)
+//    {
+//        velocity = rigidBody->GetVelocity().SmoothDamp(
+//            velocity,
+//            acceleration,
+//            0.05,
+//            Scene::PhysicsDeltaTime);
+//    }
+//
+//    if (dist <= 1)
+//    {
+//        velocity = { 0, 0 };
+//        acceleration = { 0, 0 };
+//        Stop(true);
+//    }
 
-    if (dist <= 1)
-    {
-        velocity = { 0, 0 };
-        acceleration = { 0, 0 };
-        Stop(true);
-    }
+    //rigidBody->SetVelocity(velocity);
 
-    rigidBody->SetVelocity(velocity);
+    pathFindingPosition += velocity * Scene::PhysicsDeltaTime;
+
+    auto height = Vector2(scene->GetService<PathFinderService>()->GetCell(pathFindingPosition).height);
+    auto targetPosition = scene->isometricSettings.TileToWorld(pathFindingPosition - height);
+
+    currentLayer.SetValue(0);
+
+    owner->SetCenter(targetPosition);
 
     //Renderer::DrawDebugLine({ owner->Center(), owner->Center() + velocity, useBeeLine ? Color::Red() : Color::Green() });
 }
@@ -129,7 +135,7 @@ void PathFollowerComponent::UpdateFlowField(Vector2 newTarget)
     if (!CanBeeline(owner->Center(), newTarget))
     {
         currentTarget = newTarget;
-        intermediateTarget = owner->Center();
+        intermediateTarget = targetPathFinderPerspective;
         currentPath.type = PathFollowerPathType::FlowField;
         currentPath.path.clear();
 
@@ -184,7 +190,7 @@ void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
             if (dir == Vector2(0)) break;
 
             cell = cell + dir;
-            currentPath.path.push_back(cell);
+            currentPath.path.push_back(cell + Vector2(0.5));
         } while (true);
 
         currentPath.target = currentTarget;
@@ -247,7 +253,7 @@ void PathFollowerComponent::Update(float deltaTime)
 {
     if (owner->type != "player"_sid) return;
 
-#if 1
+#if 0
     if (currentPath.flowField != nullptr)
     {
         for (int i = 0; i < currentPath.flowField->grid.Rows(); ++i)
