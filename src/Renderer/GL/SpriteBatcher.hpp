@@ -109,7 +109,7 @@ public:
     void Render();
     void RenderPolygon(Polygon& polygon, Texture* texture);
 
-    static constexpr int MaxVerticesPerBatch = 65536 * 2;
+    static constexpr int MaxVerticesPerBatch = 65536 * 8;
     static constexpr int MaxElementsPerBatch = MaxVerticesPerBatch * 4;
 
 private:

@@ -45,6 +45,7 @@ void ThreadPool::Stop()
 
 void ThreadPool::WorkerThread()
 {
+    return;
     while (!_stopThreads)
     {
         std::shared_ptr<IThreadPoolWorkItem> item;

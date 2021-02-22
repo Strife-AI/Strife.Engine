@@ -33,6 +33,7 @@ TaskScheduler::~TaskScheduler()
 
 void TaskScheduler::Run()
 {
+    return;
     while (!_isDone)
     {
         ThreadPool* threadPool = ThreadPool::GetInstance();

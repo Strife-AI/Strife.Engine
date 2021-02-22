@@ -19,15 +19,16 @@ struct FlowCell
 
 struct FlowField
 {
-    FlowField(int rows, int cols, Vector2 target_)
-        : grid(rows, cols)
+    FlowField(int rows, int cols, Vector2 startCell)
+        : grid(rows, cols),
+        startCell(startCell)
     {
         
     }
 
     VariableSizedGrid<FlowCell> grid;
     PathFinderService* pathFinder;
-    Vector2 ClampPosition(const Vector2& position) const;
+    Vector2 startCell;
 };
 
 /// <summary>
@@ -62,7 +63,7 @@ struct PathRequest
     PathRequestStatus status = PathRequestStatus::NotStarted;
 };
 
-enum class ObstacleEdgeFlags : uint8_t
+enum class ObstacleEdgeFlags
 {
     NorthBlocked = 1,
     SouthBlocked = 2,
@@ -70,10 +71,21 @@ enum class ObstacleEdgeFlags : uint8_t
     WestBlocked = 8
 };
 
+enum class ObstacleRampType
+{
+    None,
+    North,
+    South,
+    East,
+    West
+};
+
 struct ObstacleCell
 {
-    char count = 0;
+    int count = 0;
     Flags<ObstacleEdgeFlags> flags;
+    ObstacleRampType ramp;
+    int height = 0;
 };
 
 class PathFinderService : public ISceneService

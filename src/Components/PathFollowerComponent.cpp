@@ -8,6 +8,11 @@
 void PathFollowerComponent::OnAdded()
 {
     currentLayer = GetScene()->isometricSettings.GetCurrentLayer(owner->Center());
+
+    auto scene = GetScene();
+    auto tile = scene->isometricSettings.WorldToTile(owner->Center());
+    pathFindingPosition = tile + Vector2(scene->isometricSettings.terrain[tile].height);
+
     GetScene()->GetService<PathFinderService>()->pathFollowers.push_back(this);
 }
 
@@ -18,30 +23,6 @@ void PathFollowerComponent::OnRemoved()
 
 void PathFollowerComponent::FixedUpdate(float deltaTime)
 {
-#if 0
-    if (flowField != nullptr)
-    {
-        for (int i = 0; i < flowField->grid.Rows(); ++i)
-        {
-            for (int j = 0; j < flowField->grid.Cols(); ++j)
-            {
-                Color c = Color::Black();
-
-                if (Vector2(j, i) == owner->scene->isometricSettings.WorldToIntegerTile(owner->Center()))
-                {
-                    c = Color::Yellow();
-                }
-
-                auto dir = flowField->grid[Vector2(j, i)].dir * 16;
-                auto result = Vector2((dir.x - dir.y), (dir.x + dir.y) / 2);
-                auto start = owner->scene->isometricSettings.TileToWorld(Vector2(j + 0.5, i + 0.5));
-                Renderer::DrawDebugLine({ start, start + result, Color::Black() });
-                Renderer::DrawDebugRectangle(Rectangle(start - Vector2(2, 2), Vector2(4, 4)), c);
-            }
-        }
-    }
-#endif
-
     if (state == PathFollowerState::Stopped)
     {
         rigidBody->SetVelocity({ 0, 0 });
@@ -55,6 +36,7 @@ void PathFollowerComponent::FixedUpdate(float deltaTime)
         UpdateFollowTarget(deltaTime, scene);
     }
 }
+
 
 void PathFollowerComponent::UpdateFollowTarget(float deltaTime, Scene* scene)
 {
@@ -81,6 +63,7 @@ void PathFollowerComponent::UpdateFollowTarget(float deltaTime, Scene* scene)
 void PathFollowerComponent::FollowFlowField()
 {
     auto scene = GetScene();
+    Vector2 tileTarget;
     Vector2 velocity;
 
     if (currentPath.type == PathFollowerPathType::None)
@@ -89,47 +72,28 @@ void PathFollowerComponent::FollowFlowField()
     }
     else if (currentPath.type == PathFollowerPathType::FlowField)
     {
-        if (currentPath.flowField == nullptr) return;
-
-        currentLayer = scene->isometricSettings.terrain[ToPathfinderPerspective(owner->Center())].height;
+        if (currentPath.path.size() == 0 || currentPath.nextPathIndex >= (int)currentPath.path.size())
+        {
+            rigidBody->SetVelocity({ 0, 0 });
+            return;
+        }
 
         if ((intermediateTarget - owner->Center()).Length() < 1)
         {
-            // TODO: this is kind of hacky, but we only change the current layer once we arrive at the intermediate target.
-            // The assumption is that we don't change layers when bee-lining.
-
-            bool firstMove = true;
-            do
+            if (currentPath.nextPathIndex + 1 < currentPath.path.size())
             {
-                Vector2 pathFinderPerspective = ToPathfinderPerspective(intermediateTarget);
-
-                auto dir = currentPath.flowField->grid[pathFinderPerspective].dir;
-
-                if (dir == Vector2(0, 0))
-                {
-                    intermediateTarget = currentTarget;
-                    break;
-                }
-
-                auto nextTile = pathFinderPerspective.Floor().AsVectorOfType<float>() + dir;
-                auto nextTarget = scene->isometricSettings.TileToWorld(nextTile + Vector2(0.5));
-
-                if (!CanBeeline(owner->Center(), nextTarget) && !firstMove)
-                {
-                    break;
-                }
-
-                firstMove = false;
-                intermediateTarget = nextTarget;
-
-                if (nextTile == scene->isometricSettings.WorldToTile(currentTarget))
-                {
-                    break;
-                }
-            } while(true);
+                ++currentPath.nextPathIndex;
+            }
         }
 
-        velocity = (intermediateTarget - owner->Center()).Normalize() * speed;
+        tileTarget = currentPath.path[currentPath.nextPathIndex];
+
+        auto targetPosition = scene->isometricSettings.TileToWorld(tileTarget
+            - Vector2(scene->GetService<PathFinderService>()->GetCell(tileTarget).height) + Vector2(0.5));
+
+        velocity = (targetPosition - owner->Center()).Normalize() * speed;
+
+        intermediateTarget = targetPosition;
     }
     else if (currentPath.type == PathFollowerPathType::Beeline)
     {
@@ -154,18 +118,21 @@ void PathFollowerComponent::FollowFlowField()
     }
 
     rigidBody->SetVelocity(velocity);
+
     //Renderer::DrawDebugLine({ owner->Center(), owner->Center() + velocity, useBeeLine ? Color::Red() : Color::Green() });
 }
 
 void PathFollowerComponent::UpdateFlowField(Vector2 newTarget)
 {
+    auto targetPathFinderPerspective = ToPathfinderPerspective(newTarget);
+
     if (!CanBeeline(owner->Center(), newTarget))
     {
         currentTarget = newTarget;
         intermediateTarget = owner->Center();
         currentPath.type = PathFollowerPathType::FlowField;
+        currentPath.path.clear();
 
-        auto targetPathFinderPerspective = ToPathfinderPerspective(newTarget);
         auto centerPathFinderPerspective = ToPathfinderPerspective(owner->Center());
         GetScene()->GetService<PathFinderService>()->RequestFlowField(centerPathFinderPerspective, targetPathFinderPerspective, owner);
     }
@@ -173,7 +140,7 @@ void PathFollowerComponent::UpdateFlowField(Vector2 newTarget)
     {
         currentPath.target = newTarget;
         currentPath.type = PathFollowerPathType::Beeline;
-        currentPath.flowField = nullptr;
+        currentPath.path.clear();
     }
 }
 
@@ -188,7 +155,8 @@ void PathFollowerComponent::Stop(bool loseVelocity)
     state = PathFollowerState::Stopped;
     if (loseVelocity) rigidBody->SetVelocity({ 0, 0 });
     currentPath.type = PathFollowerPathType::None;
-    currentPath.flowField = nullptr;
+    currentPath.path.clear();
+
 }
 
 void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
@@ -202,7 +170,23 @@ void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
             //return;
         }
 
-        currentPath.flowField = flowFieldReady->result;
+        auto flowField = flowFieldReady->result;
+        auto cell = flowField->startCell;
+        currentPath.path.clear();
+        currentPath.nextPathIndex = -1;
+        currentPath.flowField = flowField;
+
+        Vector2 dir;
+        do
+        {
+            dir = flowField->grid[cell].dir;
+
+            if (dir == Vector2(0)) break;
+
+            cell = cell + dir;
+            currentPath.path.push_back(cell);
+        } while (true);
+
         currentPath.target = currentTarget;
         acceleration = { 0, 0 };
     }
@@ -225,13 +209,18 @@ Vector2 PathFollowerComponent::ToPathfinderPerspective(Vector2 position)
 {
     auto scene = GetScene();
     if (scene->perspective == ScenePerspective::Orothgraphic) return position / Vector2(32, 32);    // TODO: don't hardcode
-    else if (scene->perspective == ScenePerspective::Isometric) return scene->isometricSettings.WorldToTile(position);
+    else if (scene->perspective == ScenePerspective::Isometric)
+    {
+        auto tile = scene->isometricSettings.WorldToTile(position);
+        return tile + Vector2(scene->isometricSettings.terrain[tile].height);
+    }
 
     return position;
 }
 
 bool PathFollowerComponent::CanBeeline(Vector2 from, Vector2 to)
 {
+    return false;
     Vector2 checkPoints[5];
     auto scene = GetScene();
     auto toTile = scene->isometricSettings.WorldToIntegerTile(to);
@@ -252,4 +241,33 @@ bool PathFollowerComponent::CanBeeline(Vector2 from, Vector2 to)
     }
 
     return true;
+}
+
+void PathFollowerComponent::Update(float deltaTime)
+{
+    if (owner->type != "player"_sid) return;
+
+#if 1
+    if (currentPath.flowField != nullptr)
+    {
+        for (int i = 0; i < currentPath.flowField->grid.Rows(); ++i)
+        {
+            for (int j = 0; j < currentPath.flowField->grid.Cols(); ++j)
+            {
+                Color c = Color::Black();
+
+                if (Vector2(j, i) == owner->scene->isometricSettings.WorldToIntegerTile(owner->Center()))
+                {
+                    c = Color::Yellow();
+                }
+
+                auto dir = currentPath.flowField->grid[Vector2(j, i)].dir * 16;
+                auto result = Vector2((dir.x - dir.y), (dir.x + dir.y) / 2);
+                auto start = owner->scene->isometricSettings.TileToWorld(Vector2(j + 0.5, i + 0.5));
+                Renderer::DrawDebugLine({ start, start + result, Color::Black() });
+                Renderer::DrawDebugRectangle(Rectangle(start - Vector2(2, 2), Vector2(4, 4)), c);
+            }
+        }
+    }
+#endif
 }

@@ -35,10 +35,13 @@ struct FontSettings
 
 struct DebugLine
 {
-    DebugLine(Vector2 start_, Vector2 end_, Color color_)
+    DebugLine(){ }
+
+    DebugLine(Vector2 start_, Vector2 end_, Color color_, float time = 0)
         : start(start_),
         end(end_),
-        color(color_)
+        color(color_),
+        time(time)
     {
         
     }
@@ -46,6 +49,7 @@ struct DebugLine
     Vector2 start;
     Vector2 end;
     Color color;
+    float time;
 };
 
 struct DebugRectangle

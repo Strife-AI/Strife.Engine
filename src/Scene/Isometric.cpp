@@ -32,16 +32,39 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
             for (int j = 0; j < layer.Cols(); ++j)
             {
                 auto tile = layer[i][j];
+                int height = layerId;
                 if (tile != nullptr)
                 {
                     if (!TileIsRamp(tile))
                     {
-                        if (i > 0 && j > 0) terrain[i - 1][j - 1].height = layerId;
+                        if (i > 0 && j > 0)
+                        {
+                            terrain[i - 1][j - 1].height = height;
+
+                            if (j + height < terrain.Cols() && i + height < terrain.Rows())
+                            {
+                                pathFinder->GetCell(Vector2(j, i) + Vector2(height - 1)).height = height;
+                            }
+                        }
                     }
                     else
                     {
                         if (i > 0 && j > 0) terrain[i - 1][j - 1].height = layerId;
-                        terrain[i][j].height = layerId;
+
+                        if (j + height < terrain.Cols() && i + height < terrain.Rows())
+                        {
+                            auto& cell = pathFinder->GetCell(Vector2(j + height - 1, i + height - 1));
+                            cell.height = 0;
+
+                            for (auto& property : tile->properties)
+                            {
+                                if (property.first == "ramp")
+                                {
+                                    if (property.second == "west") cell.ramp = ObstacleRampType::West;
+                                    else if (property.second == "north") cell.ramp = ObstacleRampType::North;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -63,45 +86,44 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
             for (int j = 1; j < terrain.Cols() - 1; ++j)
             {
                 Vector2 from = Vector2(j, i);
+                auto& fromCell = pathFinder->GetCell(from);
 
                 for (auto offset : offsets)
                 {
                     Vector2 to = from + offset;
-                    if (terrain[from].height != terrain[to].height)
-                    {
-                        pathFinder->AddEdge(from, to);
-                    }
-                }
-            }
-        }
-    }
 
-    // Ramps
-    {
-        for (int layerId = 1; layerId < mapSegment.layers.size(); ++layerId)
-        {
-            auto& layer = mapSegment.layers[layerId].tileMap;
-            for (int i = 1; i < terrain.Rows() - 1; ++i)
-            {
-                for (int j = 1; j < terrain.Cols() - 1; ++j)
-                {
-                    auto tile = layer[i][j];
-                    if (tile != nullptr)
+                    auto& toCell = pathFinder->GetCell(to);
+                    if (toCell.ramp != ObstacleRampType::None) continue;
+
+                    switch (fromCell.ramp)
                     {
-                        for (auto& property : tile->properties)
+                        case ObstacleRampType::None:
                         {
-                            if (property.first == "ramp")
+                            if (fromCell.height != pathFinder->GetCell(to).height)
                             {
-                                if (property.second == "west") terrain[i][j].rampType = RampType::West;
-                                else if (property.second == "north") terrain[i][j].rampType = terrain[i][j].rampType = RampType::North;
+                                pathFinder->AddEdge(from, to);
                             }
+                            break;
                         }
-                    }
+
+                        case ObstacleRampType::West:
+                        {
+                            if (offset == Vector2(-1, 0) || offset == Vector2(1, 0))
+                            {
+                                continue;
+                            }
+
+                            pathFinder->AddEdge(from, to);
+
+                            break;
+                        }
+                    };
                 }
             }
         }
     }
 
+#if false
     // Mark tiles under elevated tiles as impassible
     {
         for (int i = 0; i < terrain.Rows(); ++i)
@@ -125,7 +147,6 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
         }
     }
 
-    auto scene = pathFinder->scene;
 
     // Add line collider between walkable/unwalkable ares
     {
@@ -165,6 +186,10 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
             }
         }
     }
+
+#endif
+
+    auto scene = pathFinder->scene;
 
     // Create walkable ares for the grid sensor
     {

@@ -19,9 +19,12 @@ enum class PathFollowerPathType
 
 struct PathFollowerPath
 {
-    std::shared_ptr<FlowField> flowField;
+    std::vector<Vector2> path;
+    int nextPathIndex = 0;
+
     Vector2 target;
     PathFollowerPathType type;
+    std::shared_ptr<FlowField> flowField;
 };
 
 DEFINE_COMPONENT(PathFollowerComponent)
@@ -44,6 +47,7 @@ DEFINE_COMPONENT(PathFollowerComponent)
     void FollowFlowField();
     void UpdateFollowTarget(float deltaTime, Scene* scene);
     bool CanBeeline(Vector2 from, Vector2 to);
+    void Update(float deltaTime);
 
     Vector2 ToPathfinderPerspective(Vector2 position);
     Vector2 ToWorldPerspective(Vector2 position);
@@ -59,4 +63,6 @@ DEFINE_COMPONENT(PathFollowerComponent)
     Vector2 currentTarget;
     Vector2 intermediateTarget;
     SyncVar<uint8_t> currentLayer = 0;
+
+    Vector2 pathFindingPosition;
 };
