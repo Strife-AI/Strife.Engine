@@ -146,50 +146,43 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
             }
         }
     }
+#endif
 
+    auto scene = pathFinder->scene;
 
     // Add line collider between walkable/unwalkable ares
     {
-        auto tilemapRb = tilemap->GetComponent<RigidBodyComponent>();
-
-        for (int i = 1; i < terrain.Rows() - 1; ++i)
+        for (int i = 0; i < terrain.Rows(); ++i)
         {
-            for (int j = 1; j < terrain.Cols() - 1; ++j)
+            for (int j = 0; j < terrain.Cols(); ++j)
             {
+                auto tilemapRb = tilemap->GetComponent<RigidBodyComponent>();
+
                 Vector2 points[4] =
                     {
-                        TileToWorld(Vector2(j, i)),
-                        TileToWorld(Vector2(j + 1, i)),
-                        TileToWorld(Vector2(j + 1, i + 1)),
+                        scene->isometricSettings.TileToWorld(Vector2(j, i)),
+                        scene->isometricSettings.TileToWorld(Vector2(j + 1, i)),
+                        scene->isometricSettings.TileToWorld(Vector2(j + 1, i + 1)),
+                        scene->isometricSettings.TileToWorld(Vector2(j, i + 1)),
                     };
 
-                for (int k = 0; k < 2; ++k)
-                {
-                    auto to = Vector2(j, i) + offsets[k];
-                    if (terrain[i][j].height != terrain[to].height
-                        || terrain[to].flags.HasFlag(TerrainCellFlags::Unwalkable)
-                        || terrain[i][j].flags.HasFlag(TerrainCellFlags::Unwalkable)
-                        || terrain[i + 1][j + 1].rampType != RampType::None
-                        || terrain[(int)to.y + 1][(int)to.x + 1].rampType != RampType::None)
+                ObstacleEdgeFlags flags[4] =
                     {
-                        auto start = points[k];
-                        auto end = points[(k + 1) % 4];
+                        ObstacleEdgeFlags::NorthBlocked,
+                        ObstacleEdgeFlags::EastBlocked,
+                        ObstacleEdgeFlags::SouthBlocked,
+                        ObstacleEdgeFlags::WestBlocked
+                    };
 
-                        bool addAsTrigger = terrain[i][j].rampType != RampType::None
-                                            || terrain[to].rampType != RampType::None
-                                            || terrain[i + 1][j + 1].rampType != RampType::None
-                                            || terrain[to + Vector2(1)].rampType != RampType::None;
-
-                        tilemapRb->CreateLineCollider(start, end, addAsTrigger);
-                    }
+                for (int k = 0; k < 4; ++k)
+                {
+                    if (pathFinder->GetCell(Vector2(j, i)).flags.HasFlag(flags[k]))
+                       tilemapRb->CreateLineCollider(points[k], points[(k + 1) % 4], false);
                 }
             }
         }
     }
 
-#endif
-
-    auto scene = pathFinder->scene;
 
     // Create walkable ares for the grid sensor
     {

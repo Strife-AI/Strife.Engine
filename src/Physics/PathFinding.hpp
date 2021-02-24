@@ -14,14 +14,16 @@ struct PathFollowerComponent;
 struct FlowCell
 {
     bool alreadyVisited = false;
+    bool hasLineOfSightToGoal = false;
     Vector2 dir;
 };
 
 struct FlowField
 {
-    FlowField(int rows, int cols, Vector2 startCell)
+    FlowField(int rows, int cols, Vector2 startCell, Vector2 endCell)
         : grid(rows, cols),
-        startCell(startCell)
+        startCell(startCell),
+        endCell(endCell)
     {
         
     }
@@ -29,6 +31,7 @@ struct FlowField
     VariableSizedGrid<FlowCell> grid;
     PathFinderService* pathFinder;
     Vector2 startCell;
+    Vector2 endCell;
 };
 
 /// <summary>
@@ -117,11 +120,13 @@ private:
     Vector2 PixelToCellCoordinate(Vector2 position) const;
     void EnqueueCellIfValid(Vector2 cell, Vector2 from);
 
-    using WorkQueue = std::queue<Vector2>;
+    bool HasLineOfSight(FlowField* field, Vector2 at, Vector2 endCell);
+
+    bool IsBlocked(Vector2 from, Vector2 to);
 
     VariableSizedGrid<ObstacleCell> _obstacleGrid;
     std::queue<PathRequest> _requestQueue;
 
-    WorkQueue _workQueue;
+    std::queue<Vector2> _workQueue;
     std::shared_ptr<FlowField> _fieldInProgress;
 };

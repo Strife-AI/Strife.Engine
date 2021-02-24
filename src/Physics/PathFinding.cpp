@@ -62,7 +62,7 @@ void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        //Visualize(renderEvent->renderer);
+        Visualize(renderEvent->renderer);
     }
 }
 
@@ -96,10 +96,10 @@ void PathFinderService::CalculatePaths()
 
         if(request.status == PathRequestStatus::NotStarted)
         {
-            WorkQueue emptyQueue;
+            std::queue<Vector2> emptyQueue;
             std::swap(emptyQueue, _workQueue);
 
-            _fieldInProgress = std::make_shared<FlowField>(_obstacleGrid.Rows(), _obstacleGrid.Cols(), request.startCell);
+            _fieldInProgress = std::make_shared<FlowField>(_obstacleGrid.Rows(), _obstacleGrid.Cols(), request.startCell, request.endCell);
             _fieldInProgress->pathFinder = this;
 
             _workQueue.push(request.endCell);
@@ -112,6 +112,8 @@ void PathFinderService::CalculatePaths()
         {
             auto cell = _workQueue.front();
             _workQueue.pop();
+
+            _fieldInProgress->grid[cell].hasLineOfSightToGoal = HasLineOfSight(_fieldInProgress.get(), cell, _fieldInProgress->endCell);
 
             const Vector2 directions[] =
             {
@@ -147,6 +149,7 @@ void PathFinderService::CalculatePaths()
 
 void PathFinderService::Visualize(Renderer* renderer)
 {
+    return;
     for(int i = 0; i < _obstacleGrid.Rows(); ++i)
     {
         for(int j = 0; j < _obstacleGrid.Cols(); ++j)
@@ -169,10 +172,8 @@ void PathFinderService::Visualize(Renderer* renderer)
 
             for (int k = 0; k < 4; ++k)
             {
-                Vector2 offset(0, 0);
-
                 if (_obstacleGrid[i][j].flags.HasFlag(flags[k]))
-                    renderer->RenderLine(points[k] + offset, points[(k + 1) % 4] + offset, Color::Red(), -1);
+                    renderer->RenderLine(points[k], points[(k + 1) % 4], Color::Red(), -1);
             }
 
 #if false
@@ -222,7 +223,7 @@ ObstacleEdgeFlags GetBlockedDirection(Vector2 from, Vector2 to)
 
 void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from)
 {
-    bool isBlocked = _obstacleGrid[from].flags.HasFlag(GetBlockedDirection(from, cell));
+    bool isBlocked = IsBlocked(from, cell);
 
     if(cell.x >= 0
         && cell.x < _obstacleGrid.Cols()
@@ -274,4 +275,68 @@ void PathFinderService::RemoveEdge(Vector2 from, Vector2 to)
 {
     _obstacleGrid[from].flags.ResetFlag(GetBlockedDirection(from, to));
     _obstacleGrid[to].flags.ResetFlag(GetBlockedDirection(to, from));
+}
+
+bool PathFinderService::IsBlocked(Vector2 from, Vector2 to)
+{
+    return _obstacleGrid[from].flags.HasFlag(GetBlockedDirection(from, to))
+        || _obstacleGrid[to].flags.HasFlag(GetBlockedDirection(to, from))
+        || _obstacleGrid[to].count != 0;
+}
+
+bool PathFinderService::HasLineOfSight(FlowField* field, Vector2 at, Vector2 endCell)
+{
+    endCell = endCell.Floor().AsVectorOfType<float>();
+    if (at.x == 0 || at.x == field->grid.Cols() || at.y == 0 || at.y == field->grid.Rows())
+    {
+        return false;
+    }
+
+    if (at == endCell)
+    {
+        return true;
+    }
+    else
+    {
+        auto diff = endCell - at;
+        auto distX = Abs(diff.x);
+        auto distY = Abs(diff.y);
+        auto stepX = Sign(diff.x);
+        auto stepY = Sign(diff.y);
+
+        bool hasLineOfSight = false;
+
+        if (distX >= distY)
+        {
+            if (!IsBlocked(at, at + Vector2(stepX, 0)))
+            {
+                hasLineOfSight |= field->grid[at + Vector2(stepX, 0)].hasLineOfSightToGoal;
+            }
+        }
+
+        if (distY >= distX)
+        {
+            if (!IsBlocked(at, at + Vector2(0, stepY)))
+            {
+                hasLineOfSight |= field->grid[at + Vector2(0, stepY)].hasLineOfSightToGoal;
+            }
+        }
+
+        if (distX > 0 && distY > 0)
+        {
+            if (!field->grid[at + Vector2(stepX, stepY)].hasLineOfSightToGoal)
+            {
+                hasLineOfSight = false;
+            }
+            else if (distX == distY)
+            {
+                if (IsBlocked(at, at + Vector2(stepX, 0)) || IsBlocked(at, at + Vector2(0, stepY)))
+                {
+                    hasLineOfSight = false;
+                }
+            }
+        }
+
+        return hasLineOfSight;
+    }
 }
