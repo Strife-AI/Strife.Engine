@@ -60,6 +60,12 @@ void PathFollowerComponent::UpdateFollowTarget(float deltaTime, Scene* scene)
     }
 }
 
+static Vector2 SetTileVectorLengthInWorldSpace(Vector2 tileSpace, float worldLength, IsometricSettings* isometricSettings)
+{
+    return isometricSettings->WorldToTile(
+        isometricSettings->TileToWorld(tileSpace).Normalize() * worldLength);
+}
+
 void PathFollowerComponent::FollowFlowField()
 {
     auto scene = GetScene();
@@ -88,7 +94,7 @@ void PathFollowerComponent::FollowFlowField()
 
         tileTarget = currentPath.path[currentPath.nextPathIndex];
 
-        velocity = (tileTarget - pathFindingPosition).Normalize() * 4;
+        velocity = (tileTarget - pathFindingPosition);
 
         intermediateTarget = tileTarget;
     }
@@ -116,16 +122,16 @@ void PathFollowerComponent::FollowFlowField()
 
     //rigidBody->SetVelocity(velocity);
 
-    pathFindingPosition += velocity * Scene::PhysicsDeltaTime;
+    auto velocityAtCorrectSpeed = SetTileVectorLengthInWorldSpace(velocity, speed, &scene->isometricSettings);
+
+    pathFindingPosition += velocityAtCorrectSpeed * Scene::PhysicsDeltaTime;
 
     auto height = Vector2(scene->GetService<PathFinderService>()->GetCell(pathFindingPosition).height);
     auto targetPosition = scene->isometricSettings.TileToWorld(pathFindingPosition - height);
 
     currentLayer.SetValue(0);
-
+    
     owner->SetCenter(targetPosition);
-
-    //Renderer::DrawDebugLine({ owner->Center(), owner->Center() + velocity, useBeeLine ? Color::Red() : Color::Green() });
 }
 
 void PathFollowerComponent::UpdateFlowField(Vector2 newTarget)
