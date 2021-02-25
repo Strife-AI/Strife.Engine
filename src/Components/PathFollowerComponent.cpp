@@ -84,7 +84,7 @@ void PathFollowerComponent::FollowFlowField()
             return;
         }
 
-        if (currentPath.flowField->grid[pathFindingPosition].hasLineOfSightToGoal && CanBeeline(owner->Center(), scene->isometricSettings.TileToWorld(currentPath.target)))
+        if (false && currentPath.flowField->grid[pathFindingPosition].hasLineOfSightToGoal && CanBeeline(owner->Center(), scene->isometricSettings.TileToWorld(currentPath.target)))
         {
             intermediateTarget = currentPath.target;
             velocity = (currentPath.target - pathFindingPosition);

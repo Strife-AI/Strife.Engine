@@ -223,13 +223,12 @@ ObstacleEdgeFlags GetBlockedDirection(Vector2 from, Vector2 to)
 
 void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from)
 {
-    bool isBlocked = IsBlocked(from, cell);
+    bool isBlocked = IsBlocked(from, cell) && cell != _fieldInProgress->startCell;
 
     if(cell.x >= 0
         && cell.x < _obstacleGrid.Cols()
         && cell.y >= 0
         && cell.y < _obstacleGrid.Rows()
-        && _obstacleGrid[cell].count == 0
         && !_fieldInProgress->grid[cell].alreadyVisited
         && !isBlocked)
     {
