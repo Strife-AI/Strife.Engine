@@ -1,3 +1,5 @@
+#include <LightAnimations.hpp>
+#include <Memory/Util.hpp>
 #include "PathFollowerComponent.hpp"
 #include "Components/RigidBodyComponent.hpp"
 #include "Renderer.hpp"
@@ -6,6 +8,12 @@
 void PathFollowerComponent::OnAdded()
 {
     currentLayer = GetScene()->isometricSettings.GetCurrentLayer(owner->Center());
+    GetScene()->GetService<PathFinderService>()->pathFollowers.push_back(this);
+}
+
+void PathFollowerComponent::OnRemoved()
+{
+    RemoveFromVector(GetScene()->GetService<PathFinderService>()->pathFollowers, this);
 }
 
 void PathFollowerComponent::FixedUpdate(float deltaTime)
@@ -36,19 +44,7 @@ void PathFollowerComponent::FixedUpdate(float deltaTime)
 
     if (state == PathFollowerState::Stopped)
     {
-        if (rigidBody->body->GetType() != b2_staticBody)
-        {
-            rigidBody->body->SetType(b2_staticBody);
-        }
-
-        return;
-    }
-    else
-    {
-        if (rigidBody->body->GetType() != b2_dynamicBody)
-        {
-            rigidBody->body->SetType(b2_dynamicBody);
-        }
+        rigidBody->SetVelocity({ 0, 0 });
     }
 
     FollowFlowField();
@@ -214,6 +210,11 @@ void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
 
 void PathFollowerComponent::FollowEntity(Entity* entity, float minDistance)
 {
+    if (state == PathFollowerState::FollowingEntity && entity == entityToFollow.GetValueOrNull())
+    {
+        return;
+    }
+
     state = PathFollowerState::FollowingEntity;
     UpdateFlowField(entity->Center());
     entityToFollow = entity;
@@ -243,7 +244,7 @@ bool PathFollowerComponent::CanBeeline(Vector2 from, Vector2 to)
         if (scene->Raycast(owner->Center(), point, result, true, [=](const ColliderHandle& handle)
         {
             return handle.OwningEntity()->Is<TilemapEntity>()
-                   || !handle.IsTrigger();
+               || !handle.IsTrigger();
         }))
         {
             return false;
