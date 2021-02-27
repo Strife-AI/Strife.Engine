@@ -7,10 +7,7 @@
 
 void PathFollowerComponent::OnAdded()
 {
-    currentLayer = GetScene()->isometricSettings.GetCurrentLayer(owner->Center());
-
     auto scene = GetScene();
-    auto tile = scene->isometricSettings.ScreenToTile(owner->Center());
     GetScene()->GetService<PathFinderService>()->pathFollowers.push_back(this);
 }
 

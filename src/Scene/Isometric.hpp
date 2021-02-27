@@ -69,12 +69,12 @@ struct IsometricSettings
         return TileToWorld(tile + Vector2(terrain[tile].height));
     }
 
-    Vector2 WorldToScreen(Vector2 world)
+    Vector2 WorldToScreen(Vector2 world) const
     {
         return TileToScreen(world / 32);
     }
 
-    Vector2 WorldToTile(Vector2 world)
+    Vector2 WorldToTile(Vector2 world) const
     {
         return world / 32;
     }

@@ -188,7 +188,7 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
 
 float IsometricSettings::GetTileDepth(Vector2 position, int layer, std::optional<int> layerOffset) const
 {
-    position = ScreenToTile(position) + (layerOffset.has_value() ? Vector2(layerOffset.value()) : Vector2(layer));
+    position = WorldToTile(position) + (layerOffset.has_value() ? Vector2(layerOffset.value()) : Vector2(layer));
     float maxWidth = terrain.Cols();
     float maxHeight = terrain.Rows();
 
