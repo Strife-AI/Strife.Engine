@@ -5,6 +5,7 @@
 #include <Memory/StringId.hpp>
 #include <filesystem>
 #include "System/Logger.hpp"
+#include <optional>
 
 struct Engine;
 
