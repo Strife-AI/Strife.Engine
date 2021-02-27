@@ -59,6 +59,5 @@ DEFINE_COMPONENT(PathFollowerComponent)
     EntityReference<Entity> entityToFollow;
     float updateTargetTimer = 0;
     float speed = 200;
-    Vector2 currentTarget;
     Vector2 intermediateTarget;
 };

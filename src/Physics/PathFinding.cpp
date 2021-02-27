@@ -45,10 +45,24 @@ void PathFinderService::RequestFlowField(Vector2 start, Vector2 end, Entity* own
 
     //Log("End cell: %f, %f\n", end.x, end.y);
 
-    // FIXME: workaround for when ending in a solid cell
-    while(_obstacleGrid[request.endCell].count != 0)
+    if (_obstacleGrid[request.endCell].count != 0)
     {
-        ++request.endCell.x;
+        auto diff = request.startCell - request.endCell;
+        Vector2 offset = Abs(diff.x) > Abs(diff.y)
+            ? Vector2(Sign(diff.x), 0)
+            : Vector2(0, Sign(diff.y));
+
+        if (offset == Vector2(0))
+        {
+            return;
+        }
+
+        while(_obstacleGrid[request.endCell].count != 0)
+        {
+            request.endCell += offset;
+        }
+
+        request.end = request.endCell;
     }
 
     _requestQueue.push(request);
@@ -62,7 +76,7 @@ void PathFinderService::ReceiveEvent(const IEntityEvent& ev)
     }
     else if(auto renderEvent = ev.Is<RenderEvent>())
     {
-        Visualize(renderEvent->renderer);
+        //Visualize(renderEvent->renderer);
     }
 }
 
@@ -99,7 +113,7 @@ void PathFinderService::CalculatePaths()
             std::queue<Vector2> emptyQueue;
             std::swap(emptyQueue, _workQueue);
 
-            _fieldInProgress = std::make_shared<FlowField>(_obstacleGrid.Rows(), _obstacleGrid.Cols(), request.startCell, request.endCell);
+            _fieldInProgress = std::make_shared<FlowField>(_obstacleGrid.Rows(), _obstacleGrid.Cols(), request.startCell, request.endCell, request.end);
             _fieldInProgress->pathFinder = this;
 
             _workQueue.push(request.endCell);
@@ -149,7 +163,6 @@ void PathFinderService::CalculatePaths()
 
 void PathFinderService::Visualize(Renderer* renderer)
 {
-    return;
     for(int i = 0; i < _obstacleGrid.Rows(); ++i)
     {
         for(int j = 0; j < _obstacleGrid.Cols(); ++j)
@@ -176,14 +189,14 @@ void PathFinderService::Visualize(Renderer* renderer)
                     renderer->RenderLine(points[k], points[(k + 1) % 4], Color::Red(), -1);
             }
 
-#if false
-            if (_obstacleGrid[i][j].count != 0 || true)
+#if true
+            if (_obstacleGrid[i][j].count != 0)
             {
                 Color colors[3] = {Color::Green(), Color::Yellow(), Color::Red()};
 
                 Vector2 size(4, 4);
                 renderer->RenderRectangle(
-                    Rectangle(scene->isometricSettings.TileToWorld(Vector2(j, i) + Vector2(0.5)) - size / 2, size),
+                    Rectangle(scene->isometricSettings.TileToScreen(Vector2(j, i) + Vector2(0.5)) - size / 2, size),
                     colors[(int)_obstacleGrid[Vector2(j, i)].height],
                     -1);
             }

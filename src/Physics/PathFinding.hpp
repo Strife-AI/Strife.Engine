@@ -20,10 +20,11 @@ struct FlowCell
 
 struct FlowField
 {
-    FlowField(int rows, int cols, Vector2 startCell, Vector2 endCell)
+    FlowField(int rows, int cols, Vector2 startCell, Vector2 endCell, Vector2 end)
         : grid(rows, cols),
         startCell(startCell),
-        endCell(endCell)
+        endCell(endCell),
+        end(end)
     {
         
     }
@@ -32,6 +33,7 @@ struct FlowField
     PathFinderService* pathFinder;
     Vector2 startCell;
     Vector2 endCell;
+    Vector2 end;
 };
 
 /// <summary>
