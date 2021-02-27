@@ -123,6 +123,42 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
         }
     }
 
+    auto scene = pathFinder->scene;
+
+    // Add line collider between walkable/unwalkable ares
+    {
+        for (int i = 0; i < terrain.Rows(); ++i)
+        {
+            for (int j = 0; j < terrain.Cols(); ++j)
+            {
+                auto tilemapRb = tilemap->GetComponent<RigidBodyComponent>();
+
+                Vector2 points[4] =
+                    {
+                        scene->isometricSettings.TileToWorld(Vector2(j, i)),
+                        scene->isometricSettings.TileToWorld(Vector2(j + 1, i)),
+                        scene->isometricSettings.TileToWorld(Vector2(j + 1, i + 1)),
+                        scene->isometricSettings.TileToWorld(Vector2(j, i + 1)),
+                    };
+
+                ObstacleEdgeFlags flags[4] =
+                    {
+                        ObstacleEdgeFlags::NorthBlocked,
+                        ObstacleEdgeFlags::EastBlocked,
+                        ObstacleEdgeFlags::SouthBlocked,
+                        ObstacleEdgeFlags::WestBlocked
+                    };
+
+                for (int k = 0; k < 4; ++k)
+                {
+                    if (pathFinder->GetCell(Vector2(j, i)).flags.HasFlag(flags[k]))
+                       tilemapRb->CreateLineCollider(points[k], points[(k + 1) % 4], false);
+                }
+            }
+        }
+    }
+
+
     // Create walkable ares for the grid sensor
     {
         auto walkable0 = scene->CreateEntity<WalkableTerrainEntity0>({});
