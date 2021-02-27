@@ -50,7 +50,6 @@ DEFINE_COMPONENT(PathFollowerComponent)
     void Update(float deltaTime);
 
     Vector2 ToPathfinderPerspective(Vector2 position);
-    Vector2 ToWorldPerspective(Vector2 position);
 
     RigidBodyComponent* rigidBody;
     PathFollowerPath currentPath;
@@ -63,6 +62,4 @@ DEFINE_COMPONENT(PathFollowerComponent)
     Vector2 currentTarget;
     Vector2 intermediateTarget;
     SyncVar<uint8_t> currentLayer = 0;
-
-    Vector2 pathFindingPosition;
 };

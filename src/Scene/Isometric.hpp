@@ -60,6 +60,11 @@ struct IsometricSettings
 
     Vector2 ScreenToWorld(Vector2 screen) const
     {
+        return TileToWorld(ScreenToTile(screen));
+    }
+
+    Vector2 ScreenToWorldIncludingTerrain(Vector2 screen) const
+    {
         auto tile = ScreenToTile(screen);
         return TileToWorld(tile + Vector2(terrain[tile].height));
     }
@@ -99,10 +104,10 @@ struct IsometricSettings
 
     void GetTileBoundaries(Vector2 tile, gsl::span<Vector2> boundaries) const
     {
-        boundaries[0] = TileToScreen(tile);
-        boundaries[1] = TileToScreen(tile + Vector2(1, 0));
-        boundaries[2] = TileToScreen(tile + Vector2(1, 1));
-        boundaries[3] = TileToScreen(tile + Vector2(0, 1));
+        boundaries[0] = TileToWorld(tile);
+        boundaries[1] = TileToWorld(tile + Vector2(1, 0));
+        boundaries[2] = TileToWorld(tile + Vector2(1, 1));
+        boundaries[3] = TileToWorld(tile + Vector2(0, 1));
     }
 
     float GetTileDepth(Vector2 position, int layer, std::optional<int> layerOffset = std::nullopt) const;

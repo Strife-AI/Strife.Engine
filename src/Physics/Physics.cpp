@@ -69,8 +69,8 @@ void CollisionManager::UpdateEntityPositions()
 
 static void DrawColliderLine(Vector2 worldStart, Vector2 worldEnd, Renderer* renderer, Scene* scene, Color color)
 {
-    auto start = scene->isometricSettings.WorldToScreen(worldStart);
-    auto end = scene->isometricSettings.WorldToScreen(worldEnd);
+    auto start = worldStart; //scene->isometricSettings.WorldToScreen(worldStart);
+    auto end = worldEnd; scene->isometricSettings.WorldToScreen(worldEnd);
 
     renderer->RenderLine(start, end, color, -1);
 }

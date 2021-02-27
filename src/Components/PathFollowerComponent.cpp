@@ -11,8 +11,6 @@ void PathFollowerComponent::OnAdded()
 
     auto scene = GetScene();
     auto tile = scene->isometricSettings.ScreenToTile(owner->Center());
-    pathFindingPosition = tile + Vector2(scene->isometricSettings.terrain[tile].height);
-
     GetScene()->GetService<PathFinderService>()->pathFollowers.push_back(this);
 }
 
@@ -60,10 +58,10 @@ void PathFollowerComponent::UpdateFollowTarget(float deltaTime, Scene* scene)
     }
 }
 
-static Vector2 SetTileVectorLengthInWorldSpace(Vector2 tileSpace, float worldLength, IsometricSettings* isometricSettings)
+static Vector2 SetTileVectorLengthInScreenSpace(Vector2 tileSpace, float screenLength, IsometricSettings* isometricSettings)
 {
-    return isometricSettings->ScreenToTile(
-        isometricSettings->TileToScreen(tileSpace).Normalize() * worldLength);
+    return isometricSettings->ScreenToWorld(
+        isometricSettings->TileToScreen(tileSpace).Normalize() * screenLength);
 }
 
 void PathFollowerComponent::FollowFlowField()
@@ -72,7 +70,7 @@ void PathFollowerComponent::FollowFlowField()
     Vector2 tileTarget;
     Vector2 velocity;
 
-    pathFindingPosition = ToPathfinderPerspective(owner->Center());
+    auto pathFindingPosition = ToPathfinderPerspective(owner->Center());
 
     if (currentPath.type == PathFollowerPathType::None)
     {
@@ -86,7 +84,8 @@ void PathFollowerComponent::FollowFlowField()
             return;
         }
 
-        if (false && currentPath.flowField->grid[pathFindingPosition].hasLineOfSightToGoal && CanBeeline(owner->Center(), scene->isometricSettings.TileToScreen(currentPath.target)))
+        if (currentPath.flowField->grid[pathFindingPosition].hasLineOfSightToGoal
+            && CanBeeline(owner->Center(), scene->isometricSettings.TileToWorld(currentPath.target)))
         {
             intermediateTarget = currentPath.target;
             velocity = (currentPath.target - pathFindingPosition);
@@ -113,49 +112,27 @@ void PathFollowerComponent::FollowFlowField()
         velocity = (currentPath.target - pathFindingPosition);
     }
 
-//    float dist = (currentPath.target - owner->Center()).Length();
-//    if (dist > 20)
-//    {
-//        velocity = rigidBody->GetVelocity().SmoothDamp(
-//            velocity,
-//            acceleration,
-//            0.05,
-//            Scene::PhysicsDeltaTime);
-//    }
-//
-//    if (dist <= 1)
-//    {
-//        velocity = { 0, 0 };
-//        acceleration = { 0, 0 };
-//        Stop(true);
-//    }
+    float dist = (scene->isometricSettings.TileToWorld(currentPath.target) - owner->Center()).Length();
 
-    //rigidBody->SetVelocity(velocity);
+    auto correctVelocity = SetTileVectorLengthInScreenSpace(velocity, speed, &scene->isometricSettings);
 
-    rigidBody->SetVelocity(scene->isometricSettings.TileToWorld(velocity).Normalize() * speed);
-
-#if false
-    auto velocityAtCorrectSpeed = SetTileVectorLengthInWorldSpace(velocity, speed, &scene->isometricSettings);
-
-    pathFindingPosition += velocityAtCorrectSpeed * Scene::PhysicsDeltaTime;
-
-    auto height = Vector2(scene->GetService<PathFinderService>()->GetCell(pathFindingPosition).height);
-    auto targetPosition = scene->isometricSettings.TileToWorld(pathFindingPosition);
-
-    if (scene->GetService<PathFinderService>()->GetCell(pathFindingPosition).ramp == ObstacleRampType::None)
+    if (dist < 20)
     {
-        targetPosition.y -= height.y * 32;
-    }
-    else
-    {
-        float frac = pathFindingPosition.x - floor(pathFindingPosition.x);
-        targetPosition.y -= (1.0 - frac) * 32;
+        correctVelocity = rigidBody->GetVelocity().SmoothDamp(
+            correctVelocity,
+            acceleration,
+            0.05,
+            Scene::PhysicsDeltaTime);
     }
 
-    currentLayer.SetValue(2);
+    if (dist <= 1)
+    {
+        correctVelocity = { 0, 0 };
+        acceleration = { 0, 0 };
+        Stop(true);
+    }
 
-    owner->SetCenter(targetPosition);
-#endif
+    rigidBody->SetVelocity(correctVelocity);
 }
 
 void PathFollowerComponent::UpdateFlowField(Vector2 newTarget)
@@ -192,7 +169,6 @@ void PathFollowerComponent::Stop(bool loseVelocity)
     if (loseVelocity) rigidBody->SetVelocity({ 0, 0 });
     currentPath.type = PathFollowerPathType::None;
     currentPath.path.clear();
-
 }
 
 void PathFollowerComponent::ReceiveEvent(const IEntityEvent& ev)
@@ -255,20 +231,19 @@ Vector2 PathFollowerComponent::ToPathfinderPerspective(Vector2 position)
 
 bool PathFollowerComponent::CanBeeline(Vector2 from, Vector2 to)
 {
-    return false;
     Vector2 checkPoints[5];
     auto scene = GetScene();
-    auto toTile = scene->isometricSettings.ScreenToIntegerTile(to);
+    auto toTile = scene->isometricSettings.WorldToTile(to);
     scene->isometricSettings.GetTileBoundaries(toTile, checkPoints);
     checkPoints[4] = to;
 
     for (auto point : checkPoints)
     {
         RaycastResult result;
-        if (scene->Raycast(owner->Center(), point, result, true, [=](const ColliderHandle& handle)
+        if (scene->Raycast(from, point, result, true, [=](const ColliderHandle& handle)
         {
-            return handle.OwningEntity()->Is<TilemapEntity>()
-               || !handle.IsTrigger();
+            auto owner = handle.OwningEntity();
+            return owner != this->owner && !handle.IsTrigger();
         }))
         {
             return false;
@@ -280,6 +255,7 @@ bool PathFollowerComponent::CanBeeline(Vector2 from, Vector2 to)
 
 void PathFollowerComponent::Update(float deltaTime)
 {
+    return;
     if (owner->type != "player"_sid) return;
 
 #if 1
@@ -299,9 +275,9 @@ void PathFollowerComponent::Update(float deltaTime)
                 auto dir = currentPath.flowField->grid[Vector2(j, i)].dir * 16;
                 auto result = Vector2((dir.x - dir.y), (dir.x + dir.y) / 2);
                 auto start = owner->scene->isometricSettings.TileToScreen(Vector2(j + 0.5, i + 0.5));
-                //Renderer::DrawDebugLine({ start, start + result, Color::Black() });
+                Renderer::DrawDebugLine({ start, start + result, Color::Black() });
 
-                if (currentPath.flowField->grid[Vector2(j, i)].hasLineOfSightToGoal)
+                //if (currentPath.flowField->grid[Vector2(j, i)].hasLineOfSightToGoal)
                     Renderer::DrawDebugRectangle(Rectangle(start - Vector2(2, 2), Vector2(4, 4)), c);
             }
         }

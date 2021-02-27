@@ -197,19 +197,6 @@ Vector2 PathFinderService::PixelToCellCoordinate(Vector2 position) const
     return position.Floor().AsVectorOfType<float>();
 }
 
-struct RampInfo
-{
-    RampInfo(RampType rampType, Vector2 rampDirection)
-        : rampType(rampType),
-        rampDirection(rampDirection)
-    {
-
-    }
-
-    Vector2 rampDirection;
-    RampType rampType;
-};
-
 ObstacleEdgeFlags GetBlockedDirection(Vector2 from, Vector2 to)
 {
     auto diff = to - from;
