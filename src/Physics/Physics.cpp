@@ -67,6 +67,25 @@ void CollisionManager::UpdateEntityPositions()
     }
 }
 
+static void DrawColliderLine(Vector2 worldStart, Vector2 worldEnd, Renderer* renderer, Scene* scene, Color color)
+{
+    auto start = scene->isometricSettings.WorldToScreen(worldStart);
+    auto end = scene->isometricSettings.WorldToScreen(worldEnd);
+
+    renderer->RenderLine(start, end, color, -1);
+}
+
+static void GenerateCircle(Vector2 center, float radius, gsl::span<Vector2> outVertices)
+{
+    float dAngle = 2 * 3.1415926535 / outVertices.size();
+
+    for (int i = 0; i < outVertices.size(); ++i)
+    {
+        auto angle = dAngle * i;
+        outVertices[i] = center + Vector2(cos(angle), sin(angle)) * radius;
+    }
+}
+
 void CollisionManager::RenderColliderOutlines(Renderer* renderer)
 {
     for (auto body = _world->GetBodyList(); body != nullptr; body = body->GetNext())
@@ -75,24 +94,35 @@ void CollisionManager::RenderColliderOutlines(Renderer* renderer)
         {
             if (fixture->IsSensor()) continue;;
 
+            auto scene = ColliderHandle(fixture).OwningEntity()->scene;
+
             auto shape = fixture->GetShape();
             switch (shape->GetType())
             {
             case b2Shape::e_circle:
             {
                 auto circle = static_cast<b2CircleShape*>(shape);
+                auto center = Scene::Box2DToPixel(body->GetWorldPoint(circle->m_p));
+                auto radius = circle->m_radius * Scene::Box2DToPixelsRatio.x;
 
-                renderer->RenderCircleOutline(Scene::Box2DToPixel(body->GetWorldPoint(circle->m_p)), circle->m_radius * Scene::Box2DToPixelsRatio.x, Color(0, 255, 0), -1);// FIXME MW DebugRenderLayer);
+                const int totalVertices = 32;
+                Vector2 vertices[totalVertices];
+                GenerateCircle(center, radius, vertices);
+
+                for (int i = 0; i < totalVertices; ++i)
+                {
+                    DrawColliderLine(vertices[i], vertices[(i + 1) % totalVertices], renderer, scene, Color::Green());
+                }
+
                 break;
             }
             case b2Shape::e_edge:
             {
                 auto edge = static_cast<b2EdgeShape*>(shape);
-                renderer->RenderLine(
-                    Scene::Box2DToPixel(body->GetWorldPoint(edge->m_vertex1)),
-                    Scene::Box2DToPixel(body->GetWorldPoint(edge->m_vertex2)),
-                    Color(255, 255, 255),
-                    -1);//DebugRenderLayer); FIXME MW
+                auto start = Scene::Box2DToPixel(body->GetWorldPoint(edge->m_vertex1));
+                auto end = Scene::Box2DToPixel(body->GetWorldPoint(edge->m_vertex2));
+
+                DrawColliderLine(start, end, renderer, scene, Color::White());
 
                 break;
             }
@@ -105,7 +135,7 @@ void CollisionManager::RenderColliderOutlines(Renderer* renderer)
                     auto vertex = Scene::Box2DToPixel(polygon->m_vertices[i] + body->GetPosition());
                     auto next = Scene::Box2DToPixel(polygon->m_vertices[(i + 1) % polygon->m_count] + body->GetPosition());
 
-                    renderer->RenderLine(vertex, next, Color::Red(), -1);// FIXME MW DebugRenderLayer);
+                    DrawColliderLine(vertex, next, renderer, scene, Color::Red());
                 }
 
                 break;

@@ -123,67 +123,6 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
         }
     }
 
-#if false
-    // Mark tiles under elevated tiles as impassible
-    {
-        for (int i = 0; i < terrain.Rows(); ++i)
-        {
-            for (int j = 0; j < terrain.Cols(); ++j)
-            {
-                int height = terrain[i][j].height;
-
-                if (terrain[i][j].rampType == RampType::None && height > 0)
-                {
-                    int x = j + 1;
-                    int y = i + 1;
-
-                    if (terrain[y][x].height != terrain[i][j].height && x < terrain.Cols() && y < terrain.Rows())
-                    {
-                        pathFinder->AddObstacle(Rectangle(x, y, 1, 1));
-                        terrain[y][x].flags.SetFlag(TerrainCellFlags::Unwalkable);
-                    }
-                }
-            }
-        }
-    }
-#endif
-
-    auto scene = pathFinder->scene;
-
-    // Add line collider between walkable/unwalkable ares
-    {
-        for (int i = 0; i < terrain.Rows(); ++i)
-        {
-            for (int j = 0; j < terrain.Cols(); ++j)
-            {
-                auto tilemapRb = tilemap->GetComponent<RigidBodyComponent>();
-
-                Vector2 points[4] =
-                    {
-                        scene->isometricSettings.TileToScreen(Vector2(j, i)),
-                        scene->isometricSettings.TileToScreen(Vector2(j + 1, i)),
-                        scene->isometricSettings.TileToScreen(Vector2(j + 1, i + 1)),
-                        scene->isometricSettings.TileToScreen(Vector2(j, i + 1)),
-                    };
-
-                ObstacleEdgeFlags flags[4] =
-                    {
-                        ObstacleEdgeFlags::NorthBlocked,
-                        ObstacleEdgeFlags::EastBlocked,
-                        ObstacleEdgeFlags::SouthBlocked,
-                        ObstacleEdgeFlags::WestBlocked
-                    };
-
-                for (int k = 0; k < 4; ++k)
-                {
-                    if (pathFinder->GetCell(Vector2(j, i)).flags.HasFlag(flags[k]))
-                       tilemapRb->CreateLineCollider(points[k], points[(k + 1) % 4], false);
-                }
-            }
-        }
-    }
-
-
     // Create walkable ares for the grid sensor
     {
         auto walkable0 = scene->CreateEntity<WalkableTerrainEntity0>({});
