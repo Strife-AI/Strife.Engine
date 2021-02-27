@@ -11,9 +11,9 @@ void IsometricSpriteComponent::Render(Renderer* renderer)
     }
 
     auto spriteBounds = sprite->sprite.Bounds().Size();
-    auto position = owner->Center() + offsetFromCenter - spriteBounds + baseSize / 2;
+    auto position = owner->ScreenCenter() + offsetFromCenter - spriteBounds + baseSize / 2;
 
-    auto depth = GetScene()->isometricSettings.GetTileDepth(owner->Center(), layer, layerOffset);
+    auto depth = -1;//GetScene()->isometricSettings.GetTileDepth(owner->Center(), layer, layerOffset);
 
     renderer->RenderSprite(&sprite->sprite, position, depth);
 }

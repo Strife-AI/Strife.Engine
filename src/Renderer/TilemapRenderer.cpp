@@ -58,7 +58,7 @@ void TilemapRenderer::Render(Renderer* renderer) const
                 if (map[i][j] == nullptr) continue;
 
                 int layerToUse = layerId != 0 ? layerId : -1;
-                auto position = _scene->isometricSettings.TileToWorld(Vector2(j, i));
+                auto position = _scene->isometricSettings.TileToScreen(Vector2(j, i));
                 renderer->RenderSprite(&map[i][j]->sprite, position - Vector2(32, 32), _scene->isometricSettings.GetTileDepth(position, layerToUse));
             }
         }

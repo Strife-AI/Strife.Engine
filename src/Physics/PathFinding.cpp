@@ -90,7 +90,7 @@ void PathFinderService::CalculatePaths()
             for (auto pathFollower : pathFollowers)
             {
                 if (pathFollower->owner == owner) continue;
-                ++_obstacleGrid[scene->isometricSettings.WorldToIntegerTile(pathFollower->owner->Center())].count;
+                ++_obstacleGrid[scene->isometricSettings.ScreenToIntegerTile(pathFollower->owner->Center())].count;
             }
         }
 
@@ -141,7 +141,7 @@ void PathFinderService::CalculatePaths()
             for (auto pathFollower : pathFollowers)
             {
                 if (pathFollower->owner == owner) continue;
-                --_obstacleGrid[scene->isometricSettings.WorldToIntegerTile(pathFollower->owner->Center())].count;
+                --_obstacleGrid[scene->isometricSettings.ScreenToIntegerTile(pathFollower->owner->Center())].count;
             }
         }
     }
@@ -156,10 +156,10 @@ void PathFinderService::Visualize(Renderer* renderer)
         {
             Vector2 points[4] =
             {
-                scene->isometricSettings.TileToWorld(Vector2(j, i)),
-                scene->isometricSettings.TileToWorld(Vector2(j + 1, i)),
-                scene->isometricSettings.TileToWorld(Vector2(j + 1, i + 1)),
-                scene->isometricSettings.TileToWorld(Vector2(j, i + 1)),
+                scene->isometricSettings.TileToScreen(Vector2(j, i)),
+                scene->isometricSettings.TileToScreen(Vector2(j + 1, i)),
+                scene->isometricSettings.TileToScreen(Vector2(j + 1, i + 1)),
+                scene->isometricSettings.TileToScreen(Vector2(j, i + 1)),
             };
 
             ObstacleEdgeFlags flags[4] =

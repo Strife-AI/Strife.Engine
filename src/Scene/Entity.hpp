@@ -99,6 +99,8 @@ struct Entity
         return _position.Value();
     }
 
+    Vector2 ScreenCenter() const;
+
     Vector2 Dimensions() const
     {
         return _dimensions;

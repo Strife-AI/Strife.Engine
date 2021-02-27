@@ -10,7 +10,7 @@ void PathFollowerComponent::OnAdded()
     currentLayer = GetScene()->isometricSettings.GetCurrentLayer(owner->Center());
 
     auto scene = GetScene();
-    auto tile = scene->isometricSettings.WorldToTile(owner->Center());
+    auto tile = scene->isometricSettings.ScreenToTile(owner->Center());
     pathFindingPosition = tile + Vector2(scene->isometricSettings.terrain[tile].height);
 
     GetScene()->GetService<PathFinderService>()->pathFollowers.push_back(this);
@@ -62,8 +62,8 @@ void PathFollowerComponent::UpdateFollowTarget(float deltaTime, Scene* scene)
 
 static Vector2 SetTileVectorLengthInWorldSpace(Vector2 tileSpace, float worldLength, IsometricSettings* isometricSettings)
 {
-    return isometricSettings->WorldToTile(
-        isometricSettings->TileToWorld(tileSpace).Normalize() * worldLength);
+    return isometricSettings->ScreenToTile(
+        isometricSettings->TileToScreen(tileSpace).Normalize() * worldLength);
 }
 
 void PathFollowerComponent::FollowFlowField()
@@ -71,6 +71,8 @@ void PathFollowerComponent::FollowFlowField()
     auto scene = GetScene();
     Vector2 tileTarget;
     Vector2 velocity;
+
+    pathFindingPosition = ToPathfinderPerspective(owner->Center());
 
     if (currentPath.type == PathFollowerPathType::None)
     {
@@ -84,14 +86,14 @@ void PathFollowerComponent::FollowFlowField()
             return;
         }
 
-        if (false && currentPath.flowField->grid[pathFindingPosition].hasLineOfSightToGoal && CanBeeline(owner->Center(), scene->isometricSettings.TileToWorld(currentPath.target)))
+        if (false && currentPath.flowField->grid[pathFindingPosition].hasLineOfSightToGoal && CanBeeline(owner->Center(), scene->isometricSettings.TileToScreen(currentPath.target)))
         {
             intermediateTarget = currentPath.target;
             velocity = (currentPath.target - pathFindingPosition);
         }
         else
         {
-            if (currentPath.nextPathIndex == -1 || (intermediateTarget - pathFindingPosition).Length() < 0.1f)
+            if (currentPath.nextPathIndex == -1 || (intermediateTarget - pathFindingPosition).Length() < 0.2)
             {
                 if (currentPath.nextPathIndex + 1 < currentPath.path.size())
                 {
@@ -130,6 +132,9 @@ void PathFollowerComponent::FollowFlowField()
 
     //rigidBody->SetVelocity(velocity);
 
+    rigidBody->SetVelocity(scene->isometricSettings.TileToWorld(velocity).Normalize() * speed);
+
+#if false
     auto velocityAtCorrectSpeed = SetTileVectorLengthInWorldSpace(velocity, speed, &scene->isometricSettings);
 
     pathFindingPosition += velocityAtCorrectSpeed * Scene::PhysicsDeltaTime;
@@ -150,6 +155,7 @@ void PathFollowerComponent::FollowFlowField()
     currentLayer.SetValue(2);
 
     owner->SetCenter(targetPosition);
+#endif
 }
 
 void PathFollowerComponent::UpdateFlowField(Vector2 newTarget)
@@ -241,8 +247,7 @@ Vector2 PathFollowerComponent::ToPathfinderPerspective(Vector2 position)
     if (scene->perspective == ScenePerspective::Orothgraphic) return position / Vector2(32, 32);    // TODO: don't hardcode
     else if (scene->perspective == ScenePerspective::Isometric)
     {
-        auto tile = scene->isometricSettings.WorldToTile(position);
-        return tile + Vector2(scene->isometricSettings.terrain[tile].height);
+        return scene->isometricSettings.WorldToTile(position);
     }
 
     return position;
@@ -250,9 +255,10 @@ Vector2 PathFollowerComponent::ToPathfinderPerspective(Vector2 position)
 
 bool PathFollowerComponent::CanBeeline(Vector2 from, Vector2 to)
 {
+    return false;
     Vector2 checkPoints[5];
     auto scene = GetScene();
-    auto toTile = scene->isometricSettings.WorldToIntegerTile(to);
+    auto toTile = scene->isometricSettings.ScreenToIntegerTile(to);
     scene->isometricSettings.GetTileBoundaries(toTile, checkPoints);
     checkPoints[4] = to;
 
@@ -285,14 +291,14 @@ void PathFollowerComponent::Update(float deltaTime)
             {
                 Color c = Color::Black();
 
-                if (Vector2(j, i) == owner->scene->isometricSettings.WorldToIntegerTile(owner->Center()))
+                if (Vector2(j, i) == owner->scene->isometricSettings.ScreenToIntegerTile(owner->Center()))
                 {
                     c = Color::Yellow();
                 }
 
                 auto dir = currentPath.flowField->grid[Vector2(j, i)].dir * 16;
                 auto result = Vector2((dir.x - dir.y), (dir.x + dir.y) / 2);
-                auto start = owner->scene->isometricSettings.TileToWorld(Vector2(j + 0.5, i + 0.5));
+                auto start = owner->scene->isometricSettings.TileToScreen(Vector2(j + 0.5, i + 0.5));
                 //Renderer::DrawDebugLine({ start, start + result, Color::Black() });
 
                 if (currentPath.flowField->grid[Vector2(j, i)].hasLineOfSightToGoal)

@@ -160,10 +160,10 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
 
                 Vector2 points[4] =
                     {
-                        scene->isometricSettings.TileToWorld(Vector2(j, i)),
-                        scene->isometricSettings.TileToWorld(Vector2(j + 1, i)),
-                        scene->isometricSettings.TileToWorld(Vector2(j + 1, i + 1)),
-                        scene->isometricSettings.TileToWorld(Vector2(j, i + 1)),
+                        scene->isometricSettings.TileToScreen(Vector2(j, i)),
+                        scene->isometricSettings.TileToScreen(Vector2(j + 1, i)),
+                        scene->isometricSettings.TileToScreen(Vector2(j + 1, i + 1)),
+                        scene->isometricSettings.TileToScreen(Vector2(j, i + 1)),
                     };
 
                 ObstacleEdgeFlags flags[4] =
@@ -213,7 +213,7 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
 
 float IsometricSettings::GetTileDepth(Vector2 position, int layer, std::optional<int> layerOffset) const
 {
-    position = WorldToTile(position) + (layerOffset.has_value() ? Vector2(layerOffset.value()) : Vector2(layer));
+    position = ScreenToTile(position) + (layerOffset.has_value() ? Vector2(layerOffset.value()) : Vector2(layer));
     float maxWidth = terrain.Cols();
     float maxHeight = terrain.Rows();
 
@@ -225,6 +225,11 @@ float IsometricSettings::GetTileDepth(Vector2 position, int layer, std::optional
 
 int IsometricSettings::GetCurrentLayer(Vector2 position) const
 {
-    auto tilePosition = WorldToIntegerTile(position);
+    auto tilePosition = ScreenToIntegerTile(position);
     return terrain[tilePosition].height;
+}
+
+Vector2 IsometricSettings::TileToScreenIncludingTerrain(Vector2 tile)
+{
+    return TileToScreen(tile - Vector2(scene->GetService<PathFinderService>()->GetCell(tile).height));
 }

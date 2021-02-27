@@ -238,3 +238,9 @@ void Entity::FlagsChanged()
 {
     scene->GetEntityManager().ScheduleUpdateInterfaces(this);
 }
+
+Vector2 Entity::ScreenCenter() const
+{
+    return scene->isometricSettings.TileToScreenIncludingTerrain(
+        scene->isometricSettings.WorldToTile(Center()));
+}
