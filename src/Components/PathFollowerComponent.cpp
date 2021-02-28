@@ -86,6 +86,8 @@ void PathFollowerComponent::FollowFlowField()
         {
             if (currentPath.nextPathIndex == -1 || (intermediateTarget - pathFindingPosition).Length() < 0.2)
             {
+                bool first = true;
+
                 do
                 {
                     if (currentPath.nextPathIndex + 1 >= currentPath.path.size())
@@ -93,13 +95,13 @@ void PathFollowerComponent::FollowFlowField()
                         return;
                     }
 
-                    ++currentPath.nextPathIndex;
-
-                    if (!CanBeeline(owner->Center(), scene->isometricSettings.TileToWorld(currentPath.path[currentPath.nextPathIndex])))
+                    if (!first && !CanBeeline(owner->Center(), scene->isometricSettings.TileToWorld(currentPath.path[currentPath.nextPathIndex + 1])))
                     {
                         break;
                     }
 
+                    ++currentPath.nextPathIndex;
+                    first = false;
                 } while (true);
             }
 
@@ -244,7 +246,7 @@ bool PathFollowerComponent::CanBeeline(Vector2 from, Vector2 to)
     {
         RaycastResult result;
 
-        if (scene->Raycast(fromPoints[i], toPoints[i], result, true, [=](const ColliderHandle& handle)
+        if (scene->Raycast(fromPoints[i], toPoints[(i + 1) % 5], result, true, [=](const ColliderHandle& handle)
         {
             auto owner = handle.OwningEntity();
             return owner != this->owner && !handle.IsTrigger();
