@@ -10,7 +10,7 @@
 
 struct LineRenderer
 {
-    static constexpr int MaxVerticesPerBatch = 512;
+    static constexpr int MaxVerticesPerBatch = 16384;
     static constexpr int VertexLocation = 0;
     static constexpr int ColorLocation = 1;
 

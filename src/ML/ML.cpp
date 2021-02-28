@@ -114,7 +114,7 @@ Rectangle GetIsometricBounds(b2Fixture* fixture, IsometricSettings* isometric, V
         for (int i = 0; i < polygon->m_count; ++i)
         {
             auto v = body->GetWorldPoint(polygon->m_vertices[i]);
-            auto v2 = isometric->WorldToTile(Scene::Box2DToPixel(v), tileSize);
+            auto v2 = isometric->ScreenToTile(Scene::Box2DToPixel(v), tileSize);
 
             min = min.Min(v2);
             max = max.Max(v2);
@@ -130,8 +130,8 @@ Rectangle GetIsometricBounds(b2Fixture* fixture, IsometricSettings* isometric, V
         auto b = Scene::Box2DToPixel(body->GetWorldPoint(edge->m_vertex2));
 
         return Rectangle::FromPoints(
-            isometric->WorldToTile(a, tileSize),
-            isometric->WorldToTile(b, tileSize));
+            isometric->ScreenToTile(a, tileSize),
+            isometric->ScreenToTile(b, tileSize));
     }
 
 
@@ -142,8 +142,8 @@ Rectangle GetIsometricBounds(b2Fixture* fixture, IsometricSettings* isometric, V
         float radius = circle->m_radius * Scene::Box2DToPixelsRatio.x;
         float diagonal = radius * sqrt(2) / 2;
 
-        auto p1 = isometric->WorldToTile(center - Vector2(diagonal), tileSize);
-        auto p2 = isometric->WorldToTile(center + Vector2(diagonal), tileSize);
+        auto p1 = isometric->ScreenToTile(center - Vector2(diagonal), tileSize);
+        auto p2 = isometric->ScreenToTile(center + Vector2(diagonal), tileSize);
 
         return Rectangle::FromPoints(p1, p2);
 
@@ -163,13 +163,13 @@ gsl::span<uint64_t> ReadGridSensorRectanglesIsometric(
     SensorObjectDefinition* objectDefinition,
     Entity* self)
 {
-    center = IsometricSettings::TileToWorldCustomSize(IsometricSettings::WorldToTile(center, cellSize).Floor().AsVectorOfType<float>(), cellSize);
+    center = IsometricSettings::TileToScreen(IsometricSettings::ScreenToTile(center, cellSize).Floor().AsVectorOfType<float>(), cellSize);
 
     Vector2 gridSizePixels = cellSize * Vector2(cols, rows);
     Vector2 topLeft =  (center - gridSizePixels / 2).RoundTo(cellSize);
 
     Rectangle gridPixelBounds(topLeft, gridSizePixels);
-    auto topLeftTile = scene->isometricSettings.WorldToTile(center - cellSize.YVector() * rows / 2, cellSize);
+    auto topLeftTile = scene->isometricSettings.ScreenToTile(center - cellSize.YVector() * rows / 2, cellSize);
 
     const int maxRectangles = 8192;
     static ColliderHandle colliderPool[maxRectangles];
@@ -293,11 +293,11 @@ void RenderGridSensorOutputIsometric(Grid<uint64_t>& grid, Vector2 center, Vecto
     Vector2 gridBottomRight = gridTopLeft + gridSize;
 
     Vector2 gridSizePixels = cellSize * grid.Dimensions();
-    Vector2 topLeft = IsometricSettings::TileToWorldCustomSize(IsometricSettings::WorldToTile(center, cellSize).Floor().AsVectorOfType<float>(), cellSize);
+    Vector2 topLeft = IsometricSettings::TileToScreen(IsometricSettings::ScreenToTile(center, cellSize).Floor().AsVectorOfType<float>(), cellSize);
 
     auto transform = [=](Vector2 tile)
     {
-        return IsometricSettings::TileToWorldCustomSize(tile - grid.Dimensions() / 2, cellSize) + topLeft;
+        return IsometricSettings::TileToScreen(tile - grid.Dimensions() / 2, cellSize) + topLeft;
     };
 
     for(int i = 0; i < grid.Rows(); ++i)

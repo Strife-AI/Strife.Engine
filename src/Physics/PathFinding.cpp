@@ -2,14 +2,6 @@
 #include "Renderer.hpp"
 #include "Components/PathFollowerComponent.hpp"
 
-Vector2 FlowField::ClampPosition(const Vector2& position) const
-{
-    return position
-        .Floor()
-        .AsVectorOfType<float>()
-        .Clamp({ 0.0f, 0.0f }, grid.Dimensions() - Vector2(1));
-}
-
 PathFinderService::PathFinderService(int rows, int cols)
     : _obstacleGrid(rows, cols)
 {
@@ -53,10 +45,24 @@ void PathFinderService::RequestFlowField(Vector2 start, Vector2 end, Entity* own
 
     //Log("End cell: %f, %f\n", end.x, end.y);
 
-    // FIXME: workaround for when ending in a solid cell
-    while(_obstacleGrid[request.endCell].count != 0)
+    if (_obstacleGrid[request.endCell].count != 0)
     {
-        ++request.endCell.x;
+        auto diff = request.startCell - request.endCell;
+        Vector2 offset = Abs(diff.x) > Abs(diff.y)
+            ? Vector2(Sign(diff.x), 0)
+            : Vector2(0, Sign(diff.y));
+
+        if (offset == Vector2(0))
+        {
+            return;
+        }
+
+        while(_obstacleGrid[request.endCell].count != 0)
+        {
+            request.endCell += offset;
+        }
+
+        request.end = request.endCell;
     }
 
     _requestQueue.push(request);
@@ -98,16 +104,16 @@ void PathFinderService::CalculatePaths()
             for (auto pathFollower : pathFollowers)
             {
                 if (pathFollower->owner == owner) continue;
-                ++_obstacleGrid[scene->isometricSettings.WorldToIntegerTile(pathFollower->owner->Center())].count;
+                ++_obstacleGrid[scene->isometricSettings.ScreenToIntegerTile(pathFollower->owner->Center())].count;
             }
         }
 
         if(request.status == PathRequestStatus::NotStarted)
         {
-            WorkQueue emptyQueue;
+            std::queue<Vector2> emptyQueue;
             std::swap(emptyQueue, _workQueue);
 
-            _fieldInProgress = std::make_shared<FlowField>(_obstacleGrid.Rows(), _obstacleGrid.Cols(), request.end);
+            _fieldInProgress = std::make_shared<FlowField>(_obstacleGrid.Rows(), _obstacleGrid.Cols(), request.startCell, request.endCell, request.end);
             _fieldInProgress->pathFinder = this;
 
             _workQueue.push(request.endCell);
@@ -121,13 +127,14 @@ void PathFinderService::CalculatePaths()
             auto cell = _workQueue.front();
             _workQueue.pop();
 
+            _fieldInProgress->grid[cell].hasLineOfSightToGoal = HasLineOfSight(_fieldInProgress.get(), cell, _fieldInProgress->endCell);
+
             const Vector2 directions[] =
             {
                 Vector2(0, 1),
                 Vector2(0, -1),
                 Vector2(1, 0),
-                Vector2(-1, 0),
-                Vector2(1, 1),      // For ramps
+                Vector2(-1, 0)
             };
 
             for(auto direction : directions)
@@ -148,7 +155,7 @@ void PathFinderService::CalculatePaths()
             for (auto pathFollower : pathFollowers)
             {
                 if (pathFollower->owner == owner) continue;
-                --_obstacleGrid[scene->isometricSettings.WorldToIntegerTile(pathFollower->owner->Center())].count;
+                --_obstacleGrid[scene->isometricSettings.ScreenToIntegerTile(pathFollower->owner->Center())].count;
             }
         }
     }
@@ -162,10 +169,10 @@ void PathFinderService::Visualize(Renderer* renderer)
         {
             Vector2 points[4] =
             {
-                scene->isometricSettings.TileToWorld(Vector2(j, i)),
-                scene->isometricSettings.TileToWorld(Vector2(j + 1, i)),
-                scene->isometricSettings.TileToWorld(Vector2(j + 1, i + 1)),
-                scene->isometricSettings.TileToWorld(Vector2(j, i + 1)),
+                scene->isometricSettings.TileToScreen(Vector2(j, i)),
+                scene->isometricSettings.TileToScreen(Vector2(j + 1, i)),
+                scene->isometricSettings.TileToScreen(Vector2(j + 1, i + 1)),
+                scene->isometricSettings.TileToScreen(Vector2(j, i + 1)),
             };
 
             ObstacleEdgeFlags flags[4] =
@@ -178,22 +185,22 @@ void PathFinderService::Visualize(Renderer* renderer)
 
             for (int k = 0; k < 4; ++k)
             {
-                Vector2 offset(0, 0);
-
-                if (_obstacleGrid[i][j].flags.HasFlag(flags[k]) || true)
-                    renderer->RenderLine(points[k] + offset, points[(k + 1) % 4] + offset, Color::Red(), -1);
+                if (_obstacleGrid[i][j].flags.HasFlag(flags[k]))
+                    renderer->RenderLine(points[k], points[(k + 1) % 4], Color::Red(), -1);
             }
 
+#if true
             if (_obstacleGrid[i][j].count != 0)
             {
                 Color colors[3] = {Color::Green(), Color::Yellow(), Color::Red()};
 
                 Vector2 size(4, 4);
                 renderer->RenderRectangle(
-                    Rectangle(scene->isometricSettings.TileToWorld(Vector2(j, i) + Vector2(0.5)) - size / 2, size),
-                    colors[(int)scene->isometricSettings.terrain[Vector2(j, i)].height],
+                    Rectangle(scene->isometricSettings.TileToScreen(Vector2(j, i) + Vector2(0.5)) - size / 2, size),
+                    colors[(int)_obstacleGrid[Vector2(j, i)].height],
                     -1);
             }
+#endif
         }
     }
 }
@@ -203,105 +210,29 @@ Vector2 PathFinderService::PixelToCellCoordinate(Vector2 position) const
     return position.Floor().AsVectorOfType<float>();
 }
 
-struct RampInfo
+ObstacleEdgeFlags GetBlockedDirection(Vector2 from, Vector2 to)
 {
-    RampInfo(RampType rampType, Vector2 rampDirection)
-        : rampType(rampType),
-        rampDirection(rampDirection)
-    {
+    auto diff = to - from;
+    if (diff == Vector2(1, 0)) return ObstacleEdgeFlags::EastBlocked;
+    if (diff == Vector2(-1, 0)) return ObstacleEdgeFlags::WestBlocked;
+    if (diff == Vector2(0, -1)) return ObstacleEdgeFlags::NorthBlocked;
+    if (diff == Vector2(0, 1)) return ObstacleEdgeFlags::SouthBlocked;
 
-    }
-
-    Vector2 rampDirection;
-    RampType rampType;
-};
-
-bool TryGetRampOffset(const IsometricSettings& isometricSettings, const RampInfo& ramp, Vector2 from, Vector2 to, Vector2& outOffset)
-{
-    bool directionIsBlocked = isometricSettings.terrain[from].height != isometricSettings.terrain[to].height;
-    
-    if (isometricSettings.terrain[to].rampType == ramp.rampType)
-    {
-        if (directionIsBlocked && (to - from == ramp.rampDirection))
-        {
-            outOffset = Vector2(-1, -1);
-            return true;
-        }
-        else if (!directionIsBlocked && to - from == Vector2(1, 1))
-        {
-            outOffset = -ramp.rampDirection;
-            return true;
-        }
-    }
-
-    return false;
+    return ObstacleEdgeFlags();
 }
-
-static const RampInfo g_westRamp(RampType::West, Vector2(-1, 0));
-static const RampInfo g_northRamp(RampType::North, Vector2(0, -1));
-static const RampInfo g_invalidRamp(RampType::None, Vector2(100, 100));
-
-static const RampInfo* GetRampInfo(RampType type)
-{
-    if (type == RampType::North) return &g_northRamp;
-    if (type == RampType::West) return &g_westRamp;
-    return &g_invalidRamp;
-}
-
 
 void PathFinderService::EnqueueCellIfValid(Vector2 cell, Vector2 from)
 {
-    bool directionIsBlocked = scene->isometricSettings.terrain[from].height != scene->isometricSettings.terrain[cell].height;
-
-    {
-        auto& below = scene->isometricSettings.terrain[from + Vector2(1)];
-        auto dir = cell - from;
-        if (below.rampType != RampType::None)
-        {
-            auto info = GetRampInfo(below.rampType);
-            if (dir != info->rampDirection && dir != -info->rampDirection && dir != Vector2(1, 1))
-            {
-                return;
-            }
-        }
-    }
-
-    {
-        auto& below = scene->isometricSettings.terrain[cell + Vector2(1)];
-        auto dir = cell - from;
-        if (below.rampType != RampType::None)
-        {
-            auto info = GetRampInfo(below.rampType);
-            if (dir != info->rampDirection && dir != -info->rampDirection)
-            {
-                return;
-            }
-        }
-    }
-
-    Vector2 rampOffset;
-    if (TryGetRampOffset(scene->isometricSettings, g_westRamp, from, cell, rampOffset))
-    {
-        directionIsBlocked = false;
-        cell = cell + rampOffset;
-    }
-    else if (TryGetRampOffset(scene->isometricSettings, g_northRamp, from, cell, rampOffset))
-    {
-        directionIsBlocked = false;
-        cell = cell + rampOffset;
-    }
-    else if (cell - from == Vector2(1, 1))
-    {
-        return;
-    }
+    bool isBlocked = IsBlocked(from, cell)
+        && cell != _fieldInProgress->startCell
+        && cell != _fieldInProgress->endCell;
 
     if(cell.x >= 0
         && cell.x < _obstacleGrid.Cols()
         && cell.y >= 0
         && cell.y < _obstacleGrid.Rows()
-        && _obstacleGrid[cell].count == 0
         && !_fieldInProgress->grid[cell].alreadyVisited
-        && !directionIsBlocked)
+        && !isBlocked)
     {
         _workQueue.push(cell);
         _fieldInProgress->grid[cell].alreadyVisited = true;
@@ -337,10 +268,76 @@ void PathFinderService::RemoveObstacle(const Rectangle &bounds)
 
 void PathFinderService::AddEdge(Vector2 from, Vector2 to)
 {
-    return;
+    _obstacleGrid[from].flags.SetFlag(GetBlockedDirection(from, to));
+    _obstacleGrid[to].flags.SetFlag(GetBlockedDirection(to, from));
 }
 
 void PathFinderService::RemoveEdge(Vector2 from, Vector2 to)
 {
-    return;
+    _obstacleGrid[from].flags.ResetFlag(GetBlockedDirection(from, to));
+    _obstacleGrid[to].flags.ResetFlag(GetBlockedDirection(to, from));
+}
+
+bool PathFinderService::IsBlocked(Vector2 from, Vector2 to)
+{
+    return _obstacleGrid[from].flags.HasFlag(GetBlockedDirection(from, to))
+        || _obstacleGrid[to].flags.HasFlag(GetBlockedDirection(to, from))
+        || _obstacleGrid[to].count != 0;
+}
+
+bool PathFinderService::HasLineOfSight(FlowField* field, Vector2 at, Vector2 endCell)
+{
+    endCell = endCell.Floor().AsVectorOfType<float>();
+    if (at.x == 0 || at.x == field->grid.Cols() || at.y == 0 || at.y == field->grid.Rows())
+    {
+        return false;
+    }
+
+    if (at == endCell)
+    {
+        return true;
+    }
+    else
+    {
+        auto diff = endCell - at;
+        auto distX = Abs(diff.x);
+        auto distY = Abs(diff.y);
+        auto stepX = Sign(diff.x);
+        auto stepY = Sign(diff.y);
+
+        bool hasLineOfSight = false;
+
+        if (distX >= distY)
+        {
+            if (!IsBlocked(at, at + Vector2(stepX, 0)))
+            {
+                hasLineOfSight |= field->grid[at + Vector2(stepX, 0)].hasLineOfSightToGoal;
+            }
+        }
+
+        if (distY >= distX)
+        {
+            if (!IsBlocked(at, at + Vector2(0, stepY)))
+            {
+                hasLineOfSight |= field->grid[at + Vector2(0, stepY)].hasLineOfSightToGoal;
+            }
+        }
+
+        if (distX > 0 && distY > 0)
+        {
+            if (!field->grid[at + Vector2(stepX, stepY)].hasLineOfSightToGoal)
+            {
+                hasLineOfSight = false;
+            }
+            else if (distX == distY)
+            {
+                if (IsBlocked(at, at + Vector2(stepX, 0)) || IsBlocked(at, at + Vector2(0, stepY)))
+                {
+                    hasLineOfSight = false;
+                }
+            }
+        }
+
+        return hasLineOfSight;
+    }
 }

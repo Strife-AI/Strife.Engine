@@ -306,12 +306,20 @@ void Renderer::DoRendering()
 
         _debugRectangles.clear();
 
-        for (auto& line : _debugLines)
+        int aliveIndex = 0;
+        for (int i = 0; i < _debugLines.size(); ++i)
         {
+            auto& line = _debugLines[i];
+            line.time -= _deltaTime;
             RenderLine(line.start, line.end, line.color, -1);
+
+            if (line.time > 0)
+            {
+                _debugLines[aliveIndex++] = line;
+            }
         }
 
-        _debugLines.clear();
+        _debugLines.resize(aliveIndex);
     }
 
     if (g_useLighting.Value())

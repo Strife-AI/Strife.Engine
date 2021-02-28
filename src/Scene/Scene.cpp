@@ -19,7 +19,8 @@ Scene::Scene(Engine* engine, StringId mapSegmentName, bool isServer)
       _cameraFollower(&_camera, engine->GetInput()),
       _engine(engine),
       _world(std::make_unique<b2World>(b2Vec2(0, 0))),
-      _collisionManager(_world.get())
+      _collisionManager(_world.get()),
+      isometricSettings(this)
 {
     _world->SetContactListener(&_collisionManager);
     _camera.SetScreenSize(engine->GetSdlManager() == nullptr ? Vector2(0, 0)
