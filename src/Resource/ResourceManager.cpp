@@ -4,6 +4,7 @@
 #include "SpriteFontResource.hpp"
 #include "ShaderResource.hpp"
 #include "FileResource.hpp"
+#include "Tools/Console.hpp"
 
 void ResourceManager::LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType)
 {
@@ -37,6 +38,7 @@ void ResourceManager::LoadResourceFromFile(const char* filePath, const char* res
     else
     {
         resource->name = resourceName;
+        resource->path = pathString;
         AddResource(resource, resourceName);
     }
 }
@@ -52,3 +54,36 @@ ResourceManager* ResourceManager::GetInstance()
     static ResourceManager resourceManager;
     return &resourceManager;
 }
+
+static void ReloadResources(ConsoleCommandBinder& binder)
+{
+    std::string resourceName;
+    binder
+        .Bind(resourceName, "resourceName")
+        .Help("Reloads a resource");
+
+    auto resource = ResourceManager::GetInstance()->GetResourceByName(resourceName.c_str());
+    if (resource == nullptr)
+    {
+        binder.GetConsole()->Log("No such resource %s", resourceName.c_str());
+    }
+    else
+    {
+        if (resource->TryCleanup())
+        {
+            ResourceSettings settings;
+            settings.resourceName = resource->name.c_str();
+            settings.isHeadlessServer = false;
+            if (!resource->LoadFromFile(settings))
+            {
+                binder.GetConsole()->Log("Failed to reload resource\n");
+            }
+        }
+        else
+        {
+            binder.GetConsole()->Log("Resource does not support reloading\n");
+        }
+    }
+}
+
+ConsoleCmd _reloadCmd("reload", ReloadResources);

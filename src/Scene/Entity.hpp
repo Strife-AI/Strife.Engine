@@ -215,6 +215,8 @@ struct Entity
 
     ISyncVar* syncVarHead = nullptr;
 
+    long long lastQueryId = -1;
+
 protected:
     void NotifyMovement();
 
@@ -253,7 +255,6 @@ private:
 
     Vector2 _dimensions;
     float _rotation;
-    int _lastQueryId = -1;
     SoundEmitter _soundEmitter;
 
     IEntityComponent* _componentList = nullptr;

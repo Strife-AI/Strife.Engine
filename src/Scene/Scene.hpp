@@ -199,6 +199,11 @@ public:
 		return _componentManager;
 	}
 
+    long long BeginQuery()
+    {
+        return _nextQueryId++;
+    }
+
     void RenderEntities(Renderer* renderer);
 
 	float deltaTime = 0;
@@ -234,11 +239,6 @@ private:
 	void NotifyFixedUpdate();
 	void NotifyServerFixedUpdate();
 
-	int BeginQuery()
-	{
-		return _nextQueryId++;
-	}
-
 	StringId _sceneName;
 
 	Camera _camera;
@@ -249,7 +249,7 @@ private:
 	std::unique_ptr<b2World> _world;
 	float _physicsTimeLeft = 0;
 	CollisionManager _collisionManager;
-	int _nextQueryId = 0;
+	long long _nextQueryId = 0;
 
 	TimerManager _timerManager;
 	EntityManager _entityManager;

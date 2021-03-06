@@ -487,12 +487,15 @@ namespace StrifeML
 
         }
 
-        void SetNewNetwork(std::stringstream& stream)
+        std::shared_ptr<TNeuralNetwork> SetNewNetwork(std::stringstream& stream)
         {
             newNetworkLock.Lock();
-            newNetwork = std::make_shared<TNeuralNetwork>();
+            std::shared_ptr<TNeuralNetwork> result = std::make_shared<TNeuralNetwork>();
+            newNetwork = result;
             torch::load(newNetwork, stream);
             newNetworkLock.Unlock();
+
+            return result;
         }
 
         std::shared_ptr<TNeuralNetwork> TryGetNewNetwork()
@@ -598,7 +601,8 @@ namespace StrifeML
 
         void NotifyTrainingComplete(std::stringstream& serializedNetwork, const TrainingBatchResult& result)
         {
-            networkContext->SetNewNetwork(serializedNetwork);
+            auto newNetwork = networkContext->SetNewNetwork(serializedNetwork);
+            OnCreateNewNetwork(newNetwork);
 
             OnTrainingComplete(result);
 
@@ -609,10 +613,9 @@ namespace StrifeML
         }
 
         virtual void OnTrainingComplete(const TrainingBatchResult& result) { }
-
         virtual void ReceiveSample(const SampleType& sample) { }
-
         virtual bool TrySelectSequenceSamples(gsl::span<SampleType> outSequence) { return false; }
+        virtual void OnCreateNewNetwork(std::shared_ptr<NetworkType> newNetwork) { }
 
         SpinLock sampleLock;
         RandomNumberGenerator rng;

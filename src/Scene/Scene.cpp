@@ -244,10 +244,10 @@ gsl::span<Entity*> Scene::FindOverlappingEntities(const Rectangle& bounds, gsl::
     {
         auto entity = collider.OwningEntity();
 
-        if (entity->_lastQueryId != queryId)
+        if (entity->lastQueryId != queryId)
         {
             storage[totalOverlappingEntities++] = entity;
-            entity->_lastQueryId = queryId;
+            entity->lastQueryId = queryId;
         }
     }
 

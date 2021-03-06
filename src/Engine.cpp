@@ -30,6 +30,13 @@ extern ConsoleVar<bool> g_developerMode("developer-mode", true, true);
 
 ConsoleVar<bool> g_isServer("server", false);
 
+static ConcurrentQueue<std::function<void()>> g_workQueue;
+
+void ExecuteOnGameThread(const std::function<void()>& function)
+{
+    g_workQueue.Enqueue(function);
+}
+
 Engine::Engine(const EngineConfig& config)
 {
     _config = config;
@@ -135,6 +142,12 @@ void AccurateSleepFor(float seconds)
 
 void Engine::RunFrame()
 {
+    std::function<void()> func;
+    while (g_workQueue.TryDequeue(func))
+    {
+        func();
+    }
+
     std::shared_ptr<BaseGameInstance> games[2];
     int totalGames = 0;
 
@@ -300,12 +313,3 @@ void Engine::SetGame(IGame* game)
         WindowSizeChangedEvent(_sdlManager->WindowSize().x, _sdlManager->WindowSize().y).Send();
     }
 }
-
-static void ReloadResources(ConsoleCommandBinder& binder)
-{
-    binder.Help("Reloads the resource files");
-
-    binder.GetEngine()->ReloadResources();
-}
-
-ConsoleCmd _reloadCmd("reload", ReloadResources);
