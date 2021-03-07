@@ -5,6 +5,7 @@
 #include "ShaderResource.hpp"
 #include "FileResource.hpp"
 #include "Tools/Console.hpp"
+#include "Resource/ScriptResource.hpp"
 
 void ResourceManager::LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType)
 {
@@ -25,6 +26,7 @@ void ResourceManager::LoadResourceFromFile(const char* filePath, const char* res
     else if (type == ".sfnt") resource = new SpriteFontResource;
     else if (type == ".shader") resource = new ShaderResource;
     else if (type == ".txt" || type == ".file") resource = new FileResource;
+    else if (type == ".c") resource = new ScriptResource;
 
     if (resource == nullptr)
     {

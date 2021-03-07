@@ -4,7 +4,11 @@
 #include <string>
 #include <memory>
 #include <type_traits>
-#include <setjmp.h>
+#include <csetjmp>
+#include <thread>
+#include <functional>
+
+#include "System/Logger.hpp"
 
 template <typename T>
 constexpr auto type_name() noexcept {
@@ -27,12 +31,41 @@ constexpr auto type_name() noexcept {
     return name;
 }
 
+struct ThreadState
+{
+    jmp_buf errorHandler;
+};
+
+ThreadState* GetThreadState(std::thread::id threadId);
+
+template<typename TFunc, TFunc func>
+constexpr const char* ScriptCallableName();
+
+
+template<typename Fn, Fn fn, typename... Args>
+typename std::result_of<Fn(Args...)>::type wrapper(Args... args)
+{
+    try
+    {
+        return fn(std::forward<Args>(args)...);
+    }
+    catch(const std::exception& e)
+    {
+        // Prevent exceptions from going through the C code, which would crash
+        // Instead, do a longjmp to abort the script
+        Log("Aborting call to %s because got instance of %s: %s\n", ScriptCallableName<Fn, fn>(),  typeid(e).name(), e.what());
+        auto threadState = GetThreadState(std::this_thread::get_id());
+        longjmp(threadState->errorHandler, 1);
+    }
+}
+
+#define WRAPIT(FUNC) wrapper<decltype(&FUNC), &FUNC>
 struct ScriptCallableInfo
 {
     template<typename TFunc>
     ScriptCallableInfo(const char* name, TFunc func)
         : name(name),
-        functionPointer(static_cast<void*>(func))
+        functionPointer((void*)func)
     {
         auto functionPointerPrototype = type_name<decltype(func)>();
         Initialize(functionPointerPrototype);
@@ -46,51 +79,83 @@ private:
     void Initialize(const std::string_view& functionPointerPrototype);
 };
 
-class Script : std::enable_shared_from_this<Script>
+template<typename TFunc>
+class ScriptFunction;
+
+template<typename TReturnType, typename ... Args>
+class ScriptFunction<TReturnType(Args...)>
 {
 public:
+    ScriptFunction(const char* name)
+        : _name(name)
+    {
+
+    }
+
+    const char* Name() const
+    {
+        return _name;
+    }
+
+    auto operator()(Args... args)
+    {
+        if (_functionPointer == nullptr)
+        {
+            throw std::bad_function_call();
+        }
+
+        auto threadState = GetThreadState(std::this_thread::get_id());
+        if (setjmp(threadState->errorHandler) == 0)
+        {
+            return _functionPointer(args...);
+        }
+        else
+        {
+            Log("Call to %s failed\n", _name);
+            throw std::bad_function_call();
+        }
+    }
+
+private:
+    TReturnType (*_functionPointer)(Args...) = nullptr;
+    const char* _name;
+
+    friend class Script;
+};
+
+struct ScriptResource;
+
+class Script : public std::enable_shared_from_this<Script>
+{
+public:
+    Script(ScriptResource* scriptResource);
+
     template<typename TFunc>
-    bool TryBindFunction(const char* name, TFunc& outFunc);
+    bool TryBindFunction(ScriptFunction<TFunc>& outFunction);
+
+    bool TryCompile();
 
 private:
     void* GetSymbolOrNull(const char* name);
+    bool Compile(const char* name, const char* source);
 
-    struct TCCState* _tccState;
-};
+    friend class ScriptCompiler;
 
-//template<typename TReturnType, typename... Args>
-//bool ScriptFunction<TReturnType, Args...>::TryInvokeWithReturnValue(TReturnType& outReturnValue, Args&& ... args)
-//{
-//    static_assert(!std::is_same_v<TReturnType, void>);
-//
-//    if (_func == nullptr)
-//    {
-//        return false;
-//    }
-//    else
-//    {
-//        outReturnValue = _func(args...);
-//        return true;
-//    }
-//}
-
-class ScriptCompiler
-{
-public:
-    bool CompileFromSource(const char* source);
-
-private:
+    struct TCCState* _tccState = nullptr;
+    ScriptResource* _scriptResource;
+    int _currentScriptVersion = -1;
+    bool _compilationDone = false;
+    bool _compilationSuccessful = false;
 };
 
 template<typename TFunc>
-bool Script::TryBindFunction(const char* name, TFunc& outFunc)
+bool Script::TryBindFunction(ScriptFunction<TFunc>& outFunction)
 {
-    outFunc = GetSymbolOrNull(name);
-    return outFunc != nullptr;
+    outFunction._functionPointer = (decltype(outFunction._functionPointer))GetSymbolOrNull(outFunction.Name());
+    return outFunction._functionPointer != nullptr;
 }
 
 #define SCRIPT_CALLABLE(returnType_, name_, params_...) returnType_ name_(params_); \
-    static ScriptCallableInfo g_functioninfo_##name_ { #name_, name_ }; \
+    template<> constexpr const char* ScriptCallableName<decltype(&name_), &name_>() { return #name_; } \
+    static ScriptCallableInfo g_functioninfo_##name_(#name_, (returnType_ (*)(params_))WRAPIT(name_)); \
     returnType_ name_(params_)
-
-#define SCRIPT_FUNCTION(returnType_, name_, params_...) decltype(returnType_) //ScriptFunction<returnType_, params_> name_(#name_)

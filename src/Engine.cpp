@@ -19,6 +19,7 @@
 #include "Tools/MetricsManager.hpp"
 #include "Sound/SoundManager.hpp"
 #include "UI/UI.hpp"
+#include "Scripting/ScriptCompiler.hpp"
 
 using namespace std::chrono;
 
@@ -182,6 +183,8 @@ void Engine::RunFrame()
     AccurateSleepFor(timeUntilUpdate);
     nextGameToRun->RunFrame(GetTimeSeconds());
     nextGameToRun->nextUpdateTime = nextGameToRun->nextUpdateTime + 1.0f / nextGameToRun->targetTickRate;
+
+    ScriptCompiler::GetInstance()->Update();
 }
 
 void Engine::PauseGame()
