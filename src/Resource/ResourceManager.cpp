@@ -75,6 +75,7 @@ static void ReloadResources(ConsoleCommandBinder& binder)
         {
             ResourceSettings settings;
             settings.resourceName = resource->name.c_str();
+            settings.path = resource->path.c_str();
             settings.isHeadlessServer = false;
             if (!resource->LoadFromFile(settings))
             {

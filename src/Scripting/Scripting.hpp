@@ -132,8 +132,8 @@ public:
 
     template<typename TFunc>
     bool TryBindFunction(ScriptFunction<TFunc>& outFunction);
-
     bool TryCompile();
+    bool TryRecompileIfNewer();
 
 private:
     void* GetSymbolOrNull(const char* name);

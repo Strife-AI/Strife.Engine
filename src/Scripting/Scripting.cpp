@@ -85,6 +85,8 @@ static bool HasUnsafeSymbol(const std::string& source)
 
 bool Script::Compile(const char* name, const char* source)
 {
+    _currentScriptVersion = _scriptResource->currentVersion;
+
     if (_tccState != nullptr)
     {
         tcc_delete(_tccState);
@@ -136,6 +138,14 @@ bool Script::TryCompile()
     }
 
     return _compilationSuccessful;
+}
+
+bool Script::TryRecompileIfNewer()
+{
+    if (_currentScriptVersion != _scriptResource->currentVersion)
+    {
+        return TryCompile();
+    }
 }
 
 thread_local ThreadState threadState;

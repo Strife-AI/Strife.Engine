@@ -53,6 +53,7 @@ struct ScriptTrainer : StrifeML::Trainer<ScriptNetwork>
 
     void RunBatch() override
     {
+        script->TryRecompileIfNewer();
         Trainer<ScriptNetwork>::RunBatch();
     }
 
