@@ -241,6 +241,7 @@ struct NeuralNetworkManager
         static_assert(std::is_base_of_v<StrifeML::ITrainer, TTrainer>, "Trainer must inherit from ITrainer<TInput, TOutput>");
         auto trainer = std::make_shared<TTrainer>(std::forward<Args>(constructorArgs) ...);
         auto trainerPtr = trainer.get();
+
         _trainers.emplace(std::move(trainer));
         return trainerPtr;
     }
@@ -259,6 +260,8 @@ struct NeuralNetworkManager
         auto newContext = std::make_shared<StrifeML::NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
         _networksByName[name] = newContext;
         newContext->trainer->networkContext = newContext;
+        trainer->OnCreateNewNetwork(trainer->network);
+
         newContext->decider->networkContext = newContext;
     }
 

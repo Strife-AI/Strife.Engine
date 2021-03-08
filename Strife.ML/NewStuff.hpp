@@ -492,6 +492,7 @@ namespace StrifeML
             newNetworkLock.Lock();
             std::shared_ptr<TNeuralNetwork> result = std::make_shared<TNeuralNetwork>();
             newNetwork = result;
+            trainer->OnCreateNewNetwork(newNetwork);
             torch::load(newNetwork, stream);
             newNetworkLock.Unlock();
 
@@ -563,7 +564,7 @@ namespace StrifeML
             }
         }
 
-        void RunBatch()
+        virtual void RunBatch()
         {
             sampleLock.Lock();
             bool successful = TryCreateBatch(Grid<SampleType>(batchSize, sequenceLength, trainingInput.data.get()));
@@ -602,7 +603,6 @@ namespace StrifeML
         void NotifyTrainingComplete(std::stringstream& serializedNetwork, const TrainingBatchResult& result)
         {
             auto newNetwork = networkContext->SetNewNetwork(serializedNetwork);
-            OnCreateNewNetwork(newNetwork);
 
             OnTrainingComplete(result);
 

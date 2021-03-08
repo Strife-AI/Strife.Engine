@@ -138,27 +138,9 @@ bool Script::TryCompile()
     return _compilationSuccessful;
 }
 
-static std::unordered_map<std::thread::id, std::unique_ptr<ThreadState>> threadStateById;
-static SpinLock threadStateLock;
+thread_local ThreadState threadState;
 
 ThreadState* GetThreadState(std::thread::id threadId)
 {
-    ThreadState* state = nullptr;
-
-    threadStateLock.Lock();
-    {
-        auto result = threadStateById.find(threadId);
-        if (result != threadStateById.end())
-        {
-            state = result->second.get();
-        }
-        else
-        {
-            state = new ThreadState;
-            threadStateById[threadId] = std::unique_ptr<ThreadState>(state);
-        }
-    }
-    threadStateLock.Unlock();
-
-    return state;
+    return &threadState;
 }

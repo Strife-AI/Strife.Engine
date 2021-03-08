@@ -155,7 +155,5 @@ bool Script::TryBindFunction(ScriptFunction<TFunc>& outFunction)
     return outFunction._functionPointer != nullptr;
 }
 
-#define SCRIPT_CALLABLE(returnType_, name_, params_...) returnType_ name_(params_); \
-    template<> constexpr const char* ScriptCallableName<decltype(&name_), &name_>() { return #name_; } \
-    static ScriptCallableInfo g_functioninfo_##name_(#name_, (returnType_ (*)(params_))WRAPIT(name_)); \
-    returnType_ name_(params_)
+#define SCRIPT_CALLABLE(name_) template<> constexpr const char* ScriptCallableName<decltype(&name_), &name_>() { return #name_; } \
+    static ScriptCallableInfo g_functioninfo_##name_(#name_, (decltype(&name_))WRAPIT(name_));
