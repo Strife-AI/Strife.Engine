@@ -38,8 +38,11 @@ void ExecuteOnGameThread(const std::function<void()>& function)
     g_workQueue.Enqueue(function);
 }
 
+void RegisterScriptFunctions();
+
 Engine::Engine(const EngineConfig& config)
 {
+    RegisterScriptFunctions();
     _config = config;
     _defaultBlockAllocator = std::make_unique<BlockAllocator>(config.blockAllocatorSizeBytes);
 

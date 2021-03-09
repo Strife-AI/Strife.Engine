@@ -3,20 +3,20 @@
 #include "torch/torch.h"
 #include "NewStuff.hpp"
 
-struct Tensor
+struct TorchTensor
 {
-    Tensor()
+    TorchTensor()
     {
 
     }
 
-    Tensor(const torch::IntArrayRef& ref)
+    TorchTensor(const torch::IntArrayRef& ref)
         : tensor(torch::zeros(ref, torch::kFloat32))
     {
 
     }
 
-    Tensor(const torch::Tensor& tensor)
+    TorchTensor(const torch::Tensor& tensor)
         : tensor(tensor)
     {
 
@@ -30,14 +30,25 @@ struct Conv2D
     torch::nn::Conv2d conv2d { nullptr };
 };
 
-
-struct TorchContext
+struct TensorDictionary
 {
-    std::vector<std::unique_ptr<Tensor>> tensors;
+    void Add(const char* name, const torch::Tensor& tensor)
+    {
+        tensorsByName[name] = std::make_unique<TorchTensor>(tensor);
+    }
+
+    std::unordered_map<std::string, std::unique_ptr<TorchTensor>> tensorsByName;
 };
 
 struct TorchNetwork
 {
+    TorchNetwork(StrifeML::INeuralNetwork* network)
+        : network(network)
+    {
+
+    }
+
     StrifeML::INeuralNetwork* network;
     std::unordered_map<std::string, std::unique_ptr<Conv2D>> conv2d;
+    std::vector<std::unique_ptr<TorchTensor>> tensors;
 };

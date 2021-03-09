@@ -47,17 +47,6 @@ static void LogCompilerError(void* scriptName, const char* message)
     printf("Failed to compile %s: %s\n", (const char*)scriptName, message);
 }
 
-static std::string GetPrototypes()
-{
-    std::string result;
-    for (auto& callable : GetAllScriptCallableFunctions())
-    {
-        result += callable->prototype + ";\n";
-    }
-
-    return result;
-};
-
 static const char* unsafeSymbols[] =
 {
     "fopen",
@@ -102,10 +91,6 @@ bool Script::Compile(const char* name, const char* source)
     tcc_set_error_func(_tccState, (void*)name, LogCompilerError);
     tcc_set_output_type(_tccState, TCC_OUTPUT_MEMORY);
 
-    auto combinedSource = GetPrototypes() + source;
-
-    printf("%s\n", combinedSource.c_str());
-
     for(auto& callable : GetAllScriptCallableFunctions())
     {
         tcc_add_symbol(_tccState, callable->name, callable->functionPointer);
@@ -113,8 +98,8 @@ bool Script::Compile(const char* name, const char* source)
 
     //tcc_set_options(_tccState, "-b");
 
-    if (tcc_compile_string(_tccState, combinedSource.c_str()) > 0
-        || HasUnsafeSymbol(combinedSource))
+    if (tcc_compile_string(_tccState, source) > 0
+        || HasUnsafeSymbol(source))
     {
         Log("Compilation error!\n");
         tcc_delete(_tccState);
@@ -146,6 +131,8 @@ bool Script::TryRecompileIfNewer()
     {
         return TryCompile();
     }
+
+    return false;
 }
 
 thread_local ThreadState threadState;

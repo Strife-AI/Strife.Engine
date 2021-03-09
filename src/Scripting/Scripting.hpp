@@ -39,8 +39,7 @@ struct ThreadState
 ThreadState* GetThreadState(std::thread::id threadId);
 
 template<typename TFunc, TFunc func>
-constexpr const char* ScriptCallableName();
-
+const char* ScriptCallableName;
 
 template<typename Fn, Fn fn, typename... Args>
 typename std::result_of<Fn(Args...)>::type wrapper(Args... args)
@@ -53,13 +52,14 @@ typename std::result_of<Fn(Args...)>::type wrapper(Args... args)
     {
         // Prevent exceptions from going through the C code, which would crash
         // Instead, do a longjmp to abort the script
-        Log("Aborting call to %s because got instance of %s: %s\n", ScriptCallableName<Fn, fn>(),  typeid(e).name(), e.what());
+        Log("Aborting call to %s because got instance of %s: %s\n", ScriptCallableName<Fn, fn>,  typeid(e).name(), e.what());
         auto threadState = GetThreadState(std::this_thread::get_id());
         longjmp(threadState->errorHandler, 1);
     }
 }
 
 #define WRAPIT(FUNC) wrapper<decltype(&FUNC), &FUNC>
+
 struct ScriptCallableInfo
 {
     template<typename TFunc>
@@ -155,5 +155,5 @@ bool Script::TryBindFunction(ScriptFunction<TFunc>& outFunction)
     return outFunction._functionPointer != nullptr;
 }
 
-#define SCRIPT_CALLABLE(name_) template<> constexpr const char* ScriptCallableName<decltype(&name_), &name_>() { return #name_; } \
-    static ScriptCallableInfo g_functioninfo_##name_(#name_, (decltype(&name_))WRAPIT(name_));
+#define SCRIPT_REGISTER(name_) static ScriptCallableInfo g_functioninfo_##name_(#name_, (decltype(&name_))WRAPIT(name_)); \
+ScriptCallableName<decltype(&name_), name_> = #name_;

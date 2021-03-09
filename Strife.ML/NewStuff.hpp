@@ -492,8 +492,8 @@ namespace StrifeML
             newNetworkLock.Lock();
             std::shared_ptr<TNeuralNetwork> result = std::make_shared<TNeuralNetwork>();
             newNetwork = result;
-            trainer->OnCreateNewNetwork(newNetwork);
             torch::load(newNetwork, stream);
+            trainer->OnCreateNewNetwork(newNetwork);
             newNetworkLock.Unlock();
 
             return result;
@@ -626,7 +626,7 @@ namespace StrifeML
         float trainsPerSecond;
         std::shared_ptr<ScheduledTask> trainTask;
         std::shared_ptr<NetworkContext<TNeuralNetwork>> networkContext;
-        std::shared_ptr<TNeuralNetwork> network = std::make_shared<TNeuralNetwork>();
+        std::shared_ptr<TNeuralNetwork> network;
         bool isTraining = false;
         int minSamplesBeforeStartingTraining = 32;
         int totalSamples = 0;

@@ -259,7 +259,9 @@ struct NeuralNetworkManager
 
         auto newContext = std::make_shared<StrifeML::NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
         _networksByName[name] = newContext;
-        newContext->trainer->networkContext = newContext;
+
+        trainer->networkContext = newContext;
+        trainer->network = std::make_shared<typename TDecider::NetworkType>();
         trainer->OnCreateNewNetwork(trainer->network);
 
         newContext->decider->networkContext = newContext;

@@ -25,20 +25,35 @@ struct ScriptNetwork : StrifeML::NeuralNetwork<DynamicNetworkInput, DynamicNetwo
 
     void TrainBatch(Grid<const SampleType> input, StrifeML::TrainingBatchResult& outResult) override
     {
-        printf("Train batch\n");
-        train(nullptr);
+        TensorDictionary tensorInput;
+        tensorInput.Add("featureInput", torch::zeros({ 1, 1, 10, 10 }));
+
+        try
+        {
+            auto result = train(&torchNetwork, &tensorInput);
+        }
+        catch (...)
+        {
+            // TODO
+        }
     }
 
-    void BindCallbacks(std::shared_ptr<Script> script)
+    void BindCallbacks(std::shared_ptr<Script> script, bool runSetup)
     {
-        Log("Bind callbacks\n");
         if (!script->TryBindFunction(train))
         {
             Log("Failed to bind train function\n");
         }
+
+        if (script->TryBindFunction(setup) && runSetup)
+        {
+            setup(&torchNetwork);
+        }
     }
 
-    ScriptFunction<void(TorchNetwork*)> train { "Train" };
+    ScriptFunction<void(TorchNetwork*)> setup { "Setup" };
+    ScriptFunction<TorchTensor* (TorchNetwork*, TensorDictionary*)> train { "Train" };
+    TorchNetwork torchNetwork { this };
 };
 
 struct ScriptTrainer : StrifeML::Trainer<ScriptNetwork>
@@ -48,12 +63,18 @@ struct ScriptTrainer : StrifeML::Trainer<ScriptNetwork>
           scriptResource(scriptResource)
     {
         minSamplesBeforeStartingTraining = -1;
-        Recompile();
+        script = scriptResource->CreateScript();
+        script->TryCompile();   // TODO error checking
     }
 
     void RunBatch() override
     {
-        script->TryRecompileIfNewer();
+        if (script->TryRecompileIfNewer())
+        {
+            Log("Successfully recompiled\n");
+            network->BindCallbacks(script, false);
+        }
+
         Trainer<ScriptNetwork>::RunBatch();
     }
 
@@ -62,15 +83,9 @@ struct ScriptTrainer : StrifeML::Trainer<ScriptNetwork>
         return true;
     }
 
-    void Recompile()
-    {
-        script = scriptResource->CreateScript();
-        script->TryCompile();
-    }
-
     void OnCreateNewNetwork(std::shared_ptr<NetworkType> newNetwork)
     {
-        newNetwork->BindCallbacks(script);
+        newNetwork->BindCallbacks(script, true);
     }
 
     ScriptResource* scriptResource;
