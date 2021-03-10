@@ -33,6 +33,11 @@ namespace Scripting
         torch::nn::Conv2d conv2d{ nullptr };
     };
 
+    struct LinearLayerImpl
+    {
+        torch::nn::Linear linear{ nullptr };
+    };
+
     struct TensorDictionary
     {
         void Add(const char* name, const torch::Tensor& tensor)
@@ -45,9 +50,6 @@ namespace Scripting
 
     template<typename T>
     const char* HandleName();
-
-    template<> constexpr const char* HandleName<Conv2D>() { return "Conv2D"; }
-    template<> constexpr const char* HandleName<Tensor>() { return "Tensor"; }
 
     template<typename THandle, typename TObj>
     struct HandleMap
@@ -126,6 +128,7 @@ namespace Scripting
 
         StrifeML::INeuralNetwork* network;
         NamedHandleMap<Conv2D, Conv2DImpl> conv2d;
+        NamedHandleMap<LinearLayer, LinearLayerImpl> linearLayer;
     };
 
     struct ScriptingState

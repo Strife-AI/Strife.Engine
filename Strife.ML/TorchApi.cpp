@@ -5,6 +5,10 @@
 namespace Scripting
 {
 
+template<> constexpr const char* HandleName<Conv2D>() { return "Conv2D"; }
+template<> constexpr const char* HandleName<Tensor>() { return "Tensor"; }
+template<> constexpr const char* HandleName<LinearLayer>() { return "LinearLayer"; }
+
 thread_local ScriptingState g_scriptState;
 
 ScriptingState* GetScriptingState()
@@ -41,6 +45,12 @@ Conv2D conv2d_get(const char* name)
     tensorOutput->tensor = convImpl->conv2d->memberFunction_(tensorInput->tensor);                                  \
 }
 
+#define TENSOR_FUNCTION(name_, torchName_) void name_(Tensor input) \
+{                                                                                  \
+    auto tensorInput = g_scriptState.tensors.Get(input);                           \
+    tensorInput->tensor = torch::torchName_(tensorInput->tensor);                 \
+}
+
 CONV2D_MEMBER_FUNCTION(conv2d_forward, forward)
 
 Tensor tensor_new()
@@ -49,10 +59,38 @@ Tensor tensor_new()
     return handle;
 }
 
+Tensor tensor_clone(Tensor input)
+{
+    auto [obj, handle] = g_scriptState.tensors.Create(g_scriptState.tensors.Get(input)->tensor);
+    return handle;
+}
+
 Tensor tensor_new_4d(int x, int y, int z, int w)
 {
     auto [obj, handle] = g_scriptState.tensors.Create(torch::IntArrayRef { x, y, z, w });
     return handle;
+}
+
+TENSOR_FUNCTION(relu, relu)
+
+LinearLayer linearlayer_add(const char* name, int totalFeatures, int hiddenNodesCount)
+{
+    auto network = GetNetwork();
+    auto [obj, handle] = network->linearLayer.Create(name);
+    network->network->register_module(name, torch::nn::Linear(totalFeatures, hiddenNodesCount));
+    return handle;
+}
+
+LinearLayer linearlayer_get(const char* name)
+{
+    return GetNetwork()->linearLayer.GetHandleByName(name);
+}
+
+void linearlayer_forward(LinearLayer layer, Tensor input)
+{
+    auto layerImpl = GetNetwork()->linearLayer.Get(layer);
+    auto tensorInput = g_scriptState.tensors.Get(input);
+    tensorInput->tensor = layerImpl->linear->forward(tensorInput->tensor);
 }
 
 }
