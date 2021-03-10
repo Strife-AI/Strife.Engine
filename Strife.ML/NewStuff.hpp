@@ -3,6 +3,7 @@
 #include <random>
 #include <unordered_set>
 #include <gsl/span>
+#include <cstdarg>
 
 #include "Container/Grid.hpp"
 #include "Thread/TaskScheduler.hpp"
@@ -47,10 +48,14 @@ namespace StrifeML
 
         }
 
-        StrifeException(const char* message_)
-            : message(message_)
+        StrifeException(const char* format, ...)
         {
+            va_list args;
+            va_start (args, format);
 
+            char buf[1024];
+            vsnprintf(buf, sizeof(buf), format, args);
+            message = buf;
         }
 
         const char* what()  const noexcept override

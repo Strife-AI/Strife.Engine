@@ -1,18 +1,22 @@
 #ifndef TORCH_API_H
 #define TORCH_API_H
 
-typedef struct Conv2D Conv2D;
-typedef struct TorchNetwork TorchNetwork;
-typedef struct TorchTensor TorchTensor;
-typedef struct TensorDictionary TensorDictionary;
+#ifdef __cplusplus
+namespace Scripting {
+#endif
 
-TorchTensor* tensor_new(TorchNetwork* network);
-TorchTensor* tensor_new_4d(TorchNetwork* network, int x, int y, int z, int w);
+typedef struct Conv2D { int handle; } Conv2D;
+typedef struct Tensor { int handle; } Tensor;
 
-Conv2D* network_conv2d_add(TorchNetwork* network, const char* name, int a, int b, int c);
-Conv2D* network_conv2d_get(TorchNetwork* network, const char* name);
-void conv2d_forward(Conv2D* conv, TorchTensor* input, TorchTensor* output);
+Tensor tensor_new();
+Tensor tensor_new_4d(int x, int y, int z, int w);
 
-TorchTensor* tensordictionary_get(TensorDictionary* dictionary, const char* name);
+Conv2D conv2d_add(const char* name, int a, int b, int c);
+Conv2D conv2d_get(const char* name);
+void conv2d_forward(Conv2D conv, Tensor input, Tensor output);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif

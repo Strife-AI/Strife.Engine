@@ -1,6 +1,7 @@
 #pragma once
 
 #include <torch/torch.h>
+#include <Strife.ML/TorchApi.h>
 #include "ML.hpp"
 #include "Scripting/Scripting.hpp"
 #include "Strife.ML/TorchApiInternal.hpp"
@@ -25,12 +26,9 @@ struct ScriptNetwork : StrifeML::NeuralNetwork<DynamicNetworkInput, DynamicNetwo
 
     void TrainBatch(Grid<const SampleType> input, StrifeML::TrainingBatchResult& outResult) override
     {
-        TensorDictionary tensorInput;
-        tensorInput.Add("featureInput", torch::zeros({ 1, 1, 10, 10 }));
-
         try
         {
-            auto result = train(&torchNetwork, &tensorInput);
+            DoScriptCall([=] { train(); });
         }
         catch (...)
         {
@@ -47,13 +45,23 @@ struct ScriptNetwork : StrifeML::NeuralNetwork<DynamicNetworkInput, DynamicNetwo
 
         if (script->TryBindFunction(setup) && runSetup)
         {
-            setup(&torchNetwork);
+            DoScriptCall([=] { setup(); });
         }
     }
 
-    ScriptFunction<void(TorchNetwork*)> setup { "Setup" };
-    ScriptFunction<TorchTensor* (TorchNetwork*, TensorDictionary*)> train { "Train" };
-    TorchNetwork torchNetwork { this };
+    template<typename TFunc>
+    void DoScriptCall(TFunc func)
+    {
+        auto scriptState = Scripting::GetScriptingState();
+        scriptState->network = &networkState;
+        func();
+        scriptState->tensors.objects.clear();
+        scriptState->network = nullptr;
+    }
+
+    ScriptFunction<void()> setup { "Setup" };
+    ScriptFunction<Scripting::Tensor()> train { "Train" };
+    Scripting::NetworkState networkState { this };
 };
 
 struct ScriptTrainer : StrifeML::Trainer<ScriptNetwork>

@@ -2,68 +2,57 @@
 #include "TorchApiInternal.hpp"
 #include "NewStuff.hpp"
 
+namespace Scripting
+{
+
+thread_local ScriptingState g_scriptState;
+
+ScriptingState* GetScriptingState()
+{
+    return &g_scriptState;
+}
+
+NetworkState* GetNetwork() { return g_scriptState.network; }
+
 #define NOT_NULL(name_) { if (name_ == nullptr) throw StrifeML::StrifeException("Paramater " + std::string(#name_) + " is NULL"); }
 
-Conv2D* network_conv2d_add(TorchNetwork* network, const char* name, int a, int b, int c)
-{
-    NOT_NULL(network); NOT_NULL(name);
 
-    auto conv = new Conv2D;
-    network->conv2d[name] = std::unique_ptr<Conv2D>(conv);
+Conv2D conv2d_add(const char* name, int a, int b, int c)
+{
+    NOT_NULL(name);
+
+    auto network = GetNetwork();
+    auto [conv, handle] = network->conv2d.Create(name);
     conv->conv2d = network->network->register_module(name, torch::nn::Conv2d { a, b, c });
-    return conv;
+    return handle;
 }
 
-Conv2D* network_conv2d_get(TorchNetwork* network, const char* name)
+Conv2D conv2d_get(const char* name)
 {
-    NOT_NULL(network); NOT_NULL(name);
-
-    auto it = network->conv2d.find(name);
-    if (it != network->conv2d.end())
-    {
-        return it->second.get();
-    }
-    else
-    {
-        throw StrifeML::StrifeException("Missing conv2d: " + std::string(name));
-    }
+    NOT_NULL(name);
+    return GetNetwork()->conv2d.GetHandleByName(name);
 }
 
-void conv2d_forward(Conv2D* conv, TorchTensor* input, TorchTensor* output)
-{
-    NOT_NULL(conv); NOT_NULL(input); NOT_NULL(output);
-    output->tensor = conv->conv2d->forward(input->tensor);
+#define CONV2D_MEMBER_FUNCTION(name_, memberFunction_) void name_(Conv2D conv, Tensor input, Tensor output) \
+{                                                                                                           \
+    auto convImpl = GetNetwork()->conv2d.Get(conv);                                                         \
+    auto tensorInput = g_scriptState.tensors.Get(input);                                                    \
+    auto tensorOutput = g_scriptState.tensors.Get(output);                                                  \
+    tensorOutput->tensor = convImpl->conv2d->memberFunction_(tensorInput->tensor);                                  \
 }
 
-TorchTensor* tensor_new(TorchNetwork* network)
-{
-    NOT_NULL(network);
+CONV2D_MEMBER_FUNCTION(conv2d_forward, forward)
 
-    auto tensor = new TorchTensor;
-    network->tensors.push_back(std::unique_ptr<TorchTensor>(tensor));
-    return tensor;
+Tensor tensor_new()
+{
+    auto [obj, handle] = g_scriptState.tensors.Create();
+    return handle;
 }
 
-TorchTensor* tensor_new_4d(TorchNetwork* network, int x, int y, int z, int w)
+Tensor tensor_new_4d(int x, int y, int z, int w)
 {
-    NOT_NULL(network);
-
-    auto tensor = new TorchTensor(torch::IntArrayRef { x, y, z, w });
-    network->tensors.push_back(std::unique_ptr<TorchTensor>(tensor));
-    return tensor;
+    auto [obj, handle] = g_scriptState.tensors.Create(torch::IntArrayRef { x, y, z, w });
+    return handle;
 }
 
-TorchTensor* tensordictionary_get(TensorDictionary* dictionary, const char* name)
-{
-    NOT_NULL(dictionary); NOT_NULL(name);
-
-    auto it = dictionary->tensorsByName.find(name);
-    if (it != dictionary->tensorsByName.end())
-    {
-        return it->second.get();
-    }
-    else
-    {
-        throw StrifeML::StrifeException("Missing tensor in dictionary: " + std::string(name));
-    }
 }
