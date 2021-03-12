@@ -70,6 +70,43 @@ namespace StrifeML
     struct ObjectSerializer;
 
     template<typename T>
+    const char* ObjectSerializerName();
+
+    template<> inline const char* ObjectSerializerName<float>() { return "float"; }
+    template<> inline const char* ObjectSerializerName<int>() { return "int"; }
+
+    struct ObjectSerializerProperty
+    {
+        ObjectSerializerProperty()
+            : type(nullptr),
+            offset(0)
+        {
+
+        }
+
+        ObjectSerializerProperty(const char* type, int offset)
+            : type(type),
+            offset(offset)
+        {
+
+        }
+
+        const char* type;
+        int offset;
+    };
+
+    struct ObjectSerializerSchema
+    {
+        template<typename T>
+        void AddProperty(const char* name, int offset)
+        {
+            propertiesByName[name] = ObjectSerializerProperty(ObjectSerializerName<T>(), offset);
+        }
+
+        std::unordered_map<std::string, ObjectSerializerProperty> propertiesByName;
+    };
+
+    template<typename T>
     void Serialize(T& value, ObjectSerializer& serializer);
 
     struct ObjectSerializer
@@ -83,16 +120,26 @@ namespace StrifeML
 
         // Create a template specialization of Serialize<> to serialize custom types
         template<typename T, std::enable_if_t<!(std::is_arithmetic_v<T> || std::is_enum_v<T>)>* = nullptr>
-        ObjectSerializer& Add(T& value)
+        ObjectSerializer& Add(T& value, const char* name)
         {
+            if (schema != nullptr)
+            {
+                schema->template AddProperty<T>(name, (int)bytes.size());
+            }
+
             Serialize(value, *this);
             return *this;
         }
 
         // Arithmetic types are default serialized to bytes; everything else needs to define a custom serialization method
         template<typename T, std::enable_if_t<std::is_arithmetic_v<T> || std::is_enum_v<T>>* = nullptr>
-        ObjectSerializer& Add(T& value)
+        ObjectSerializer& Add(T& value, const char* name)
         {
+            if (schema != nullptr)
+            {
+                schema->template AddProperty<T>(name, (int)bytes.size());
+            }
+
             AddBytes(reinterpret_cast<unsigned char*>(&value), sizeof(T));
             return *this;
         }
@@ -106,6 +153,8 @@ namespace StrifeML
         }
 
         std::vector<unsigned char>& bytes;
+        ObjectSerializerSchema* schema = nullptr;
+
         bool isReading;
         int readOffset = 0;
         bool hadError = false;

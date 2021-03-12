@@ -1,5 +1,6 @@
 #pragma once
 
+#include <variant>
 #include <torch/torch.h>
 #include <Strife.ML/TorchApi.h>
 #include "ML.hpp"
@@ -7,19 +8,12 @@
 #include "Strife.ML/TorchApiInternal.hpp"
 #include "Resource/ScriptResource.hpp"
 
-struct DynamicNetworkInput
+template<typename TInput, typename TOutput>
+struct ScriptNetwork : StrifeML::NeuralNetwork<TInput, TOutput, 1>
 {
+    using SampleType = StrifeML::Sample<TInput, TOutput>;
 
-};
-
-struct DynamicNetworkOutput
-{
-
-};
-
-struct ScriptNetwork : StrifeML::NeuralNetwork<DynamicNetworkInput, DynamicNetworkOutput, 1>
-{
-    void MakeDecision(Grid<const InputType> input, OutputType& output) override
+    void MakeDecision(Grid<const TInput> input, TOutput& output) override
     {
 
     }
@@ -64,13 +58,17 @@ struct ScriptNetwork : StrifeML::NeuralNetwork<DynamicNetworkInput, DynamicNetwo
     Scripting::NetworkState networkState { this };
 };
 
-struct ScriptTrainer : StrifeML::Trainer<ScriptNetwork>
+template<typename TInput, typename TOutput>
+struct ScriptTrainer : StrifeML::Trainer<ScriptNetwork<TInput, TOutput>>
 {
+    using SampleType = StrifeML::Sample<TInput, TOutput>;
+    using NetworkType = ScriptNetwork<TInput, TOutput>;
+
     ScriptTrainer(ScriptResource* scriptResource)
-        : StrifeML::Trainer<ScriptNetwork>(1, 1),
+        : StrifeML::Trainer<ScriptNetwork<TInput, TOutput>>(1, 1),
           scriptResource(scriptResource)
     {
-        minSamplesBeforeStartingTraining = -1;
+        this->minSamplesBeforeStartingTraining = -1;
         script = scriptResource->CreateScript();
         script->TryCompile();   // TODO error checking
     }
@@ -80,10 +78,10 @@ struct ScriptTrainer : StrifeML::Trainer<ScriptNetwork>
         if (script->TryRecompileIfNewer())
         {
             Log("Successfully recompiled\n");
-            network->BindCallbacks(script, false);
+            this->network->BindCallbacks(script, false);
         }
 
-        Trainer<ScriptNetwork>::RunBatch();
+        StrifeML::Trainer<NetworkType>::RunBatch();
     }
 
     bool TryCreateBatch(Grid<SampleType> outBatch) override
@@ -100,7 +98,8 @@ struct ScriptTrainer : StrifeML::Trainer<ScriptNetwork>
     std::shared_ptr<Script> script;
 };
 
-struct ScriptDecider : StrifeML::Decider<ScriptNetwork>
+template<typename TInput, typename TOutput>
+struct ScriptDecider : StrifeML::Decider<ScriptNetwork<TInput, TOutput>>
 {
 
 };

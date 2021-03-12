@@ -11,7 +11,8 @@
 template<>
 inline void StrifeML::Serialize<Vector2>(Vector2& value, StrifeML::ObjectSerializer& serializer)
 {
-    serializer.Add(value.x).Add(value.y);
+    Serialize(value.x, serializer);
+    Serialize(value.y, serializer);
 }
 
 enum class NeuralNetworkMode
@@ -403,17 +404,17 @@ struct GridSensorOutput
     {
         int rows = Rows;
         int cols = Cols;
-        serializer.Add(rows);
-        serializer.Add(cols);
+        Serialize(rows, serializer);
+        Serialize(cols, serializer);
 
         // Dimensions of serialized grid must match the grid being deserialized into
         assert(rows == Rows);
         assert(cols == Cols);
 
-        serializer.Add(_isCompressed);
+        Serialize(_isCompressed, serializer);
         if(_isCompressed)
         {
-            serializer.Add(_totalRectangles);
+            Serialize(_totalRectangles, serializer);
             serializer.AddBytes(compressedRectangles, _totalRectangles);
         }
         else
