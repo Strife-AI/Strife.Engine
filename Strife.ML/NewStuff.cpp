@@ -1,4 +1,6 @@
 #include "NewStuff.hpp"
+#include "torch/nn/module.h"
+#include "torch/serialize.h"
 
 namespace StrifeML
 {
@@ -30,5 +32,20 @@ namespace StrifeML
                 bytes.push_back(data[i]);
             }
         }
+    }
+
+    std::shared_ptr<torch::nn::Module> CreateModule()
+    {
+        return std::shared_ptr<torch::nn::Module>();
+    }
+
+    void TorchLoad(std::shared_ptr<torch::nn::Module> module, std::stringstream& stream)
+    {
+        torch::load(module, stream);
+    }
+
+    void TorchSave(std::shared_ptr<torch::nn::Module> module, std::stringstream& stream)
+    {
+        torch::save(module, stream);
     }
 }

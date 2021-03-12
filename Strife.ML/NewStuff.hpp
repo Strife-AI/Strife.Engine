@@ -4,15 +4,26 @@
 #include <unordered_set>
 #include <gsl/span>
 #include <cstdarg>
+#include <cassert>
 
 #include "Container/Grid.hpp"
 #include "Thread/TaskScheduler.hpp"
 #include "Thread/ThreadPool.hpp"
-#include "torch/nn/module.h"
-#include "torch/serialize.h"
+
+namespace torch
+{
+    namespace nn
+    {
+        class Module;
+    }
+}
 
 namespace StrifeML
 {
+    std::shared_ptr<torch::nn::Module> CreateModule();
+    void TorchLoad(std::shared_ptr<torch::nn::Module> module, std::stringstream& stream);
+    void TorchSave(std::shared_ptr<torch::nn::Module> module, std::stringstream& stream);
+
     namespace MlUtil
     {
         template<typename T>
@@ -189,8 +200,9 @@ namespace StrifeML
         virtual void Serialize(ObjectSerializer& serializer) = 0;
     };
 
-    struct INeuralNetwork : torch::nn::Module
+    struct INeuralNetwork
     {
+        std::shared_ptr<torch::nn::Module> module = CreateModule();
         virtual ~INeuralNetwork() = default;
     };
 
@@ -546,7 +558,7 @@ namespace StrifeML
             newNetworkLock.Lock();
             std::shared_ptr<TNeuralNetwork> result = std::make_shared<TNeuralNetwork>();
             newNetwork = result;
-            torch::load(newNetwork, stream);
+            TorchLoad(newNetwork->module, stream);
             trainer->OnCreateNewNetwork(newNetwork);
             newNetworkLock.Unlock();
 
@@ -692,7 +704,7 @@ namespace StrifeML
         Grid<const SampleType> input(batchSize, sequenceLength, samples.data.get());
         network->TrainBatch(input, _result);
         std::stringstream stream;
-        torch::save(network, stream);
+        TorchSave(network->module, stream);
         trainer->NotifyTrainingComplete(stream, _result);
     }
 }

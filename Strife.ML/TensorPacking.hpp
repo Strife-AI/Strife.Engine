@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <torch/torch.h>
 
 #include "ML/ML.hpp"
 

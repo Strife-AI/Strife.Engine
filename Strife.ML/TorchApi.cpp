@@ -27,7 +27,7 @@ Conv2D conv2d_add(const char* name, int a, int b, int c)
 
     auto network = GetNetwork();
     auto [conv, handle] = network->conv2d.Create(name);
-    conv->conv2d = network->network->register_module(name, torch::nn::Conv2d { a, b, c });
+    conv->conv2d = network->network->module->register_module(name, torch::nn::Conv2d { a, b, c });
     return handle;
 }
 
@@ -77,7 +77,7 @@ LinearLayer linearlayer_add(const char* name, int totalFeatures, int hiddenNodes
 {
     auto network = GetNetwork();
     auto [obj, handle] = network->linearLayer.Create(name);
-    network->network->register_module(name, torch::nn::Linear(totalFeatures, hiddenNodesCount));
+    network->network->module->register_module(name, torch::nn::Linear(totalFeatures, hiddenNodesCount));
     return handle;
 }
 
