@@ -262,6 +262,7 @@ namespace StrifeML
             return this;
         }
 
+    	bool TryPickSequence(TSelector groupSelector, gsl::span<TSample> outSamples);
         bool TryPickRandomSequence(gsl::span<TSample> outSamples);
 
         void AddSample(const TSample& sample, int sampleId) override
@@ -347,6 +348,56 @@ namespace StrifeML
         RandomNumberGenerator& _rng;
     };
 
+    template <typename TSample, typename TSelector>
+    bool GroupedSampleView<TSample, TSelector>::TryPickSequence(TSelector groupSelector, gsl::span<TSample> outSamples)
+    {
+    	int minSampleId = outSamples.size() - 1;
+    	auto& groupToSampleFrom = _samplesBySelectorType[groupSelector];
+
+        if (groupToSampleFrom.empty())
+		{
+		    return false;
+		}
+
+		// The largest sample id in this group isn't big enough to have N samples before it
+		if (groupToSampleFrom[groupToSampleFrom.size() - 1] < minSampleId)
+		{
+		    return false;
+		}
+            	
+        int groupIndexStart = 0;
+        int endSampleId = 0;
+        bool found = false;
+
+    	auto& rng = _owner->GetRandomNumberGenerator();
+        while(groupIndexStart < groupToSampleFrom.size())
+        {
+            int groupIndex = rng.RandInt(groupIndexStart, groupToSampleFrom.size() - 1);
+            if(groupToSampleFrom[groupIndex] < minSampleId)
+            {
+                groupIndexStart = groupIndex + 1;
+            }
+            else
+            {
+                endSampleId = groupIndex;
+                found = true;
+                break;
+            }
+        }
+
+        // Should be impossible because we checked to make sure the list had at least one sample id big enough
+        assert(found);
+
+        for(int i = 0; i < outSamples.size(); ++i)
+        {
+            int sampleId = endSampleId - (outSamples.size() - 1 - i);
+            bool gotSample = _owner->TryGetSampleById(sampleId, outSamples[i]);
+            assert(gotSample);
+        }
+
+        return true;
+    }
+	
     template <typename TSample, typename TSelector>
     bool GroupedSampleView<TSample, TSelector>::TryPickRandomSequence(gsl::span<TSample> outSamples)
     {
