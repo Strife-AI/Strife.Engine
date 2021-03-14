@@ -38,16 +38,6 @@ namespace Scripting
         torch::nn::Linear linear{ nullptr };
     };
 
-    struct TensorDictionary
-    {
-        void Add(const char* name, const torch::Tensor& tensor)
-        {
-            tensorsByName[name] = std::make_unique<TensorImpl>(tensor);
-        }
-
-        std::unordered_map<std::string, std::unique_ptr<TensorImpl>> tensorsByName;
-    };
-
     template<typename T>
     const char* HandleName();
 
@@ -118,6 +108,19 @@ namespace Scripting
         std::unordered_map<std::string, int> objectsByName;
     };
 
+    struct SerializedInput
+    {
+        SerializedInput()
+            : serializer(bytes, false, &schema)
+        {
+
+        }
+
+        std::vector<unsigned char> bytes;
+        StrifeML::ObjectSerializerSchema schema;
+        StrifeML::ObjectSerializer serializer;
+    };
+
     struct NetworkState
     {
         NetworkState(StrifeML::INeuralNetwork* network)
@@ -129,11 +132,13 @@ namespace Scripting
         StrifeML::INeuralNetwork* network;
         NamedHandleMap<Conv2D, Conv2DImpl> conv2d;
         NamedHandleMap<LinearLayer, LinearLayerImpl> linearLayer;
+
+        Grid<SerializedInput> input;
     };
 
     struct ScriptingState
     {
-        NetworkState* network;
+        NetworkState* network = nullptr;
         HandleMap<Tensor, TensorImpl> tensors;
     };
 

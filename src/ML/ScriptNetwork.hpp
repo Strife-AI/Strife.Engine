@@ -8,6 +8,7 @@
 #include "Strife.ML/TorchApiInternal.hpp"
 #include "Resource/ScriptResource.hpp"
 
+
 template<typename TInput, typename TOutput>
 struct ScriptNetwork : StrifeML::NeuralNetwork<TInput, TOutput, 1>
 {
@@ -20,6 +21,22 @@ struct ScriptNetwork : StrifeML::NeuralNetwork<TInput, TOutput, 1>
 
     void TrainBatch(Grid<const SampleType> input, StrifeML::TrainingBatchResult& outResult) override
     {
+        VariableSizedGrid<Scripting::SerializedInput> serializedInput(input.Rows(), input.Cols());
+
+        for (int i = 0; i < input.Rows(); ++i)
+        {
+            for (int j = 0; j < input.Cols(); ++j)
+            {
+                // Safe to remove constness because we're in writing mode
+                auto inputElement = const_cast<SampleType&>(input[i][j]);
+                serializedInput[i][j].serializer.isReading = false;
+                inputElement.input.Serialize(serializedInput[i][j].serializer);
+                inputElement.output.Serialize(serializedInput[i][j].serializer);
+            }
+        }
+
+        networkState.input = serializedInput;
+
         try
         {
             DoScriptCall([=] { train(); });
@@ -28,6 +45,8 @@ struct ScriptNetwork : StrifeML::NeuralNetwork<TInput, TOutput, 1>
         {
             // TODO
         }
+
+        networkState.input.Set(0, 0, nullptr);
     }
 
     void BindCallbacks(std::shared_ptr<Script> script, bool runSetup)

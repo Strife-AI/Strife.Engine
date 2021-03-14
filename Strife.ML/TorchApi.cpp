@@ -1,6 +1,7 @@
 #include "TorchApi.h"
 #include "TorchApiInternal.hpp"
 #include "NewStuff.hpp"
+#include "TensorPacking.hpp"
 
 namespace Scripting
 {
@@ -18,7 +19,7 @@ ScriptingState* GetScriptingState()
 
 NetworkState* GetNetwork() { return g_scriptState.network; }
 
-#define NOT_NULL(name_) { if (name_ == nullptr) throw StrifeML::StrifeException("Paramater " + std::string(#name_) + " is NULL"); }
+#define NOT_NULL(name_) { if (name_ == nullptr) throw StrifeML::StrifeException("Parameter " + std::string(#name_) + " is NULL"); }
 
 
 Conv2D conv2d_add(const char* name, int a, int b, int c)
@@ -91,6 +92,55 @@ void linearlayer_forward(LinearLayer layer, Tensor input)
     auto layerImpl = GetNetwork()->linearLayer.Get(layer);
     auto tensorInput = g_scriptState.tensors.Get(input);
     tensorInput->tensor = layerImpl->linear->forward(tensorInput->tensor);
+}
+
+
+template<typename T>
+T GetProperty(StrifeML::ObjectSerializer& serializer, const char* name)
+{
+    auto it = serializer.schema->propertiesByName.find(name);
+    if (it == serializer.schema->propertiesByName.end())
+    {
+        throw StrifeML::StrifeException("No such input property: %s", name);
+    }
+    else
+    {
+        auto expectedType = StrifeML::ObjectSerializerName<T>();
+        if (strcmp(it->second.type, expectedType) != 0)
+        {
+            throw StrifeML::StrifeException(
+                "%s is of type %s, but expected %s",
+                name,
+                it->second.type,
+                expectedType);
+        }
+
+        T result;
+        serializer.Seek(it->second.offset);
+        StrifeML::Serializer<T>::Serialize(result, serializer);
+        return result;
+    }
+}
+
+Tensor pack_float_array(const char* attributeNames[], int count)
+{
+    const int maxAttributes = 100;
+    NOT_NULL(attributeNames);
+    if (count < 0 || count > maxAttributes) throw StrifeML::StrifeException("Invalid value for count: %d", count);
+
+    float data[maxAttributes];
+
+    auto [obj, handle] = g_scriptState.tensors.Create(StrifeML::PackIntoTensor(g_scriptState.network->input, [&](const SerializedInput& input) -> gsl::span<float>
+    {
+        for (int i = 0; i < count; ++i)
+        {
+            data[i] = GetProperty<float>(const_cast<SerializedInput&>(input).serializer, attributeNames[i]);
+        }
+
+        return gsl::span<float>(data, count);
+    }));
+
+    return handle;
 }
 
 }

@@ -36,7 +36,7 @@ namespace StrifeML
 
     std::shared_ptr<torch::nn::Module> CreateModule()
     {
-        return std::shared_ptr<torch::nn::Module>();
+        return std::make_shared<torch::nn::Module>();
     }
 
     void TorchLoad(std::shared_ptr<torch::nn::Module> module, std::stringstream& stream)

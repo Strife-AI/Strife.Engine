@@ -9,11 +9,14 @@
 #include "Scene/Scene.hpp"
 
 template<>
-inline void StrifeML::Serialize<Vector2>(Vector2& value, StrifeML::ObjectSerializer& serializer)
+struct StrifeML::Serializer<Vector2>
 {
-    Serialize(value.x, serializer);
-    Serialize(value.y, serializer);
-}
+    static void Serialize(Vector2& value, StrifeML::ObjectSerializer& serializer)
+    {
+        Serializer<float>::Serialize(value.x, serializer);
+        Serializer<float>::Serialize(value.y, serializer);
+    }
+};
 
 enum class NeuralNetworkMode
 {
@@ -263,6 +266,7 @@ struct NeuralNetworkManager
 
         trainer->networkContext = newContext;
         trainer->network = std::make_shared<typename TDecider::NetworkType>();
+
         trainer->OnCreateNewNetwork(trainer->network);
 
         newContext->decider->networkContext = newContext;

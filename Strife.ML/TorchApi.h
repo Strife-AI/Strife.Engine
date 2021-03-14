@@ -8,6 +8,7 @@ namespace Scripting {
 typedef struct Conv2D { int handle; } Conv2D;
 typedef struct Tensor { int handle; } Tensor;
 typedef struct LinearLayer { int handle; } LinearLayer;
+typedef struct Input { int handle; } Input;
 
 Tensor tensor_new();
 Tensor tensor_new_4d(int x, int y, int z, int w);
@@ -22,6 +23,8 @@ LinearLayer linearlayer_get(const char* name);
 void linearlayer_forward(LinearLayer layer, Tensor input);
 
 void relu(Tensor input);
+
+Tensor pack_float_array(const char* attributeNames[], int count);
 
 #ifdef __cplusplus
 };

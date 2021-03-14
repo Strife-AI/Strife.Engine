@@ -18,4 +18,6 @@ void RegisterScriptFunctions()
     SCRIPT_REGISTER(linearlayer_add);
     SCRIPT_REGISTER(linearlayer_get);
     SCRIPT_REGISTER(linearlayer_forward);
+
+    SCRIPT_REGISTER(pack_float_array);
 };

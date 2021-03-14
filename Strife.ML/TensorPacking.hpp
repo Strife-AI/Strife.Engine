@@ -3,7 +3,9 @@
 #include <array>
 #include <torch/torch.h>
 
-#include "ML/ML.hpp"
+#if STRIFE_ENGINE
+    #include "ML/ML.hpp"
+#endif
 
 namespace StrifeML
 {
@@ -58,6 +60,7 @@ namespace StrifeML
         }
     };
 
+#if STRIFE_ENGINE
     template<int Rows, int Cols>
     struct DimensionCalculator<GridSensorOutput<Rows, Cols>>
     {
@@ -66,6 +69,7 @@ namespace StrifeML
             return Dimensions<2>(Rows, Cols).Union(DimensionCalculator<int>::Dims(0));
         }
     };
+#endif
 
     template<typename T, std::size_t Size>
     struct DimensionCalculator<std::array<T, Size>>
@@ -81,7 +85,7 @@ namespace StrifeML
     {
         static constexpr auto Dims(const gsl::span<T>& span)
         {
-            return Dimensions<1>(span.size()).Union(DimensionCalculator<T>::Dims(span[0]));
+            return Dimensions<1>((long long)span.size()).Union(DimensionCalculator<T>::Dims(span[0]));
         }
 
     };
@@ -99,11 +103,14 @@ namespace StrifeML
     {
         using Type = typename GetCellType<TCell>::Type;
     };
+
+#if STRIFE_ENGINE
     template<int Rows, int Cols>
     struct GetCellType<GridSensorOutput<Rows, Cols>>
     {
         using Type = uint64_t;
     };
+#endif
 
     template<typename T, std::size_t Size>
     struct GetCellType<std::array<T, Size>>
@@ -175,6 +182,28 @@ namespace StrifeML
             return outPtr + 1;
         }
     };
+
+    template<typename TCell, typename TorchType>
+    struct TorchPacker<gsl::span<TCell>, TorchType>
+    {
+        static TorchType* Pack(const gsl::span<TCell>& value, TorchType* outPtr)
+        {
+            if constexpr (std::is_arithmetic_v<TCell>)
+            {
+                memcpy(outPtr, &value[0], value.size() * sizeof(TCell));
+                return outPtr + value.size();
+            }
+            else
+            {
+                for (int i = 0; i < (int)value.size(); ++i)
+                {
+                    outPtr = TorchPacker<TCell, TorchType>::Pack(value[i], outPtr);
+                }
+
+                return outPtr;
+            }
+        }
+    };
 	
     template<typename TCell, typename TorchType>
     struct TorchPacker<Grid<TCell>, TorchType>
@@ -223,7 +252,7 @@ namespace StrifeML
         }
     };
 
-
+#if STRIFE_ENGINE
     template<int Rows, int Cols>
     struct TorchPacker<GridSensorOutput<Rows, Cols>, uint64_t>
     {
@@ -243,6 +272,7 @@ namespace StrifeML
         }
 
     };
+#endif
 
     template<typename T>
     torch::Tensor PackIntoTensor(const T& value)
@@ -259,6 +289,7 @@ namespace StrifeML
         return t.squeeze(t.dim()-1);
     }
 
+#if STRIFE_ENGINE
     template<int Rows, int Cols>
     torch::Tensor PackIntoTensor(GridSensorOutput<Rows, Cols>& value)
     {
@@ -266,6 +297,7 @@ namespace StrifeML
         value.Decompress(grid);
         return PackIntoTensor((const Grid<uint64_t>&) grid);
     }
+#endif
 
     template<typename T, typename TSelector>
     torch::Tensor PackIntoTensor(const Grid<T>& grid, TSelector selector)
@@ -273,11 +305,10 @@ namespace StrifeML
         using SelectorReturnType = decltype(selector(grid[0][0]));
         using CellType = typename GetCellType<SelectorReturnType>::Type;
 
-        SelectorReturnType selectorTemp;
+        SelectorReturnType selectorTemp = selector(grid[0][0]);
         Grid<SelectorReturnType> dummyGrid(grid.Rows(), grid.Cols(), &selectorTemp);
 
-        auto dimensions = DimensionCalculator<Grid<SelectorReturnType>>
-        ::Dims(dummyGrid);
+        auto dimensions = DimensionCalculator<Grid<SelectorReturnType>>::Dims(dummyGrid);
 
         torch::IntArrayRef dims(dimensions.dimensions, dimensions.GetTotalDimensions());
         auto torchType = GetTorchType<CellType>();

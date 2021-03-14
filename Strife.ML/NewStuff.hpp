@@ -117,20 +117,20 @@ namespace StrifeML
         std::unordered_map<std::string, ObjectSerializerProperty> propertiesByName;
     };
 
-    template<typename T>
-    void Serialize(T& value, ObjectSerializer& serializer);
+    template<typename T, typename Enable = void>
+    struct Serializer;
 
     struct ObjectSerializer
     {
-        ObjectSerializer(std::vector<unsigned char>& bytes_, bool isReading_)
+        ObjectSerializer(std::vector<unsigned char>& bytes_, bool isReading_, ObjectSerializerSchema* schema = nullptr)
             : bytes(bytes_),
-              isReading(isReading_)
+              isReading(isReading_),
+              schema(schema)
         {
 
         }
 
-        // Create a template specialization of Serialize<> to serialize custom types
-        template<typename T, std::enable_if_t<!(std::is_arithmetic_v<T> || std::is_enum_v<T>)>* = nullptr>
+        template<typename T>
         ObjectSerializer& Add(T& value, const char* name)
         {
             if (schema != nullptr)
@@ -138,20 +138,7 @@ namespace StrifeML
                 schema->template AddProperty<T>(name, (int)bytes.size());
             }
 
-            Serialize(value, *this);
-            return *this;
-        }
-
-        // Arithmetic types are default serialized to bytes; everything else needs to define a custom serialization method
-        template<typename T, std::enable_if_t<std::is_arithmetic_v<T> || std::is_enum_v<T>>* = nullptr>
-        ObjectSerializer& Add(T& value, const char* name)
-        {
-            if (schema != nullptr)
-            {
-                schema->template AddProperty<T>(name, (int)bytes.size());
-            }
-
-            AddBytes(reinterpret_cast<unsigned char*>(&value), sizeof(T));
+            Serializer<T>::Serialize(value, *this);
             return *this;
         }
 
@@ -163,6 +150,16 @@ namespace StrifeML
             AddBytes(reinterpret_cast<unsigned char*>(data), count * sizeof(T));
         }
 
+        void Seek(int offset)
+        {
+            if (offset < 0 || offset >= bytes.size())
+            {
+                throw StrifeException("Invalid read offset");
+            }
+
+            readOffset = offset;
+        }
+
         std::vector<unsigned char>& bytes;
         ObjectSerializerSchema* schema = nullptr;
 
@@ -170,9 +167,6 @@ namespace StrifeML
         int readOffset = 0;
         bool hadError = false;
     };
-
-    template<typename T>
-    void Serialize(T& value, ObjectSerializer& serializer);
 
     struct SerializedObject
     {
@@ -202,7 +196,13 @@ namespace StrifeML
 
     struct INeuralNetwork
     {
-        std::shared_ptr<torch::nn::Module> module = CreateModule();
+        INeuralNetwork()
+            : module(CreateModule())
+        {
+
+        }
+
+        std::shared_ptr<torch::nn::Module> module;
         virtual ~INeuralNetwork() = default;
     };
 
@@ -680,7 +680,7 @@ namespace StrifeML
 
         virtual void OnTrainingComplete(const TrainingBatchResult& result) { }
         virtual void ReceiveSample(const SampleType& sample) { }
-        virtual bool TrySelectSequenceSamples(gsl::span<SampleType> outSequence) { return false; }
+        virtual bool TrySelectSequenceSamples(gsl::span<SampleType> outSequence) { return false;  }
         virtual void OnCreateNewNetwork(std::shared_ptr<NetworkType> newNetwork) { }
 
         SpinLock sampleLock;
@@ -707,4 +707,13 @@ namespace StrifeML
         TorchSave(network->module, stream);
         trainer->NotifyTrainingComplete(stream, _result);
     }
+
+    template<typename T>
+    struct Serializer<T, std::enable_if_t<std::is_arithmetic_v<T> || std::is_enum_v<T>>>
+    {
+        static void Serialize(T& value, ObjectSerializer& serializer)
+        {
+            serializer.template AddBytes(reinterpret_cast<unsigned char*>(&value), sizeof(value));
+        }
+    };
 }
