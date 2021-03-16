@@ -4,7 +4,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 find_package(SDL2 REQUIRED)
 find_package(SDL2-image REQUIRED)
-find_package(unofficial-box2d CONFIG REQUIRED)
+find_package(box2d CONFIG REQUIRED)
 find_package(slikenet CONFIG REQUIRED)
 find_package(Ogg REQUIRED)
 
@@ -188,7 +188,7 @@ target_link_libraries(Strife.Engine PUBLIC
     SDL2::SDL2
     SDL2::SDL2main
     SDL2::SDL2_image
-    unofficial::box2d::box2d
+    box2d::box2d
     OALWrapper
     SLikeNet
     Strife.ML
