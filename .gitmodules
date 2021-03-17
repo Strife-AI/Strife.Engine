@@ -7,6 +7,3 @@
 [submodule "tmxlite"]
 	path = tmxlite
 	url = git@github.com:fallahn/tmxlite.git
-[submodule "Strife.ML"]
-	path = Strife.ML
-	url = git@github.com:Strife-AI/Strife.ML.git
