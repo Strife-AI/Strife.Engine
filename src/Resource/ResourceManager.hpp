@@ -22,6 +22,7 @@ struct BaseResource
 {
 public:
     virtual bool LoadFromFile(const ResourceSettings& settings) { return false; }
+    virtual bool TryCleanup() { return false; }
 
     template<typename TResource>
     TResource* As();
@@ -29,6 +30,7 @@ public:
     static BaseResource* GetDefaultResource() { return nullptr; }
 
     std::string name;
+    std::string path;
 };
 
 template<typename T>

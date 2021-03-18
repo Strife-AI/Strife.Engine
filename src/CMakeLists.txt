@@ -162,7 +162,7 @@ add_library(Strife.Engine STATIC
 		Project/Project.cpp
 		Project/Project.hpp
 		Resource/ResourceManager.hpp Resource/SpriteResource.hpp Resource/SpriteResource.cpp Resource/ResourceManager.cpp Resource/TilemapResource.hpp Resource/TilemapResource.cpp Resource/SpriteFontResource.hpp Resource/SpriteFontResource.cpp
-		Resource/ShaderResource.cpp Resource/ShaderResource.hpp Renderer/NewRenderer.cpp Renderer/NewRenderer.hpp Components/ParticleSystemComponent.hpp Components/ParticleSystemComponent.cpp Scene/Isometric.hpp Scene/Isometric.cpp Components/IsometricSpriteComponent.hpp Components/IsometricSpriteComponent.cpp Resource/FileResource.hpp Resource/FileResource.cpp ML/UtilityAI.hpp)
+		Resource/ShaderResource.cpp Resource/ShaderResource.hpp Renderer/NewRenderer.cpp Renderer/NewRenderer.hpp Components/ParticleSystemComponent.hpp Components/ParticleSystemComponent.cpp Scene/Isometric.hpp Scene/Isometric.cpp Components/IsometricSpriteComponent.hpp Components/IsometricSpriteComponent.cpp Resource/FileResource.hpp Resource/FileResource.cpp ML/UtilityAI.hpp Resource/ScriptResource.hpp Resource/ScriptResource.cpp)
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 
@@ -202,7 +202,7 @@ target_compile_definitions(Strife.Engine PUBLIC IMGUI_IMPL_OPENGL_LOADER_GL3W)
 
 find_package(Microsoft.GSL CONFIG REQUIRED)
 target_link_libraries(Strife.Engine PRIVATE Microsoft.GSL::GSL)
-target_link_libraries(Strife.Engine PUBLIC tmxlite)
+target_link_libraries(Strife.Engine PUBLIC tmxlite Strife.Common)
 
 set_property(TARGET Strife.Engine PROPERTY CXX_STANDARD 17)
 

@@ -9,7 +9,7 @@
 #include <thread>
 #include "slikenet/PacketConsoleLogger.h"
 
-#include "../Strife.ML/NewStuff.hpp"
+#include "NewStuff.hpp"
 #include "ML/ML.hpp"
 #include "Scene/IGame.hpp"
 #include "System/Input.hpp"
@@ -19,6 +19,7 @@
 #include "Tools/MetricsManager.hpp"
 #include "Sound/SoundManager.hpp"
 #include "UI/UI.hpp"
+#include "Scripting/ScriptCompiler.hpp"
 
 using namespace std::chrono;
 
@@ -30,8 +31,18 @@ extern ConsoleVar<bool> g_developerMode("developer-mode", true, true);
 
 ConsoleVar<bool> g_isServer("server", false);
 
+static ConcurrentQueue<std::function<void()>> g_workQueue;
+
+void ExecuteOnGameThread(const std::function<void()>& function)
+{
+    g_workQueue.Enqueue(function);
+}
+
+void RegisterScriptFunctions();
+
 Engine::Engine(const EngineConfig& config)
 {
+    RegisterScriptFunctions();
     _config = config;
     _defaultBlockAllocator = std::make_unique<BlockAllocator>(config.blockAllocatorSizeBytes);
 
@@ -135,6 +146,12 @@ void AccurateSleepFor(float seconds)
 
 void Engine::RunFrame()
 {
+    std::function<void()> func;
+    while (g_workQueue.TryDequeue(func))
+    {
+        func();
+    }
+
     std::shared_ptr<BaseGameInstance> games[2];
     int totalGames = 0;
 
@@ -169,6 +186,8 @@ void Engine::RunFrame()
     AccurateSleepFor(timeUntilUpdate);
     nextGameToRun->RunFrame(GetTimeSeconds());
     nextGameToRun->nextUpdateTime = nextGameToRun->nextUpdateTime + 1.0f / nextGameToRun->targetTickRate;
+
+    ScriptCompiler::GetInstance()->Update();
 }
 
 void Engine::PauseGame()
@@ -300,12 +319,3 @@ void Engine::SetGame(IGame* game)
         WindowSizeChangedEvent(_sdlManager->WindowSize().x, _sdlManager->WindowSize().y).Send();
     }
 }
-
-static void ReloadResources(ConsoleCommandBinder& binder)
-{
-    binder.Help("Reloads the resource files");
-
-    binder.GetEngine()->ReloadResources();
-}
-
-ConsoleCmd _reloadCmd("reload", ReloadResources);
