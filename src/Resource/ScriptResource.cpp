@@ -3,17 +3,11 @@
 
 bool ScriptResource::LoadFromFile(const ResourceSettings& settings)
 {
-    bool success = TryReadFileContents(settings.path, source);
+    bool success = TryReadFileContents(settings.path, source.source);
     if (success)
     {
-        ++currentVersion;
+        ++source.currentVersion;
     }
 
     return success;
 }
-
-std::shared_ptr<Script> ScriptResource::CreateScript()
-{
-    return std::make_shared<Script>(this);
-}
-
