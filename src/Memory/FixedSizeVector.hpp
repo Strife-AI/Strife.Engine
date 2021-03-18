@@ -13,7 +13,7 @@ public:
     {
     }
 
-    int Capacity() const
+    static constexpr int Capacity()
     {
         return MaxSize;
     }
