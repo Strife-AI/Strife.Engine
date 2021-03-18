@@ -23,6 +23,8 @@ class Renderer;
 class SceneManager;
 class SoundManager;
 
+void ExecuteOnGameThread(const std::function<void()>& function);
+
 struct EngineConfig
 {
     EngineConfig& SaveConsoleVarsToFile(const std::string& fileName)

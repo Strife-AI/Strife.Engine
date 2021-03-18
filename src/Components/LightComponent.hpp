@@ -53,6 +53,6 @@ void LightComponent<TLight>::ReceiveEvent(const IEntityEvent& ev)
 {
     if (ev.Is<EntityMovedEvent>())
     {
-        this->position = this->owner->Center() + offsetFromCenter;
+        this->position = this->owner->ScreenCenter() + offsetFromCenter;
     }
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Engine.hpp"
-#include "../../Strife.ML/NewStuff.hpp"
+#include "NewStuff.hpp"
 #include "Math/Vector2.hpp"
 #include "Container/Grid.hpp"
 #include "Scene/EntityComponent.hpp"
@@ -9,10 +9,14 @@
 #include "Scene/Scene.hpp"
 
 template<>
-inline void StrifeML::Serialize<Vector2>(Vector2& value, StrifeML::ObjectSerializer& serializer)
+struct StrifeML::Serializer<Vector2>
 {
-    serializer.Add(value.x).Add(value.y);
-}
+    static void Serialize(Vector2& value, StrifeML::ObjectSerializer& serializer)
+    {
+        Serializer<float>::Serialize(value.x, serializer);
+        Serializer<float>::Serialize(value.y, serializer);
+    }
+};
 
 enum class NeuralNetworkMode
 {
@@ -241,6 +245,7 @@ struct NeuralNetworkManager
         static_assert(std::is_base_of_v<StrifeML::ITrainer, TTrainer>, "Trainer must inherit from ITrainer<TInput, TOutput>");
         auto trainer = std::make_shared<TTrainer>(std::forward<Args>(constructorArgs) ...);
         auto trainerPtr = trainer.get();
+
         _trainers.emplace(std::move(trainer));
         return trainerPtr;
     }
@@ -258,7 +263,12 @@ struct NeuralNetworkManager
 
         auto newContext = std::make_shared<StrifeML::NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
         _networksByName[name] = newContext;
-        newContext->trainer->networkContext = newContext;
+
+        trainer->networkContext = newContext;
+        trainer->network = std::make_shared<typename TDecider::NetworkType>();
+
+        trainer->OnCreateNewNetwork(trainer->network);
+
         newContext->decider->networkContext = newContext;
     }
 
@@ -398,17 +408,17 @@ struct GridSensorOutput
     {
         int rows = Rows;
         int cols = Cols;
-        serializer.Add(rows);
-        serializer.Add(cols);
+        StrifeML::Serializer<int>::Serialize(rows, serializer);
+        StrifeML::Serializer<int>::Serialize(cols, serializer);
 
         // Dimensions of serialized grid must match the grid being deserialized into
         assert(rows == Rows);
         assert(cols == Cols);
 
-        serializer.Add(_isCompressed);
+        StrifeML::Serializer<bool>::Serialize(_isCompressed, serializer);
         if(_isCompressed)
         {
-            serializer.Add(_totalRectangles);
+            StrifeML::Serializer<int>::Serialize(_totalRectangles, serializer);
             serializer.AddBytes(compressedRectangles, _totalRectangles);
         }
         else

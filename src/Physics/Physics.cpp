@@ -76,7 +76,7 @@ static void DrawColliderLine(Vector2 worldStart, Vector2 worldEnd, Renderer* ren
     renderer->RenderLine(start, end, color, -1);
 }
 
-static void GenerateCircle(Vector2 center, float radius, gsl::span<Vector2> outVertices)
+void GenerateCircle(Vector2 center, float radius, gsl::span<Vector2> outVertices)
 {
     float dAngle = 2 * 3.1415926535 / outVertices.size();
 

@@ -6,6 +6,7 @@
 struct FileResource : BaseResource
 {
     bool LoadFromFile(const ResourceSettings& settings) override;
+    bool TryCleanup() override;
 
     std::vector<unsigned char>& Get()
     {

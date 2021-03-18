@@ -22,6 +22,8 @@ DEFINE_COMPONENT(RigidBodyComponent)
     void ApplyForce(const Vector2& force);
     void ApplyForce(const Vector2& force, const Vector2 & position);
 
+    static RigidBodyComponent* FromB2Body(b2Body* body);
+
     b2Fixture* CreateBoxCollider(Vector2 size, bool isTrigger = false, Vector2 offset = Vector2(0, 0));
     b2Fixture* CreateCircleCollider(float radius, bool isTrigger = false, Vector2 offset = Vector2(0, 0));
     b2Fixture* CreateLineCollider(Vector2 start, Vector2 end, bool isTrigger = false);

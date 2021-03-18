@@ -39,7 +39,6 @@ endif()
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 
-add_subdirectory(Strife.Common)
 add_subdirectory(Strife.ML)
 add_subdirectory(src)
 add_subdirectory(OALWrapper)

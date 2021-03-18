@@ -45,12 +45,12 @@ struct WorldState
 DEFINE_EVENT(PlayerConnectedEvent)
 {
     PlayerConnectedEvent(int id_, std::optional<Vector2> = std::nullopt)
-        : id(id_)
+        : clientId(id_)
     {
 
     }
 
-    int id;
+    int clientId;
     std::optional<Vector2> position;
 };
 
