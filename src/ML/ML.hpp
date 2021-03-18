@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Engine.hpp"
-#include "../../Strife.ML/NewStuff.hpp"
+#include "NewStuff.hpp"
 #include "Math/Vector2.hpp"
 #include "Container/Grid.hpp"
 #include "Scene/EntityComponent.hpp"
@@ -408,17 +408,17 @@ struct GridSensorOutput
     {
         int rows = Rows;
         int cols = Cols;
-        Serialize(rows, serializer);
-        Serialize(cols, serializer);
+        StrifeML::Serializer<int>::Serialize(rows, serializer);
+        StrifeML::Serializer<int>::Serialize(cols, serializer);
 
         // Dimensions of serialized grid must match the grid being deserialized into
         assert(rows == Rows);
         assert(cols == Cols);
 
-        Serialize(_isCompressed, serializer);
+        StrifeML::Serializer<bool>::Serialize(_isCompressed, serializer);
         if(_isCompressed)
         {
-            Serialize(_totalRectangles, serializer);
+            StrifeML::Serializer<int>::Serialize(_totalRectangles, serializer);
             serializer.AddBytes(compressedRectangles, _totalRectangles);
         }
         else

@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include <map>
-#include "Strife.Common/Thread/SpinLock.hpp"
+#include "Thread/SpinLock.hpp"
 
 struct Metric
 {
