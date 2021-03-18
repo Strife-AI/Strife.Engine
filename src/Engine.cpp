@@ -9,7 +9,7 @@
 #include <thread>
 #include "slikenet/PacketConsoleLogger.h"
 
-#include "../Strife.ML/NewStuff.hpp"
+#include "NewStuff.hpp"
 #include "ML/ML.hpp"
 #include "Scene/IGame.hpp"
 #include "System/Input.hpp"

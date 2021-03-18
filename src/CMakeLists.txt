@@ -202,7 +202,7 @@ target_compile_definitions(Strife.Engine PUBLIC IMGUI_IMPL_OPENGL_LOADER_GL3W)
 
 find_package(Microsoft.GSL CONFIG REQUIRED)
 target_link_libraries(Strife.Engine PRIVATE Microsoft.GSL::GSL)
-target_link_libraries(Strife.Engine PUBLIC tmxlite)
+target_link_libraries(Strife.Engine PUBLIC tmxlite Strife.Common)
 
 set_property(TARGET Strife.Engine PROPERTY CXX_STANDARD 17)
 
