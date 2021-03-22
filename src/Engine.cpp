@@ -40,9 +40,16 @@ void ExecuteOnGameThread(const std::function<void()>& function)
 
 void RegisterScriptFunctions();
 
+static void StrifeMlLog(const char* message)
+{
+    Log("%s", message);
+}
+
 Engine::Engine(const EngineConfig& config)
 {
+    StrifeML::SetLogFunction(StrifeMlLog);
     RegisterScriptFunctions();
+
     _config = config;
     _defaultBlockAllocator = std::make_unique<BlockAllocator>(config.blockAllocatorSizeBytes);
 
