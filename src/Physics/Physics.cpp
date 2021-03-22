@@ -33,11 +33,12 @@ void CollisionManager::UpdateEntityPositions()
 {
     for (auto body = _world->GetBodyList(); body != nullptr; body = body->GetNext())
     {
-        auto data = body->GetUserData();
+        auto data = body->GetUserData().pointer;
+        auto rigidBody = reinterpret_cast<RigidBodyComponent*>(data);
 
-        if (data != nullptr)
+        if (rigidBody != nullptr)
         {
-            auto rigidBody = reinterpret_cast<RigidBodyComponent*>(data);
+
             auto entity = rigidBody->owner;
 
             auto oldPosition = entity->Center();
