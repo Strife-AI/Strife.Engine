@@ -16,7 +16,7 @@ Entity* ColliderHandle::OwningEntity() const
 
 RigidBodyComponent* ColliderHandle::OwningRigidBody() const
 {
-    return reinterpret_cast<RigidBodyComponent*>(_fixture->GetBody()->GetUserData());
+    return reinterpret_cast<RigidBodyComponent*>(_fixture->GetBody()->GetUserData().pointer);
 }
 
 Rectangle ColliderHandle::Bounds() const
