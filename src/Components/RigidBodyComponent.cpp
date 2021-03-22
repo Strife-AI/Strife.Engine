@@ -212,5 +212,5 @@ b2Fixture* RigidBodyComponent::CreatePolygonCollider(gsl::span<Vector2> points, 
 
 RigidBodyComponent* RigidBodyComponent::FromB2Body(b2Body* body)
 {
-    return reinterpret_cast<RigidBodyComponent*>(body->GetUserData());
+    return reinterpret_cast<RigidBodyComponent*>(body->GetUserData().pointer);
 }
