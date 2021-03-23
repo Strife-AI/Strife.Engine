@@ -1,10 +1,11 @@
 #include "FileTransfer.hpp"
 #include "Engine.hpp"
+#include "ServerGame.hpp"
 #include "System/FileSystem.hpp"
 
 DEFINE_RPC(UploadFileRpc)
 {
-    void Serialize(ReadWriteBitStream& stream)
+    void Serialize(ReadWriteBitStream& stream) override
     {
         stream.Add(fileName).Add(contents);
     }

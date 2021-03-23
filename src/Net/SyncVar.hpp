@@ -1,9 +1,12 @@
 #pragma once
 
-#include <box2d/b2_block_allocator.h>
-#include <slikenet/BitStream.h>
 #include "Math/Vector2.hpp"
 #include "Memory/CircularQueue.hpp"
+
+namespace SLNet
+{
+    class BitStream;
+}
 
 enum class SyncVarUpdateFrequency
 {
@@ -44,96 +47,14 @@ inline bool TryLerp(const Vector2& start, const Vector2& end, float t, Vector2& 
     return true;
 }
 
+void WriteBitsToStream(const unsigned char* data, int size, SLNet::BitStream& stream);
+void ReadBitsFromStream(unsigned char* data, int size, SLNet::BitStream& stream);
 
 template<typename T>
-void WriteSyncVarDelta(const T& before, const T& after, bool forceFullUpdate, SyncVarDeltaMode mode, SLNet::BitStream& stream)
-{
-    stream.WriteBits(reinterpret_cast<const unsigned char*>(&after), sizeof(T) * 8);
-}
+void WriteSyncVarDelta(const T& before, const T& after, bool forceFullUpdate, SyncVarDeltaMode mode, SLNet::BitStream& stream);
 
 template<typename T>
-void ReadSyncVarDelta(const T& before, T& result, SyncVarDeltaMode mode, SLNet::BitStream& stream)
-{
-    stream.ReadBits(reinterpret_cast<unsigned char*>(&result), sizeof(T) * 8);
-}
-
-template<>
-inline void WriteSyncVarDelta<bool>(const bool& before, const bool& after, bool forceFullUpdate, SyncVarDeltaMode mode, SLNet::BitStream& stream)
-{
-    stream.Write(after);
-}
-
-template<>
-inline void WriteSyncVarDelta<Vector2>(const Vector2& before, const Vector2& after, bool forceFullUpdate, SyncVarDeltaMode mode, SLNet::BitStream& stream)
-{
-    if (mode == SyncVarDeltaMode::SmallIntegerOffset)
-    {
-        int beforeX = round(before.x);
-        int beforeY = round(before.y);
-
-        int afterX = round(after.x);
-        int afterY = round(after.y);
-
-        int offsetX = afterX - beforeX;
-        int offsetY = afterY - beforeY;
-
-        if (!forceFullUpdate
-            && offsetX >= -11 && offsetX <= 10
-            && offsetY >= -11 && offsetY <= 10)
-        {
-            unsigned int encodedOffsetX = offsetX + 11;
-            unsigned int encodedOffsetY = offsetY + 11;
-            unsigned int encodedValue = encodedOffsetX * 22 + encodedOffsetY;
-
-            stream.WriteBits(reinterpret_cast<const unsigned char*>(&encodedValue), 9);
-        }
-        else
-        {
-            unsigned int magicOffset = 511;
-            stream.WriteBits(reinterpret_cast<const unsigned char*>(&magicOffset), 9);
-            stream.WriteCasted<short>(afterX);
-            stream.WriteCasted<short>(afterY);
-        }
-    }
-    else
-    {
-        stream.Write(after.x);
-        stream.Write(after.y);
-    }
-}
-
-template<>
-inline void ReadSyncVarDelta<Vector2>(const Vector2& before, Vector2& result, SyncVarDeltaMode mode, SLNet::BitStream& stream)
-{
-    if (mode == SyncVarDeltaMode::SmallIntegerOffset)
-    {
-        unsigned int encodedOffset = 0;
-        stream.ReadBits(reinterpret_cast<unsigned char*>(&encodedOffset), 9);
-
-        if (encodedOffset == 511)
-        {
-            stream.ReadCasted<short>(result.x);
-            stream.ReadCasted<short>(result.y);
-        }
-        else
-        {
-            result.x = round(before.x) + static_cast<int>(encodedOffset / 22) - 11;
-            result.y = round(before.y) + static_cast<int>(encodedOffset % 22) - 11;
-        }
-    }
-    else
-    {
-        stream.Read(result.x);
-        stream.Read(result.y);
-    }
-}
-
-template<>
-inline void ReadSyncVarDelta<bool>(const bool& before, bool& result, SyncVarDeltaMode mode, SLNet::BitStream& stream)
-{
-    result = stream.ReadBit();
-}
-
+void ReadSyncVarDelta(const T& before, T& result, SyncVarDeltaMode mode, SLNet::BitStream& stream);
 
 struct ISyncVar
 {
@@ -143,17 +64,34 @@ struct ISyncVar
 
     virtual ~ISyncVar() = default;
 
-    virtual bool CurrentValueChangedFromSequence(uint32 snapshotId) = 0;
-    virtual void WriteValueDeltaedFromSnapshot(uint32 fromSnapshotId, uint32 toSnapshotId, SLNet::BitStream& stream) = 0;
-    virtual void ReadValueDeltaedFromSequence(uint32 fromSnapshotId, uint32 toSnapshotId, float time, SLNet::BitStream& stream) = 0;
+    virtual bool CurrentValueChangedFromSequence(uint32_t snapshotId) = 0;
+    virtual void WriteValueDeltaedFromSnapshot(uint32_t fromSnapshotId, uint32_t toSnapshotId, SLNet::BitStream& stream) = 0;
+    virtual void ReadValueDeltaedFromSequence(uint32_t fromSnapshotId, uint32_t toSnapshotId, float time, SLNet::BitStream& stream) = 0;
     virtual void SetCurrentValueToValueAtTime(float time) = 0;
-    virtual void AddCurrentValueToSnapshots(uint32 currentSnapshotId, float currentTime) = 0;
+    virtual void AddCurrentValueToSnapshots(uint32_t currentSnapshotId, float currentTime) = 0;
 
     virtual bool IsBool() = 0;
 
     ISyncVar* next = nullptr;
     SyncVarUpdateFrequency frequency;
 };
+
+template<typename T, typename Enable = void>
+struct DirectlySerializableAsBytes
+{
+    static constexpr bool value = false;
+};
+
+template<typename T>
+struct DirectlySerializableAsBytes<T, std::enable_if_t<std::is_arithmetic_v<T>>>
+{
+    static constexpr bool value = true;
+};
+
+struct Color;
+
+template<>
+struct DirectlySerializableAsBytes<Color> { static constexpr bool value = true; };
 
 template<typename T>
 struct SyncVar final : ISyncVar
@@ -174,7 +112,7 @@ struct SyncVar final : ISyncVar
 
     }
 
-    bool CurrentValueChangedFromSequence(uint32 snapshotId) override
+    bool CurrentValueChangedFromSequence(uint32_t snapshotId) override
     {
         T value;
         if (!TryGetValueAtSnapshot(snapshotId, value))
@@ -186,14 +124,14 @@ struct SyncVar final : ISyncVar
         return value != currentValue;
     }
 
-    void AddCurrentValueToSnapshots(uint32 currentSnapshotId, float currentTime) override
+    void AddCurrentValueToSnapshots(uint32_t currentSnapshotId, float currentTime) override
     {
         AddValue(currentValue, currentTime, currentSnapshotId);
     }
 
     bool IsBool() override { return std::is_same_v<T, bool>; }
 
-    void WriteValueDeltaedFromSnapshot(uint32 fromSnapshotId, uint32 toSnapshotId, SLNet::BitStream& stream) override
+    void WriteValueDeltaedFromSnapshot(uint32_t fromSnapshotId, uint32_t toSnapshotId, SLNet::BitStream& stream) override
     {
         T oldValue;
         bool hasOldValue = TryGetValueAtSnapshot(fromSnapshotId, oldValue);
@@ -204,10 +142,17 @@ struct SyncVar final : ISyncVar
             newValue = currentValue;
         }
 
-        WriteSyncVarDelta(oldValue, newValue, !hasOldValue, deltaMode, stream);
+        if constexpr (DirectlySerializableAsBytes<T>::value)
+        {
+            WriteBitsToStream(reinterpret_cast<const unsigned char*>(&newValue), sizeof(T), stream);
+        }
+        else
+        {
+            WriteSyncVarDelta(oldValue, newValue, !hasOldValue, deltaMode, stream);
+        }
     }
 
-    void ReadValueDeltaedFromSequence(uint32 fromSnapshotId, uint32 toSnapshotId, float time, SLNet::BitStream& stream) override
+    void ReadValueDeltaedFromSequence(uint32_t fromSnapshotId, uint32_t toSnapshotId, float time, SLNet::BitStream& stream) override
     {
         T oldValue;
         if (!TryGetValueAtSnapshot(fromSnapshotId, oldValue))
@@ -221,7 +166,15 @@ struct SyncVar final : ISyncVar
             newValue = currentValue;
         }
 
-        ReadSyncVarDelta(oldValue, newValue, deltaMode, stream);
+        if constexpr (DirectlySerializableAsBytes<T>::value)
+        {
+            ReadBitsFromStream(reinterpret_cast<unsigned char*>(&newValue), sizeof(T), stream);
+        }
+        else
+        {
+            ReadSyncVarDelta(oldValue, newValue, deltaMode, stream);
+        }
+
         AddValue(newValue, time, toSnapshotId);
     }
 
@@ -242,7 +195,7 @@ struct SyncVar final : ISyncVar
 
         }
 
-        Snapshot(const T& value_, float time_, uint32 snapshotId_)
+        Snapshot(const T& value_, float time_, uint32_t snapshotId_)
             : value(value_),
             time(time_),
             snapshotId(snapshotId_)
@@ -252,7 +205,7 @@ struct SyncVar final : ISyncVar
 
         T value;
         float time;
-        uint32 snapshotId;
+        uint32_t snapshotId;
     };
 
     void operator=(const T& value)
@@ -275,7 +228,7 @@ struct SyncVar final : ISyncVar
         return _wasChanged;
     }
 
-    void AddValue(const T& value, float time, uint32 snapshotId)
+    void AddValue(const T& value, float time, uint32_t snapshotId)
     {
         if (!snapshots.IsEmpty())
         {
@@ -294,7 +247,7 @@ struct SyncVar final : ISyncVar
         snapshots.Enqueue({ value, time, snapshotId });
     }
 
-    bool TryGetValueAtSnapshot(uint32 snapshotId, T& outValue)
+    bool TryGetValueAtSnapshot(uint32_t snapshotId, T& outValue)
     {
         for (auto& snapshot : snapshots)
         {

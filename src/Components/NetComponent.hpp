@@ -1,5 +1,7 @@
 #pragma once
 
+#pragma warning(disable:4005)
+
 #include <vector>
 #include <slikenet/BitStream.h>
 #include <memory>

@@ -5,19 +5,6 @@
 #include "Scene/Scene.hpp"
 #include "Net/ServerGame.hpp"
 
-ISyncVar::ISyncVar(SyncVarUpdateFrequency frequency_)
-    : frequency(frequency_)
-{
-    auto entity = Scene::entityUnderConstruction;
-    if (entity == nullptr)
-    {
-        FatalError("Syncvars can only be added to an entity");
-    }
-
-    next = entity->syncVarHead;
-    entity->syncVarHead = this;
-}
-
 void NetComponent::OnAdded()
 {
     GetScene()->replicationManager->AddNetComponent(this);

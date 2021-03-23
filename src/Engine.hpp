@@ -6,8 +6,6 @@
 
 
 #include "Memory/BlockAllocator.hpp"
-#include "Net/ServerGame.hpp"
-#include "Tools/ConsoleCmd.hpp"
 #include "Tools/ConsoleVar.hpp"
 
 struct NeuralNetworkManager;
@@ -22,6 +20,8 @@ class MetricsManager;
 class Renderer;
 class SceneManager;
 class SoundManager;
+struct ServerGame;
+struct ClientGame;
 
 void ExecuteOnGameThread(const std::function<void()>& function);
 

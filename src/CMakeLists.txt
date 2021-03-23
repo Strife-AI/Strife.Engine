@@ -159,6 +159,7 @@ add_library(Strife.Engine STATIC
 		Components/LightComponent.hpp
 		Net/FileTransfer.hpp
 		Net/FileTransfer.cpp
+        Net/SyncVar.cpp
 		Project/Project.cpp
 		Project/Project.hpp
 		Resource/ResourceManager.hpp Resource/SpriteResource.hpp Resource/SpriteResource.cpp Resource/ResourceManager.cpp Resource/TilemapResource.hpp Resource/TilemapResource.cpp Resource/SpriteFontResource.hpp Resource/SpriteFontResource.cpp

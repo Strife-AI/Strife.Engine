@@ -20,6 +20,7 @@
 #include "Sound/SoundManager.hpp"
 #include "UI/UI.hpp"
 #include "Scripting/ScriptCompiler.hpp"
+#include "Net/ServerGame.hpp"
 
 using namespace std::chrono;
 
