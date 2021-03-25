@@ -76,7 +76,7 @@ b2Body* RigidBodyComponent::CreateBody(b2BodyDef& bodyDef, bool createAtCurrentP
     ScaleToBox2D(bodyDef.position);
     ScaleToBox2D(bodyDef.linearVelocity);
 
-    bodyDef.userData = this;
+    bodyDef.userData.pointer = (uintptr_t)this;
 
     body = GetScene()->GetWorld()->CreateBody(&bodyDef);
 

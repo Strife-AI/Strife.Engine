@@ -33,9 +33,10 @@ void CollisionManager::UpdateEntityPositions()
 {
     for (auto body = _world->GetBodyList(); body != nullptr; body = body->GetNext())
     {
-        auto data = body->GetUserData();
+        // TODO: This should use the new box2d userdata integration
+        auto data = body->GetUserData().pointer;
 
-        if (data != nullptr)
+        if ((void*)data != nullptr)
         {
             auto rigidBody = reinterpret_cast<RigidBodyComponent*>(data);
             auto entity = rigidBody->owner;
