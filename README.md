@@ -2,10 +2,15 @@
 
 The Strife Engine is originally an internal custom engine developed by Strife AI LLC and used in the development of games such as [Human-Like](https://store.steampowered.com/app/1400190/HumanLike/). In order to support further work on machine learning for game development, we have provided source code for our engine under a [modified UIUC/NCSA license](https://github.com/Strife-AI/Strife.Engine/blob/master/LICENSE.txt).
 
+## Starter projects
+To make getting started easier, feel free to clone and use these starter projects.
+* [Singleplayer Demo](https://github.com/Strife-AI/Strife.SingleplayerDemo)
+* [Multiplayer Demo](https://github.com/Strife-AI/Strife.MultiplayerDemo)
+
 ## Getting started
 These instructions are written using the CLion IDE, but utilizes CMake as its build system, so any workflow using CMAKE will suffice.
 
-Prerequisites
+### Prerequisites
 There are a few things before getting started:
 * C++ compiler and build tools: The engine builds and runs on MSVC, Gcc, and Clang (For Windows, Linux, and Mac respectively). Using CMake as the build system.
     * For Windows: use the Visual Studio C++ build tools.
@@ -19,7 +24,7 @@ There are a few things before getting started:
 * [A downloaded copy of LibTorch](https://pytorch.org/get-started/locally/)
     * The latest stable version of LibTorch (1.7.1) should do the trick
     * Note for Windows: Copies of both the debug and release versions of libtorch are required. 
-      You'll also need to setup enviroment variables (See: [Setting Up Enviroment Variables](https://github.com/Strife-AI/Strife.Engine#setting-up-enviroment-variables-windows-only))
+      You'll also need to setup enviroment variables (See: [Setting Up Enviroment Variables](#setting-up-enviroment-variables-windows-only))
     * Note for macOS: CUDA is not available for Mac. So make sure to select “None” for CUDA version.
 * [vcpkg](https://github.com/microsoft/vcpkg), which is used to manage dependencies
 * Optional: The current version of the engine utilizes [Tiled](MapEditor.org) as its map Editor and [X2cm](https://github.com/Strife-AI/X2DContentManager/releases/tag/v1.8.15-stable) which manages content.
@@ -56,10 +61,6 @@ directory of the debug and release versions of libtorch.
   * Once these are set, restart Windows to ensure the changes take place.
 
 ### Setting up Strife Engine
-Alternatively, sample projects can be forked but the engine will still need to be configured following the steps below
-* [Singleplayer Demo](https://github.com/Strife-AI/Strife.SingleplayerDemo)
-* [Multiplayer Demo](https://github.com/Strife-AI/Strife.MultiplayerDemo)
-
 Clone the repo (if you are using the sample projects, then substitute in the name of that repo instead of Strife.Engine):
 ```shell
 git clone --recurse-submodules -j8 git@github.com:Strife-AI/Strife.Engine.git
