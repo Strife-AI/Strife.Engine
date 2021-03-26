@@ -1,9 +1,8 @@
-# Strife Engine
+![StrifeEngineLogo](https://user-images.githubusercontent.com/7697514/112564487-bcba8400-8db1-11eb-812d-a25270b8385e.png)
 
 The Strife Engine is originally an internal custom engine developed by Strife AI LLC and used in the development of games such as [Human-Like](https://store.steampowered.com/app/1400190/HumanLike/). In order to support further work on machine learning for game development, we have provided source code for our engine under a [modified UIUC/NCSA license](https://github.com/Strife-AI/Strife.Engine/blob/master/LICENSE.txt).
 
 ## Getting started
-
 These instructions are written using the CLion IDE, but utilizes CMake as its build system, so any workflow using CMAKE will suffice.
 
 Prerequisites
@@ -19,6 +18,8 @@ There are a few things before getting started:
 * Configured git client
 * [A downloaded copy of LibTorch](https://pytorch.org/get-started/locally/)
     * The latest stable version of LibTorch (1.7.1) should do the trick
+    * Note for Windows: Copies of both the debug and release versions of libtorch are required. 
+      You'll also need to setup enviroment variables (See: [Setting Up Enviroment Variables](https://github.com/Strife-AI/Strife.Engine#setting-up-enviroment-variables-windows-only))
     * Note for macOS: CUDA is not available for Mac. So make sure to select “None” for CUDA version.
 * [vcpkg](https://github.com/microsoft/vcpkg), which is used to manage dependencies
 * Optional: The current version of the engine utilizes [Tiled](MapEditor.org) as its map Editor and [X2cm](https://github.com/Strife-AI/X2DContentManager/releases/tag/v1.8.15-stable) which manages content.
@@ -48,6 +49,12 @@ Install dependencies:
 ```shell
 ./vcpkg install sdl2 sdl2-image box2d nlohmann-json openal-soft libogg libvorbis ms-gsl glm slikenet --triplet {x64-windows, x64-linux, x64-osx}
 ```
+### Setting up enviroment variables (Windows Only)
+* If you're on Windows, set up environment variables ([How to access them in Windows 10](https://www.wikihow.com/Create-an-Environment-Variable-in-Windows-10))
+named `TORCH_DEBUG_DIR` and `TORCH_RELEASE_DIR` which point to the root 
+directory of the debug and release versions of libtorch.
+  * Once these are set, restart Windows to ensure the changes take place.
+
 ### Setting up Strife Engine
 Alternatively, sample projects can be forked but the engine will still need to be configured following the steps below
 * [Singleplayer Demo](https://github.com/Strife-AI/Strife.SingleplayerDemo)
