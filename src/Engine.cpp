@@ -110,6 +110,9 @@ Engine::~Engine()
 
         auto peerInterface = SLNet::RakPeerInterface::GetInstance();
         peerInterface->Shutdown(2000, 0, HIGH_PRIORITY);
+
+        TaskScheduler::GetInstance()->Stop();
+        ThreadPool::GetInstance()->Stop();
     }
     catch(const std::exception& e)
     {
