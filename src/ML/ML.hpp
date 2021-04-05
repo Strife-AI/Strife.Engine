@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Engine.hpp"
-#include "NewStuff.hpp"
+#include "StrifeML.hpp"
 #include "Math/Vector2.hpp"
 #include "Container/Grid.hpp"
 #include "Scene/EntityComponent.hpp"
