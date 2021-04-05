@@ -7,9 +7,11 @@
 #include "Tools/Console.hpp"
 #include "Resource/ScriptResource.hpp"
 
+ConsoleVar<std::string> assetPath("asset-path", "../assets", true);
+
 void ResourceManager::LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType)
 {
-    std::filesystem::path path = _baseAssetPath/std::filesystem::path(filePath);
+    std::filesystem::path path = std::filesystem::path(assetPath.Value())/std::filesystem::path(filePath);
     auto pathString = path.string();
 
     ResourceSettings settings;
@@ -55,6 +57,11 @@ ResourceManager* ResourceManager::GetInstance()
 {
     static ResourceManager resourceManager;
     return &resourceManager;
+}
+
+std::string ResourceManager::GetBaseAssetPath() const
+{
+    return assetPath.Value();
 }
 
 static void ReloadResources(ConsoleCommandBinder& binder)

@@ -16,17 +16,20 @@ void IGame::Run()
         _engine = std::make_unique<Engine>(config);
 
         ConfigureGame(_config);
+
+        if (_config.userConfigFile.has_value())
+        {
+            _engine->GetConsole()->RunUserConfig(_config.userConfigFile.value().c_str());
+        }
+
+        LoadResources(ResourceManager::GetInstance());
+
         _engine->SetGame(this);
 
         _engine->SetLoadResources([=]
         {
 
         });
-
-        if (_config.userConfigFile.has_value())
-        {
-            _engine->GetConsole()->RunUserConfig(_config.userConfigFile.value().c_str());
-        }
 
         if (_config.devConsoleFont.has_value())
         {

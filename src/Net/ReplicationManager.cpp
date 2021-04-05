@@ -673,9 +673,6 @@ void ReplicationManager::ProcessDestroyEntity(DestroyEntityMessage& message, flo
     }
 }
 
-static const int MaxNewEntities = 1024;
-static const int MaxDeletedEntities = 1024;
-
 void ReplicationManager::ProcessEntitySnapshotMessage(ReadWriteBitStream& stream, uint32 snapshotFromId)
 {
     // Read new entities

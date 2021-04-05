@@ -6,6 +6,7 @@
 
 
 #include "Memory/StringId.hpp"
+#include "Scene.hpp"
 
 struct EngineConfig;
 class Scene;
@@ -57,6 +58,18 @@ struct GameConfig
         return *this;
     }
 
+    GameConfig& EnableMultiplayer()
+    {
+        isMultiplayer = true;
+        return *this;
+    }
+
+    GameConfig& SetPerspective(ScenePerspective perspective)
+    {
+        this->perspective = perspective;
+        return *this;
+    }
+
     StringId defaultScene = "empty-map"_sid;
     std::string gameName;
     std::filesystem::path projectFilePath;
@@ -64,7 +77,8 @@ struct GameConfig
     std::optional<std::string> userConfigFile;
     std::optional<std::string> devConsoleFont;
     std::vector<std::string> resourcePacks;
-
+    bool isMultiplayer = false;
+    ScenePerspective perspective = ScenePerspective::Orothgraphic;
 };
 
 class IGame
@@ -90,8 +104,15 @@ public:
 
     virtual void OnGameStart() { }
 
+    virtual void LoadResources(ResourceManager* resourceManager) { }
+
     Engine* GetEngine() { return _engine.get(); }
     void Run();
+
+    const GameConfig& GetConfig() const
+    {
+        return _config;
+    }
 
     std::shared_ptr<Project> project;
 private:

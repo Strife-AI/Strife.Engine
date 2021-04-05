@@ -1,10 +1,10 @@
 #pragma once
 #include "Scene/Scene.hpp"
 
-class NetworkPhysics : public ISceneService
+class PlayerCommandRunner : public ISceneService
 {
 public:
-    NetworkPhysics(bool isServer)
+    PlayerCommandRunner(bool isServer)
         : _isServer(isServer)
     {
         

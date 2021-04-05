@@ -65,12 +65,7 @@ public:
         _resourcesByStringId[StringId(name)] = std::unique_ptr<BaseResource>(resource);
     }
 
-    void SetBaseAssetPath(const char* path)
-    {
-        _baseAssetPath = path;
-    }
-
-    auto GetBaseAssetPath() const { return _baseAssetPath; }
+    std::string GetBaseAssetPath() const;
 
     BaseResource* GetResourceByStringId(StringId id)
     {
@@ -93,7 +88,6 @@ private:
 
     std::unordered_map<unsigned int, std::unique_ptr<BaseResource>> _resourcesByStringId;
     bool _replaceWithDefault = true;
-    std::filesystem::path _baseAssetPath;
 };
 
 template<typename TResource>

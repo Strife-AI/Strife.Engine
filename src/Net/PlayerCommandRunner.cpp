@@ -1,4 +1,4 @@
-#include "NetworkPhysics.hpp"
+#include "PlayerCommandRunner.hpp"
 
 #include "Renderer.hpp"
 #include "ReplicationManager.hpp"
@@ -16,7 +16,7 @@ void UpdateVarsToTime(ISyncVar* head, float time)
 
 ConsoleVar<float> g_jitterTime("jitter", 0.2);
 
-void NetworkPhysics::ReceiveEvent(const IEntityEvent& ev)
+void PlayerCommandRunner::ReceiveEvent(const IEntityEvent& ev)
 {
     if (ev.Is<FixedUpdateEvent>())
     {
@@ -41,7 +41,7 @@ void NetworkPhysics::ReceiveEvent(const IEntityEvent& ev)
     }
 }
 
-void NetworkPhysics::ServerFixedUpdate()
+void PlayerCommandRunner::ServerFixedUpdate()
 {
     ++currentFixedUpdateId;
 

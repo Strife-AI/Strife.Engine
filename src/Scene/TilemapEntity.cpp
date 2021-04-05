@@ -65,6 +65,11 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
     _renderer.SetOffset(TopLeft());
     scene->isometricSettings.tileSize = mapSegment.layers[0].tileSize.AsVectorOfType<float>();
 
+    if (scene->perspective == ScenePerspective::Isometric)
+    {
+        scene->isometricSettings.tileSize = Vector2(64, 32);
+    }
+
     _mapSegment = &mapSegment;
 
     scene->isometricSettings.BuildFromMapSegment(mapSegment, pathFinder, this);

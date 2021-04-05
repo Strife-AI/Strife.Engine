@@ -1,5 +1,6 @@
 #include <chrono>
 #include <Resource/TilemapResource.hpp>
+#include <Net/PlayerCommandRunner.hpp>
 #include "Tools/Console.hpp"
 #include "Engine.hpp"
 
@@ -68,7 +69,17 @@ void SceneManager::BuildNewScene(const SceneModel* sceneModel)
     _scene->GetCamera()->SetScreenSize(screenSize);
     _scene->GetCamera()->SetZoom(screenSize.y / (1080.0f / 2));
 
-    _engine->Game()->BuildScene(_scene.get());
+    auto game =_engine->Game();
+    auto& config = game->GetConfig();
+
+    _scene->perspective = config.perspective;
+
+    if (config.isMultiplayer)
+    {
+        _scene->AddService<PlayerCommandRunner>(_scene->isServer);
+    }
+
+    game->BuildScene(_scene.get());
 
     for (auto& entity : sceneModel->entities)
     {
