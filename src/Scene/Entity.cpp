@@ -241,6 +241,10 @@ void Entity::FlagsChanged()
 
 Vector2 Entity::ScreenCenter() const
 {
-    return scene->isometricSettings.TileToScreenIncludingTerrain(
+    auto input = Center();
+
+    auto output = scene->isometricSettings.TileToScreenIncludingTerrain(
         scene->isometricSettings.WorldToTile(Center()));
+
+    return output;
 }

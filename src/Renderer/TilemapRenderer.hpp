@@ -10,18 +10,21 @@ class Camera;
 class SpriteBatcher;
 class Renderer;
 
-class TilemapLayerRenderer : public ICustomTransparencyRenderer
+class TilemapLayerRenderer
 {
 public:
     TilemapLayerRenderer(const MapLayer* layer)
         : _layer(layer)
     {
     }
-
-    void Render(SpriteBatcher* batcher, Camera* camera, float depth) const override;
     void SetOffset(Vector2 offset)
     {
         _offset = offset;
+    }
+
+    Vector2 Offset() const
+    {
+        return _offset;
     }
 
     const MapLayer* GetMapLayer() const { return _layer; };

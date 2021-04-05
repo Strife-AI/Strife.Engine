@@ -23,52 +23,13 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
         terrain.SetSize(mapSize.y, mapSize.x);
     }
 
-    // Exclude layer 0, since that has background tiles
-    for (int layerId = 1; layerId < mapSegment.layers.size(); ++layerId)
+    if (scene->perspective == ScenePerspective::Isometric)
     {
-        auto& layer = mapSegment.layers[layerId].tileMap;
-        for (int i = 0; i < layer.Rows(); ++i)
-        {
-            for (int j = 0; j < layer.Cols(); ++j)
-            {
-                auto tile = layer[i][j];
-                int height = layerId;
-                if (tile != nullptr)
-                {
-                    if (!TileIsRamp(tile))
-                    {
-                        if (i > 0 && j > 0)
-                        {
-                            terrain[i - 1][j - 1].height = height;
-
-                            if (j + height < terrain.Cols() && i + height < terrain.Rows())
-                            {
-                                pathFinder->GetCell(Vector2(j, i) + Vector2(height - 1)).height = height;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (i > 0 && j > 0) terrain[i - 1][j - 1].height = layerId;
-
-                        if (j + height < terrain.Cols() && i + height < terrain.Rows())
-                        {
-                            auto& cell = pathFinder->GetCell(Vector2(j + height - 1, i + height - 1));
-                            cell.height = 0;
-
-                            for (auto& property : tile->properties)
-                            {
-                                if (property.first == "ramp")
-                                {
-                                    if (property.second == "west") cell.ramp = ObstacleRampType::West;
-                                    else if (property.second == "north") cell.ramp = ObstacleRampType::North;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        BuildTerrainIsometric(mapSegment, pathFinder);
+    }
+    else
+    {
+        BuildTerrainOrthographic(mapSegment, pathFinder);
     }
 
     const Vector2 offsets[4] =
@@ -186,6 +147,57 @@ void IsometricSettings::BuildFromMapSegment(const MapSegment& mapSegment, PathFi
     }
 }
 
+void IsometricSettings::BuildTerrainIsometric(const MapSegment& mapSegment, PathFinderService* pathFinder)
+{
+    // Exclude layer 0, since that has background tiles
+    for (int layerId = 1; layerId < mapSegment.layers.size(); ++layerId)
+    {
+        auto& layer = mapSegment.layers[layerId].tileMap;
+        for (int i = 0; i < layer.Rows(); ++i)
+        {
+            for (int j = 0; j < layer.Cols(); ++j)
+            {
+                auto tile = layer[i][j];
+                int height = layerId;
+                if (tile != nullptr)
+                {
+                    if (!TileIsRamp(tile))
+                    {
+                        if (i > 0 && j > 0)
+                        {
+                            terrain[i - 1][j - 1].height = height;
+
+                            if (j + height < terrain.Cols() && i + height < terrain.Rows())
+                            {
+                                pathFinder->GetCell(Vector2(j, i) + Vector2(height - 1)).height = height;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (i > 0 && j > 0) terrain[i - 1][j - 1].height = layerId;
+
+                        if (j + height < terrain.Cols() && i + height < terrain.Rows())
+                        {
+                            auto& cell = pathFinder->GetCell(Vector2(j + height - 1, i + height - 1));
+                            cell.height = 0;
+
+                            for (auto& property : tile->properties)
+                            {
+                                if (property.first == "ramp")
+                                {
+                                    if (property.second == "west") cell.ramp = ObstacleRampType::West;
+                                    else if (property.second == "north") cell.ramp = ObstacleRampType::North;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 float IsometricSettings::GetTileDepth(Vector2 position, int layer, std::optional<int> layerOffset) const
 {
     position = WorldToTile(position) + (layerOffset.has_value() ? Vector2(layerOffset.value()) : Vector2(layer));
@@ -204,7 +216,64 @@ int IsometricSettings::GetCurrentLayer(Vector2 position) const
     return terrain[tilePosition].height;
 }
 
-Vector2 IsometricSettings::TileToScreenIncludingTerrain(Vector2 tile)
+Vector2 IsometricSettings::TileToScreenIncludingTerrain(Vector2 tile) const
 {
-    return TileToScreen(tile - Vector2(scene->GetService<PathFinderService>()->GetCell(tile).height));
+    if (scene->perspective == ScenePerspective::Isometric)
+    {
+        return TileToScreen(tile - Vector2(scene->GetService<PathFinderService>()->GetCell(tile).height));
+    }
+    else
+    {
+        return TileToScreen(tile);
+    }
+}
+
+Vector2 IsometricSettings::TileToScreen(Vector2 tile, Vector2 tileSize) const
+{
+    if (scene->perspective == ScenePerspective::Isometric)
+    {
+        return Vector2(
+            (tile.x - tile.y) * tileSize.x / 2,
+            (tile.x + tile.y) * tileSize.y / 2);
+    }
+    else
+    {
+        return tile * tileSize;
+    }
+}
+
+Vector2 IsometricSettings::ScreenToTile(Vector2 world, Vector2 tileSize) const
+{
+    if (scene->perspective == ScenePerspective::Isometric)
+    {
+        return Vector2(
+            (2 * world.y + world.x),
+            (2 * world.y - world.x) / 2) / tileSize;
+    }
+    else
+    {
+        return world / tileSize;
+    }
+}
+
+void IsometricSettings::BuildTerrainOrthographic(const MapSegment& mapSegment, PathFinderService* pathFinder)
+{
+    for (int layerId = 1; layerId < mapSegment.layers.size(); ++layerId)
+    {
+        auto& layer = mapSegment.layers[layerId].tileMap;
+        for (int i = 0; i < layer.Rows(); ++i)
+        {
+            for (int j = 0; j < layer.Cols(); ++j)
+            {
+                auto tile = layer[i][j];
+                int height = layerId;
+
+                if (tile != nullptr)
+                {
+                    terrain[i][j].height = height;
+                    pathFinder->GetCell(Vector2(j, i)).height = height;
+                }
+            }
+        }
+    }
 }

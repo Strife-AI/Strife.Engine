@@ -10,18 +10,12 @@ enum class RampType
     None,
     West,
     North
-};
-
-enum class TerrainCellFlags
-{
-    Unwalkable = 1
-};
+};;
 
 struct IsometricTerrainCell
 {
     int height = 0;
     RampType rampType = RampType::None;
-    Flags<TerrainCellFlags> flags;
 };
 
 class PathFinderService;
@@ -39,19 +33,15 @@ struct IsometricSettings
         return TileToScreen(tile, tileSize);
     }
 
+
     Vector2 TileToWorld(Vector2 tile) const
     {
         return tile * Vector2(32);
     }
 
-    Vector2 TileToScreenIncludingTerrain(Vector2 tile);
+    Vector2 TileToScreenIncludingTerrain(Vector2 tile) const;
 
-    static Vector2 TileToScreen(Vector2 tile, Vector2 tileSize)
-    {
-        return Vector2(
-            (tile.x - tile.y) * tileSize.x / 2,
-            (tile.x + tile.y) * tileSize.y / 2);
-    }
+    Vector2 TileToScreen(Vector2 tile, Vector2 tileSize) const;
 
     Vector2 ScreenToTile(Vector2 screen) const
     {
@@ -79,12 +69,7 @@ struct IsometricSettings
         return world / 32;
     }
 
-    static Vector2 ScreenToTile(Vector2 world, Vector2 tileSize)
-    {
-        return Vector2(
-            (2 * world.y + world.x),
-            (2 * world.y - world.x) / 2) / tileSize;
-    }
+    Vector2 ScreenToTile(Vector2 world, Vector2 tileSize) const;
 
     Vector2 ScreenToIntegerTile(Vector2 world) const
     {
@@ -118,4 +103,8 @@ struct IsometricSettings
     float baseDepth = 0;
     VariableSizedGrid<IsometricTerrainCell> terrain;
     Scene* scene;
+
+private:
+    void BuildTerrainIsometric(const MapSegment& mapSegment, PathFinderService* pathFinder);
+    void BuildTerrainOrthographic(const MapSegment& mapSegment, PathFinderService* pathFinder);
 };

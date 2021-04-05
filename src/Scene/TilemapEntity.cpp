@@ -22,14 +22,6 @@ void TilemapEntity::OnDestroyed()
 {
     if(!scene->isServer)
         scene->GetLightManager()->RemoveLight(&light);
-
-    auto pathFinder = scene->GetService<PathFinderService>();
-
-    for (auto& rectangle : _mapSegment->colliders)
-    {
-        auto bounds = rectangle.As<float>();
-        pathFinder->AddObstacle(bounds);
-    }
 }
 
 void TilemapEntity::Render(Renderer* renderer)
@@ -67,23 +59,11 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
         pathFinder = scene->AddService<PathFinderService>(
             mapSegment.layers[0].tileMap.Rows(),
             mapSegment.layers[0].tileMap.Cols());
-
-        for (auto& rectangle : mapSegment.colliders)
-        {
-            auto bounds = rectangle.As<float>();
-            //pathFinder->AddObstacle(bounds);
-        }
-    }
-
-    for (auto& rectangle : mapSegment.colliders)
-    {
-        auto bounds = rectangle.As<float>();
-        //rigidBody->CreateBoxCollider(bounds.Size(), false, bounds.GetCenter());
     }
 
     _renderer.SetMapSegment(&mapSegment, scene);
     _renderer.SetOffset(TopLeft());
-    scene->isometricSettings.tileSize = Vector2(64, 32);
+    scene->isometricSettings.tileSize = mapSegment.layers[0].tileSize.AsVectorOfType<float>();
 
     _mapSegment = &mapSegment;
 
