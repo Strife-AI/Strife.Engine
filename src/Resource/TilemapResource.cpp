@@ -201,7 +201,7 @@ StringId AddEdgePadding(SDL_Surface* rawSurface, const std::string& resourceName
     std::string file = (std::filesystem::path(resourceManager->GetBaseAssetPath())/"temp.png").string();
 
     int r = IMG_SavePNG(result, file.c_str());
-    resourceManager->LoadResourceFromFile(std::filesystem::path(file).filename().c_str(), resourceName.c_str());
+    resourceManager->LoadResourceFromFile(std::filesystem::path(file).filename().string().c_str(), resourceName.c_str());
 
     //auto res = AddPng(writer, file, resourceName);
 
