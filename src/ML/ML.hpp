@@ -246,6 +246,8 @@ struct NeuralNetworkManager
         auto trainer = std::make_shared<TTrainer>(std::forward<Args>(constructorArgs) ...);
         auto trainerPtr = trainer.get();
 
+        trainer->StartRunning();
+
         _trainers.emplace(std::move(trainer));
         return trainerPtr;
     }
