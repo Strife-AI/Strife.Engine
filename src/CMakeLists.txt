@@ -174,8 +174,6 @@ message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 # Workaround because OALWrapper can't find SDL path
 find_path(SDL_INCLUDE_DIR SDL.h PATH_SUFFIXES SDL2)
 
-find_package(torch REQUIRED)
-
 target_include_directories(Strife.Engine
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -188,6 +186,7 @@ target_include_directories(Strife.Engine
             Renderer)
 
 find_package(Vorbis REQUIRED)
+find_package(Torch REQUIRED)
 
 target_link_libraries(Strife.Engine PUBLIC
     SDL2::SDL2

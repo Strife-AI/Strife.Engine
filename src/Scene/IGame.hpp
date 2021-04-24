@@ -13,6 +13,7 @@ class Scene;
 class Engine;
 class SceneManager;
 class Project;
+class ResourceManager;
 
 struct GameConfig
 {

@@ -10,3 +10,6 @@
 [submodule "Strife.ML"]
 	path = Strife.ML
 	url = git@github.com:Strife-AI/Strife.ML.git
+[submodule "vcpkg"]
+	path = vcpkg
+	url = git@github.com:microsoft/vcpkg.git
