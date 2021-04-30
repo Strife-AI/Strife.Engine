@@ -116,7 +116,7 @@ void RendererState::BindVao(int id)
 {
     if (activeVao != id)
     {
-        glBindVertexArray(activeVao);
+        glBindVertexArray(id);
         activeVao = id;
     }
 }
@@ -152,6 +152,6 @@ void Effect::Start(RendererState* state)
 
 void Effect::StopEffect()
 {
-    Flush();
+    FlushEffect();
     Stop();
 }

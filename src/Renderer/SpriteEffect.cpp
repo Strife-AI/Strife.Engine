@@ -1,5 +1,6 @@
 #include "SpriteEffect.hpp"
 #include "Texture.hpp"
+#include "Camera.hpp"
 
 SpriteEffect::SpriteEffect(Shader* shader, int batchSize)
     : Effect(shader)
@@ -18,7 +19,7 @@ SpriteEffect::SpriteEffect(Shader* shader, int batchSize)
 
 void SpriteEffect::Start()
 {
-
+    glUniformMatrix4fv(view.id, 1, GL_FALSE, &renderer->camera->ViewMatrix()[0][0]);
 }
 
 void SpriteEffect::RenderPolygon(gsl::span<RenderVertex> vertices, Texture* texture)
@@ -35,7 +36,7 @@ void SpriteEffect::RenderPolygon(gsl::span<RenderVertex> vertices, Texture* text
 
     // Split the convex polygon into triangles
     {
-        int first = vertices.size();
+        int first = 0;
 
         for (int i = 1; i < vertices.size() - 1; ++i)
         {
@@ -43,7 +44,7 @@ void SpriteEffect::RenderPolygon(gsl::span<RenderVertex> vertices, Texture* text
 
             if (currentVertexCount + 3 > maxVerticesInBatch)
             {
-                Flush();
+                FlushEffect();
             }
 
             this->vertices[currentVertexCount++] = vertices[a];

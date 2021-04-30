@@ -108,6 +108,8 @@ public:
     void Render();
     void RenderPolygon(Polygon& polygon, Texture* texture);
 
+    std::unique_ptr<Texture> _solidColor;
+
     static constexpr int MaxVerticesPerBatch = 65536 * 8;
     static constexpr int MaxElementsPerBatch = MaxVerticesPerBatch * 4;
 
@@ -123,7 +125,6 @@ private:
     std::vector<TransparentObject> _transparentObjects;
     std::vector<RenderVertex> _vertices;
 
-    std::unique_ptr<Texture> _solidColor;
     std::unique_ptr<Texture> _transparencyTexture;
 
     Camera* _camera;

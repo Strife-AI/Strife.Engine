@@ -132,6 +132,7 @@ struct ShaderUniform
 
 struct Texture;
 struct Effect;
+struct Camera;
 
 struct RendererState
 {
@@ -147,6 +148,7 @@ struct RendererState
     int activeShader = -1;
     int activeVao = -1;
     Effect* activeEffect = nullptr;
+    Camera* camera;
 };
 
 struct Effect

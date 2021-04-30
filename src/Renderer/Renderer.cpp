@@ -7,14 +7,20 @@
 #include "Scene/Scene.hpp"
 #include "Scene/SceneManager.hpp"
 #include "GL/gl3w.h"
+#include "SpriteEffect.hpp"
 
 static ConsoleVar<bool> g_useLighting("light", true);
 
 std::vector<DebugLine> Renderer::_debugLines;
 std::vector<DebugRectangle> Renderer::_debugRectangles;
 
+std::unique_ptr<SpriteEffect> spriteEffect;
+
 Renderer::Renderer()
 {
+    auto spriteShader = GetResource<ShaderResource>("sprite-shader");
+    spriteEffect = std::make_unique<SpriteEffect>(&spriteShader->Get());
+
     InitializeLineRenderer();
     InitializeSpriteBatcher();
 
@@ -283,15 +289,24 @@ void Renderer::RenderCircle(Vector2 center, float radius, Color color, float dep
     float dAngle = 2 * 3.14159 / subdivide;
     Vector2 last = center + Vector2(radius, 0);
 
-    Vector2 v[128];
+    RenderVertex v[128];
 
     for (int i = 0; i < subdivide; ++i)
     {
         float angle = dAngle * i;
-        v[i] = center + Vector2(cos(angle), sin(angle)) * radius;
+        v[i].position = Vector3(center + Vector2(cos(angle), sin(angle)) * radius, depth);
+        v[i].color = Color::Blue().ToVector4(); //color.ToVector4();
     }
 
-    _spriteBatcher.RenderSolidPolygon(v, subdivide, depth, color);
+    RendererState state;
+    state.camera = _camera;
+    spriteEffect->renderer = &state;
+
+
+    spriteEffect->Effect::Start(&state);
+    spriteEffect->RenderPolygon(gsl::span<RenderVertex>(v, subdivide), _spriteBatcher._solidColor.get());
+    spriteEffect->StopEffect();
+    //_spriteBatcher.RenderSolidPolygon(v, subdivide, depth, color);
 }
 
 void Renderer::DoRendering()
