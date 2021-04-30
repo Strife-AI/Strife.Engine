@@ -450,11 +450,6 @@ void Renderer::RenderRectangleOutline(const Rectangle& rect, Color color, float 
     RenderLine(topRight, rect.bottomRight, color, depth);
 }
 
-void Renderer::RenderCustomTransparency(const ICustomTransparencyRenderer* renderer, float depth)
-{
-    _spriteBatcher.RenderCustomTransparency(renderer, depth);
-}
-
 void Renderer::InitializeSpriteBatcher()
 {
     auto spriteShader = GetResource<ShaderResource>("sprite-shader");

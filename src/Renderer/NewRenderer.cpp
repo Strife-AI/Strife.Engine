@@ -6,6 +6,7 @@
 void LayeredRenderStage::Execute()
 {
     Effect* lastEffect = nullptr;
+    RendererState rendererState;
     for (auto layer : layers)
     {
         for (auto& effectPair : layer->renderables)
@@ -19,6 +20,7 @@ void LayeredRenderStage::Execute()
                     lastEffect->Flush();
                 }
 
+                effect->renderer = &rendererState;
                 effect->Start();
                 lastEffect = effect;
             }

@@ -26,6 +26,8 @@ struct ParticleEffect : Effect
     int particleBatchSize = 0;
 
     struct Camera* camera;
+
+    ShaderUniform<Texture> spriteTexture;
 };
 
 struct Particle

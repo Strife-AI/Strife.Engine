@@ -102,7 +102,6 @@ public:
     void RenderSprite(const Sprite& sprite, const Vector3 position, const Vector2 scale, float angle, bool flipHorizontal, Color blendColor);
     void RenderSolidColor(Color color, const Vector3 position, const Vector2 size, Texture* textureOverride = nullptr, float angle = 0);
     void RenderSolidPolygon(Vector2* vertices, int vertexCount, float z, Color color);
-    void RenderCustomTransparency(const ICustomTransparencyRenderer* renderer, float z);
 
     void BeginRender(Camera* camera);
 
@@ -113,13 +112,6 @@ public:
     static constexpr int MaxElementsPerBatch = MaxVerticesPerBatch * 4;
 
 private:
-
-    static constexpr int VertexLocation = 0;
-    static constexpr int TextureCoordLocation = 1;
-    static constexpr int ColorLocation = 2;
-
-    int UnformArrayLocation(const char* arrayName, const char* property, int index) const;
-
     SpriteShader* _shader;
 
     int _viewMatrixLocation;

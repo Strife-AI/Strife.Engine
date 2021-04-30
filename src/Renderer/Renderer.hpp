@@ -12,7 +12,6 @@ class NineSlice;
 class Sprite;
 class Scene;
 class Camera;
-struct ICustomTransparencyRenderer;
 
 struct FontSettings
 {
@@ -85,8 +84,6 @@ public:
     void RenderCircleOutline(Vector2 center, float radius, Color color, float depth, float subdivide = 32);
     void RenderCircle(Vector2 center, float radius, Color color, float depth, float subdivide = 32);
     void RenderRectangleOutline(const Rectangle& rect, Color color, float depth);
-
-    void RenderCustomTransparency(const ICustomTransparencyRenderer* renderer, float depth);
 
     void BeginRender(Scene* scene, Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime);
     void DoRendering();

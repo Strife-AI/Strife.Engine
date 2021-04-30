@@ -43,6 +43,7 @@ void TilemapRenderer::SetMapSegment(const MapSegment* mapSegment, Scene* scene)
 
 void TilemapRenderer::Render(Renderer* renderer) const
 {
+    return;
     if (_scene->perspective == ScenePerspective::Isometric)
     {
         int layerId = 0;

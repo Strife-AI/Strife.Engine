@@ -61,7 +61,7 @@ struct Vbo : IGraphicsObject
         glBufferSubData(glType, 0, data.size_bytes(), data.data());
     }
 
-    unsigned int id;
+    unsigned int id{};
     unsigned int glType;
 };
 
@@ -130,60 +130,88 @@ struct ShaderUniform
     int id;
 };
 
+struct Texture;
+struct Effect;
+
+struct RendererState
+{
+    RendererState();
+
+    void BindTexture(ShaderUniform<Texture> uniform, Texture* texture, int textureUnit);
+    void BindShader(int id);
+    void BindVao(int id);
+    void SetActiveEffect(Effect* effect);
+
+    int activeTextureUnit = -1;
+    int activeTextures[32];
+    int activeShader = -1;
+    int activeVao = -1;
+    Effect* activeEffect = nullptr;
+};
 
 struct Effect
 {
-    Effect(Shader* shader)
-        : shader(shader)
-    {
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-    }
+    Effect(Shader* shader);
 
-    virtual void Start() { }
-    virtual void Stop() { }
-    virtual void Flush() { }
+    void Start(RendererState* state);
+    void StopEffect();
+    void FlushEffect();
 
     int ProgramId() const { return shader->ProgramId(); }
 
     template<typename T>
-    Vbo<T>* CreateBuffer(int count, VboType type)
-    {
-        auto vbo = new Vbo<T>(count, type);
-        graphicsObjects.emplace_back(std::unique_ptr<IGraphicsObject>(vbo));
-        return vbo;
-    }
+    Vbo<T>* CreateBuffer(int count, VboType type);
 
     template<typename T, typename TSelector>
-    void BindVertexAttribute(const char* name, Vbo<T>* vbo, const TSelector& selector, int divisor = 0)
-    {
-        using ElementPointerType = decltype(selector((T*)nullptr));
-        static_assert(std::is_pointer_v<ElementPointerType>, "Return value to selector must be pointer");
-        using ElementType = typename std::remove_pointer<ElementPointerType>::type;
-
-        int stride = sizeof(T);
-        size_t offset = (size_t)selector((T*)nullptr);
-
-        auto attributeLocation = glGetAttribLocation(ProgramId(), name);
-
-        glEnableVertexAttribArray(attributeLocation);
-        auto typeMetadata = GetOpenGlTypeMetadata<ElementType>();
-        glVertexAttribPointer(attributeLocation, typeMetadata.count, typeMetadata.type, GL_FALSE, stride, (void*)offset);
-
-        if (divisor != 0)
-        {
-            glVertexAttribDivisor(attributeLocation, divisor);
-        }
-    }
+    void BindVertexAttribute(const char* name, Vbo<T>* vbo, const TSelector& selector, int divisor = 0);
 
     template<typename T>
-    ShaderUniform<T> GetUniform(const char* name)
-    {
-        int id = glGetUniformLocation(ProgramId(), name);
-        return ShaderUniform<T>(id);
-    }
+    ShaderUniform<T> GetUniform(const char* name);
 
     std::vector<std::unique_ptr<IGraphicsObject>> graphicsObjects;
     unsigned int vao;
     Shader* shader;
+    RendererState* renderer;
+
+    // TODO: rename to OnStart()
+    virtual void Start() { }
+    virtual void Stop() { }
+    virtual void Flush() { }
 };
+
+template<typename T>
+ShaderUniform<T> Effect::GetUniform(const char* name)
+{
+    int id = glGetUniformLocation(ProgramId(), name);
+    return ShaderUniform<T>(id);
+}
+
+template<typename T>
+Vbo<T>* Effect::CreateBuffer(int count, VboType type)
+{
+    auto vbo = new Vbo<T>(count, type);
+    this->graphicsObjects.emplace_back(std::unique_ptr<IGraphicsObject>(vbo));
+    return vbo;
+}
+
+template<typename T, typename TSelector>
+void Effect::BindVertexAttribute(const char* name, Vbo<T>* vbo, const TSelector& selector, int divisor)
+{
+    using ElementPointerType = decltype(selector((T*)nullptr));
+    static_assert(std::is_pointer_v<ElementPointerType>, "Return value to selector must be pointer");
+    using ElementType = typename std::remove_pointer<ElementPointerType>::type;
+
+    int stride = sizeof(T);
+    size_t offset = (size_t)selector((T*)nullptr);
+
+    auto attributeLocation = glGetAttribLocation(ProgramId(), name);
+
+    glEnableVertexAttribArray(attributeLocation);
+    auto typeMetadata = GetOpenGlTypeMetadata<ElementType>();
+    glVertexAttribPointer(attributeLocation, typeMetadata.count, typeMetadata.type, GL_FALSE, stride, (void*)offset);
+
+    if (divisor != 0)
+    {
+        glVertexAttribDivisor(attributeLocation, divisor);
+    }
+}

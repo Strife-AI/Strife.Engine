@@ -16,7 +16,8 @@ struct IRenderable
     virtual void Render() = 0;
 
     Effect* effect;
-    int layer;
+    size_t effectKey;
+    int layer;  // TODO: get rid of this
 };
 
 struct RenderLayer
