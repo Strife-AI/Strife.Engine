@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <functional>
 
 #include "ConsoleValueParsing.hpp"
 
@@ -109,10 +110,10 @@ bool ConsoleCommandBinder::TryBind(TParameter& outValue, const std::string& name
 
 struct ConsoleCmd
 {
-    ConsoleCmd(const std::string& name_, void (*commandHandler_)(ConsoleCommandBinder& binder));
+    ConsoleCmd(const std::string& name_, const std::function<void(ConsoleCommandBinder(&))>& commandHandler);
 
     const std::string name;
-    void (*commandHandler)(ConsoleCommandBinder& binder);
+    std::function<void(ConsoleCommandBinder(&))> commandHandler;
 };
 
 ConsoleCmd* GetConsoleCmd(const std::string &name);

@@ -32,6 +32,7 @@ void SpriteEffect::RenderPolygon(gsl::span<RenderVertex> vertices, Texture* text
     if (texture->Id() != currentTexture->Id())
     {
         FlushEffect();
+        currentTexture = texture;
     }
 
     // Split the convex polygon into triangles

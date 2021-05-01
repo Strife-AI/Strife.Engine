@@ -43,7 +43,6 @@ void TilemapRenderer::SetMapSegment(const MapSegment* mapSegment, Scene* scene)
 
 void TilemapRenderer::Render(Renderer* renderer) const
 {
-    return;
     if (_scene->perspective == ScenePerspective::Isometric)
     {
         int layerId = 0;
@@ -99,13 +98,13 @@ void TilemapRenderer::Render(Renderer* renderer) const
                     TileProperties* tile = tileMap[i][j];
                     if (tile != nullptr)
                     {
-                        renderer->GetSpriteBatcher()->RenderSprite(
-                            tile->sprite,
-                            Vector3(layer.Offset() + Vector2(j, i) * tileSize, depth),
-                            Vector2(1, 1),
-                            0,
-                            false,
-                            Color());
+//                        renderer->GetSpriteBatcher()->RenderSprite(
+//                            tile->sprite,
+//                            Vector3(layer.Offset() + Vector2(j, i) * tileSize, depth),
+//                            Vector2(1, 1),
+//                            0,
+//                            false,
+//                            Color());
                     }
                 }
             }

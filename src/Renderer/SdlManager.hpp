@@ -55,6 +55,8 @@ public:
 
 private:
     void SetupOpenGl(bool isHeadless);
+    void Init();
+    void Cleanup();
 
     Logger* _logger;
 
@@ -67,6 +69,5 @@ private:
 
     bool _receivedQuit = false;
     bool _cursorVisible = true;
-
-    SDL_WindowFlags fullscreenType = SDL_WINDOW_FULLSCREEN;
+    bool _isHeadless;
 };

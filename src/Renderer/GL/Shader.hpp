@@ -155,7 +155,7 @@ struct Effect
 {
     Effect(Shader* shader);
 
-    void Start(RendererState* state);
+    void StartEffect();
     void StopEffect();
     void FlushEffect();
 
@@ -173,7 +173,8 @@ struct Effect
     std::vector<std::unique_ptr<IGraphicsObject>> graphicsObjects;
     unsigned int vao;
     Shader* shader;
-    RendererState* renderer;
+
+    static RendererState* renderer;
 
     // TODO: rename to OnStart()
     virtual void Start() { }

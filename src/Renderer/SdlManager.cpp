@@ -24,29 +24,23 @@ ConsoleVar<Vector2> g_Resolution("pResolution", Vector2(1024, 728), true);
 ConsoleVar<bool> g_FullscreenOnStart("pFullscreen", true, true);
 ConsoleVar<bool> g_EnableVsync("pVsync", true, true);
 
+static ConsoleCmd g_vidrestart("vidrestart", [](ConsoleCommandBinder& binder)
+{
+    auto sdlManager = binder.GetEngine()->GetSdlManager();
+    sdlManager->SetFullscreen(g_FullscreenOnStart.Value());
+    sdlManager->SetVsync(g_EnableVsync.Value());
+    sdlManager->SetScreenSize(g_Resolution.Value().x, g_Resolution.Value().y);
+});
+
 static constexpr int OpenGlMajorVersion = 3;
 static constexpr int OpenGlMinorVersion = 3;
-
-void ResolutionCommand(ConsoleCommandBinder& binder)
-{
-    int w, h;
-    binder
-        .Bind(w, "width")
-        .Bind(h, "height")
-        .Help("Changes the screen resolution");
-
-    binder.GetEngine()->GetSdlManager()->SetScreenSize(w, h);
-    g_Resolution.SetValue(Vector2(w, h));
-}
-ConsoleCmd g_resolutionCmd("resolution", ResolutionCommand);
 
 #ifdef _WIN32
 #include <Windows.h>
 #include <ShellScalingAPI.h>
 #include <comdef.h>
-#endif
-
 #pragma comment(lib, "Shcore.lib")
+#endif
 
 ConsoleVar<bool> g_firstEverRun("first-time", true, true);
 
@@ -97,7 +91,13 @@ void SetDefaultValuesOnFirstRun()
 }
 
 SdlManager::SdlManager(Input* input, bool isHeadless)
-    : _input(input)
+    : _input(input),
+    _isHeadless(isHeadless)
+{
+    Init();
+}
+
+void SdlManager::Init()
 {
 #ifdef _WIN32
     HRESULT hr = SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
@@ -108,13 +108,14 @@ SdlManager::SdlManager(Input* input, bool isHeadless)
     }
 #endif
 
-    if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
+    if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+    {
         FatalError("Failed to initialize SDL");
     }
 
     SetDefaultValuesOnFirstRun();
 
-    SetupOpenGl(isHeadless);
+    SetupOpenGl(_isHeadless);
 
     IMG_Init(IMG_INIT_PNG);
 
@@ -122,6 +123,19 @@ SdlManager::SdlManager(Input* input, bool isHeadless)
     {
         _controller = SDL_GameControllerOpen(0);
     }
+}
+
+void SdlManager::Cleanup()
+{
+    if (_controller != nullptr)
+    {
+        SDL_GameControllerClose(_controller);
+    }
+
+    IMG_Quit();
+    SDL_GL_DeleteContext(_context);
+    SDL_DestroyWindow(_window);
+    SDL_Quit();
 }
 
 void SdlManager::SetupOpenGl(bool isHeadless)
@@ -172,7 +186,7 @@ void SdlManager::SetupOpenGl(bool isHeadless)
 
     auto window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
         //| SDL_WINDOW_INPUT_FOCUS
-        | ((g_FullscreenOnStart.Value()) ? fullscreenType | SDL_WINDOW_BORDERLESS : 0));
+        | ((g_FullscreenOnStart.Value()) ? SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS : 0));
 
     if(!isHeadless)
     {
@@ -265,15 +279,7 @@ void SdlManager::EndRender()
 
 SdlManager::~SdlManager()
 {
-    if (_controller != nullptr)
-    {
-        SDL_GameControllerClose(_controller);
-    }
-
-    IMG_Quit();
-    SDL_GL_DeleteContext(_context);
-    SDL_DestroyWindow(_window);
-    SDL_Quit();
+    Cleanup();
 }
 
 void SdlManager::SetScreenSize(int w, int h)
@@ -351,7 +357,7 @@ Vector2i SdlManager::WindowSize() const
 void SdlManager::SetFullscreen(bool isFullscreen)
 {
     g_FullscreenOnStart.SetValue(isFullscreen);
-    SDL_SetWindowFullscreen(_window, isFullscreen ? (fullscreenType | SDL_WINDOW_BORDERLESS) : 0);
+    SDL_SetWindowFullscreen(_window, isFullscreen ? (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS) : 0);
 }
 
 void SdlManager::SetWindowCaption(const char* title)

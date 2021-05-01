@@ -74,9 +74,9 @@ void RegisterConsoleCmd(ConsoleCmd* cmd)
     }
 }
 
-ConsoleCmd::ConsoleCmd(const std::string& name_, void (* commandHandler_)(ConsoleCommandBinder&))
+ConsoleCmd::ConsoleCmd(const std::string& name_, const std::function<void(ConsoleCommandBinder(&))>& commandHandler)
     : name(name_),
-      commandHandler(commandHandler_)
+      commandHandler(commandHandler)
 {
     RegisterConsoleCmd(this);
 }

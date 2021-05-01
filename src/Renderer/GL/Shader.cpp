@@ -3,6 +3,8 @@
 #include "gl3w.h"
 #include "Texture.hpp"
 
+RendererState* Effect::renderer;
+
 Effect::Effect(Shader* shader)
     : shader(shader)
 {
@@ -126,7 +128,7 @@ void RendererState::SetActiveEffect(Effect* effect)
     if (effect != activeEffect)
     {
         if (activeEffect != nullptr) activeEffect->StopEffect();
-        if (effect != nullptr) effect->Start(this);
+        if (effect != nullptr) effect->StartEffect();
 
         activeEffect = effect;
     }
@@ -143,10 +145,10 @@ void Effect::FlushEffect()
     Flush();
 }
 
-void Effect::Start(RendererState* state)
+void Effect::StartEffect()
 {
-    state->BindVao(vao);
-    state->BindShader(shader->ProgramId());
+    renderer->BindVao(vao);
+    renderer->BindShader(shader->ProgramId());
     Start();
 }
 

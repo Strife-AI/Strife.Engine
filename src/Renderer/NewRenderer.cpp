@@ -5,6 +5,7 @@
 
 void LayeredRenderStage::Execute()
 {
+#if false
     Effect* lastEffect = nullptr;
     RendererState rendererState;
     for (auto layer : layers)
@@ -37,4 +38,5 @@ void LayeredRenderStage::Execute()
         lastEffect->Flush();
         lastEffect->Stop();
     }
+#endif
 }
