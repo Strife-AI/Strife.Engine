@@ -4,8 +4,8 @@
 
 struct ClearBuffersStage : IRenderStage
 {
+    void Execute(const RenderPipelineState& state) override;
+
     bool clearDepthBuffer = true;
     bool clearColorBuffer = true;
-
-    void Execute(const RenderPipelineState& state) override;
 };

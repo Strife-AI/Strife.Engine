@@ -12,6 +12,8 @@ class NineSlice;
 class Sprite;
 class Scene;
 class Camera;
+struct RenderPipeline;
+struct RenderPipelineState;
 
 struct FontSettings
 {
@@ -85,7 +87,7 @@ public:
     void RenderCircle(Vector2 center, float radius, Color color, float depth, int subdivide = 32);
     void RenderRectangleOutline(const Rectangle& rect, Color color, float depth);
 
-    void BeginRender(Scene* scene, Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime);
+    void BeginRender(Scene* scene, float deltaTime, float absoluteTime);
     void DoRendering();
     void RenderSpriteBatch();
 
@@ -96,6 +98,8 @@ public:
     Texture* SolidColorTexture() const { return _solidColor.get(); }
 
     LightManager* GetLightManager() { return &_lightManager; }
+
+    void RenderCamera(Camera* camera, const std::function<void(RenderPipelineState& state)>& executePipeline);
 
     static void DrawDebugLine(const DebugLine& line)
     {

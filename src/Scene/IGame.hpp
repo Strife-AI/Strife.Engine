@@ -107,6 +107,8 @@ public:
 
     virtual void LoadResources(ResourceManager* resourceManager) { }
 
+    virtual void Render(Renderer* renderer) { }
+
     Engine* GetEngine() { return _engine.get(); }
     void Run();
 

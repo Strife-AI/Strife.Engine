@@ -12,6 +12,7 @@
 #include "Tools/Console.hpp"
 #include "Tools/MetricsManager.hpp"
 #include "Tools/PlotManager.hpp"
+#include "Scene/IGame.hpp"
 
 ConsoleVar<bool> g_stressTest("stress-test", false, false);
 int stressCount = 0;
@@ -137,51 +138,53 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
     scene->GetCamera()->SetScreenSize(screenSize);
     scene->GetCamera()->SetZoom(1);// screenSize.y / (1080 / 2));
 
-    auto camera = scene->GetCamera();
-    renderer->BeginRender(scene, camera, Vector2(0, 0), renderDeltaTime, scene->relativeTime);
 
-    scene->SendEvent(RenderImguiEvent());
+    renderer->BeginRender(scene, renderDeltaTime, scene->relativeTime);
+    engine->Game()->Render(renderer);
+
+    auto camera = scene->GetCamera();
+
+    //scene->SendEvent(RenderImguiEvent());
 
     // FIXME: add proper ambient lighting
-    renderer->RenderRectangle(renderer->GetCamera()->Bounds(), Color(18, 21, 26), 0.99);
-    //_renderer->RenderRectangle(_renderer->GetCamera()->Bounds(), Color(255, 255, 255), 0.99);
-    renderer->DoRendering();
+    //renderer->RenderRectangle(renderer->GetCamera()->Bounds(), Color(18, 21, 26), 0.99);
+    //renderer->DoRendering();
 
     // Render HUD
-    renderer->SetRenderOffset(scene->GetCamera()->TopLeft());
-    scene->RenderHud(renderer);
+    //renderer->SetRenderOffset(scene->GetCamera()->TopLeft());
+    //scene->RenderHud(renderer);
 
-    if (g_stressTest.Value())
-    {
-        char text[1024];
-        sprintf(text, "Time elapsed: %f hours", scene->relativeTime / 60.0f / 60.0f);
-
-//        renderer->RenderString(
-//            FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid)),
-//            text,
-//            Vector2(200, 200),
-//            -1);
-    }
-
-    renderer->RenderSpriteBatch();
-
-    // Render UI
-    {
-        Camera uiCamera;
-        uiCamera.SetScreenSize(scene->GetCamera()->ScreenSize());
-        uiCamera.SetZoom(screenSize.y / 768.0f);
-        renderer->BeginRender(scene, &uiCamera, uiCamera.TopLeft(), renderDeltaTime, scene->relativeTime);
-        input->GetMouse()->SetMouseScale(Vector2::Unit() * uiCamera.Zoom());
-
-        if (console->IsOpen())
-        {
-            console->Render(renderer, deltaTime);
-        }
-
-        console->Update();
-
-        renderer->RenderSpriteBatch();
-    }
+//    if (g_stressTest.Value())
+//    {
+//        char text[1024];
+//        sprintf(text, "Time elapsed: %f hours", scene->relativeTime / 60.0f / 60.0f);
+//
+////        renderer->RenderString(
+////            FontSettings(ResourceManager::GetResource<SpriteFont>("console-font"_sid)),
+////            text,
+////            Vector2(200, 200),
+////            -1);
+//    }
+//
+//    renderer->RenderSpriteBatch();
+//
+//    // Render UI
+//    {
+//        Camera uiCamera;
+//        uiCamera.SetScreenSize(scene->GetCamera()->ScreenSize());
+//        uiCamera.SetZoom(screenSize.y / 768.0f);
+//        renderer->BeginRender(scene, &uiCamera, uiCamera.TopLeft(), renderDeltaTime, scene->relativeTime);
+//        input->GetMouse()->SetMouseScale(Vector2::Unit() * uiCamera.Zoom());
+//
+//        if (console->IsOpen())
+//        {
+//            console->Render(renderer, deltaTime);
+//        }
+//
+//        console->Update();
+//
+//        renderer->RenderSpriteBatch();
+//    }
 
     plotManager->RenderPlots();
 

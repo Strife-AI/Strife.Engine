@@ -8,6 +8,7 @@
 #include "Scene/SceneManager.hpp"
 #include "GL/gl3w.h"
 #include "SpriteEffect.hpp"
+#include "Stage/RenderPipeline.hpp"
 
 static ConsoleVar<bool> g_useLighting("light", true);
 
@@ -220,20 +221,11 @@ void Renderer::RenderSpriteBatch()
     _lineRenderer.Render(_camera->ViewMatrix());
 }
 
-void Renderer::BeginRender(Scene* scene, Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime)
+void Renderer::BeginRender(Scene* scene, float deltaTime, float absoluteTime)
 {
-    Effect::renderer = &_rendererState;
-    _rendererState = RendererState();
-
-    _rendererState.camera = camera;
-
-    _camera = camera;
     _scene = scene;
     _deltaTime = deltaTime;
     _absoluteTime = absoluteTime;
-
-    _camera->RebuildViewMatrix();
-    _renderOffset = renderOffset;
 }
 
 void Renderer::DrawDebugRectangleOutline(const Rectangle& rect, Color color)
@@ -312,4 +304,23 @@ void Renderer::RenderSolidColorPolygon(gsl::span<Vector2> vertices, Color color,
     }
 
     spriteEffect->RenderPolygon(gsl::span<RenderVertex>(rv, vertices.size()), SolidColorTexture());
+}
+
+void Renderer::RenderCamera(Camera* camera, const std::function<void(RenderPipelineState& state)>& executePipeline)
+{
+    Effect::renderer = &_rendererState;
+    _rendererState = RendererState();
+    _rendererState.camera = camera;
+
+    _camera = camera;
+    _camera->RebuildViewMatrix();
+
+    RenderPipelineState state;
+    state.renderer = this;
+    state.absoluteTime = _absoluteTime;
+    state.deltaTime = _deltaTime;
+    state.scene = _scene;
+    state.rendererState = &_rendererState;
+
+    executePipeline(state);
 }
