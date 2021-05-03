@@ -21,7 +21,15 @@ std::unordered_map<unsigned, EntityUtil::EntityMetadata*>& GetEntityMetadataByTy
 
 Entity* EntityUtil::EntityMetadata::CreateEntityFromType(StringId type, Scene* scene, EntitySerializer& serializer)
 {
-    return GetEntityMetadataByType()[type]->createEntity(scene, serializer);
+    auto& entityTypes = GetEntityMetadataByType();
+
+    auto it = entityTypes.find(type);
+    if (it == entityTypes.end())
+    {
+        FatalError("No entity type registered with id %u", type.key);
+    }
+
+    return it->second->createEntity(scene, serializer);
 }
 
 void EntityUtil::EntityMetadata::Register(EntityMetadata* metadata)

@@ -7,6 +7,7 @@
 
 #include "Memory/StringId.hpp"
 #include "Scene.hpp"
+#include "Renderer/Stage/RenderPipeline.hpp"
 
 struct EngineConfig;
 class Scene;
@@ -106,6 +107,8 @@ public:
     virtual void OnGameStart() { }
 
     virtual void LoadResources(ResourceManager* resourceManager) { }
+
+    virtual void Render(PipelineRunner& renderPipeline);
 
     Engine* GetEngine() { return _engine.get(); }
     void Run();

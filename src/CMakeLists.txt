@@ -84,8 +84,6 @@ add_library(Strife.Engine STATIC
         Renderer/GL/LineRenderer.cpp
         Renderer/GL/LineRenderer.hpp
         Renderer/RenderVertex.hpp
-        Renderer/GL/SpriteBatcher.cpp
-        Renderer/GL/SpriteBatcher.hpp
         Renderer/Texture.cpp
         Renderer/Texture.hpp
         UI/UiElement.cpp
@@ -119,8 +117,6 @@ add_library(Strife.Engine STATIC
         Sound/SoundManager.hpp
         Sound/SoundEffect.hpp
         Renderer/ThreeSlice.hpp
-        Renderer/ParticleRenderer.hpp
-        Renderer/ParticleRenderer.cpp
         UI/UiDictionary.hpp
         UI/UiBuilder.cpp
         Memory/Dictionary.hpp
@@ -167,7 +163,7 @@ add_library(Strife.Engine STATIC
 		Project/Project.cpp
 		Project/Project.hpp
 		Resource/ResourceManager.hpp Resource/SpriteResource.hpp Resource/SpriteResource.cpp Resource/ResourceManager.cpp Resource/TilemapResource.hpp Resource/TilemapResource.cpp Resource/SpriteFontResource.hpp Resource/SpriteFontResource.cpp
-		Resource/ShaderResource.cpp Resource/ShaderResource.hpp Renderer/NewRenderer.cpp Renderer/NewRenderer.hpp Components/ParticleSystemComponent.hpp Components/ParticleSystemComponent.cpp Scene/Isometric.hpp Scene/Isometric.cpp Components/IsometricSpriteComponent.hpp Components/IsometricSpriteComponent.cpp Resource/FileResource.hpp Resource/FileResource.cpp ML/UtilityAI.hpp Resource/ScriptResource.hpp Resource/ScriptResource.cpp ML/GridSensor.hpp)
+		Resource/ShaderResource.cpp Resource/ShaderResource.hpp Components/ParticleSystemComponent.hpp Components/ParticleSystemComponent.cpp Scene/Isometric.hpp Scene/Isometric.cpp Components/IsometricSpriteComponent.hpp Components/IsometricSpriteComponent.cpp Resource/FileResource.hpp Resource/FileResource.cpp ML/UtilityAI.hpp Resource/ScriptResource.hpp Resource/ScriptResource.cpp ML/GridSensor.hpp Renderer/SpriteEffect.hpp Renderer/SpriteEffect.cpp Renderer/Stage/RenderPipeline.hpp Renderer/Stage/RenderPipeline.cpp)
 
 message("SDL DIRS: ${SDL2_INCLUDE_DIRS}")
 

@@ -1,6 +1,16 @@
 #include <System/Logger.hpp>
 #include "Shader.hpp"
 #include "gl3w.h"
+#include "Texture.hpp"
+
+RendererState* Effect::renderer;
+
+Effect::Effect(Shader* shader)
+    : shader(shader)
+{
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+}
 
 void Shader::Compile(const char* vertexSource, const char* fragmentSource, const char* geometrySource)
 {
@@ -75,4 +85,96 @@ void Shader::CheckCompileErrors(GLuint object, std::string type)
 void Shader::Use()
 {
     glUseProgram(_id);
+}
+
+
+void RendererState::BindTexture(ShaderUniform<Texture> uniform, Texture* texture, int textureUnit)
+{
+    glUniform1i(uniform.id, textureUnit);
+
+    if (activeTextureUnit != textureUnit)
+    {
+        activeTextureUnit = textureUnit;
+        glActiveTexture(GL_TEXTURE0 + textureUnit);
+    }
+
+    if (activeTextures[textureUnit] != texture->Id())
+    {
+        activeTextures[textureUnit] = texture->Id();
+        glBindTexture(GL_TEXTURE_2D, texture->Id());
+    }
+}
+
+void RendererState::BindShader(int id)
+{
+    if (activeShader != id)
+    {
+        glUseProgram(id);
+        activeShader = id;
+    }
+}
+
+void RendererState::BindVao(int id)
+{
+    if (activeVao != id)
+    {
+        glBindVertexArray(id);
+        activeVao = id;
+    }
+}
+
+void RendererState::SetActiveEffect(Effect* effect)
+{
+    if (effect != activeEffect)
+    {
+        if (activeEffect != nullptr) activeEffect->StopEffect();
+        if (effect != nullptr) effect->StartEffect();
+
+        activeEffect = effect;
+    }
+}
+
+RendererState::RendererState()
+{
+    for (auto& texture : activeTextures) texture = -1;
+}
+
+void RendererState::FlushActiveEffect()
+{
+    if (activeEffect != nullptr) activeEffect->FlushEffect();
+}
+
+void RendererState::SetDepthBufferEnabled(bool enabled)
+{
+    if (enabled) glEnable(GL_DEPTH_TEST);
+    else glDisable(GL_DEPTH_TEST);
+}
+
+void RendererState::ClearBuffers(bool clearColor, bool clearDepth, bool clearStencil)
+{
+    unsigned int flags = 0;
+    if (clearColor) flags |= GL_COLOR_BUFFER_BIT;
+    if (clearDepth) flags |= GL_DEPTH_BUFFER_BIT;
+    if (clearStencil) flags |= GL_STENCIL_BUFFER_BIT;
+
+    glClear(flags);
+}
+
+void Effect::FlushEffect()
+{
+    renderer->SetActiveEffect(this);
+    Flush();
+}
+
+void Effect::StartEffect()
+{
+    renderer->BindVao(vao);
+    renderer->BindShader(shader->ProgramId());
+    Start();
+}
+
+void Effect::StopEffect()
+{
+    FlushEffect();
+    Stop();
 }

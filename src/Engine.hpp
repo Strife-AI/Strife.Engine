@@ -1,7 +1,6 @@
 #pragma once
 #include <functional>
 #include <optional>
-#include <Renderer/NewRenderer.hpp>
 #include <Project/Project.hpp>
 
 
@@ -55,7 +54,6 @@ public:
     ServerGame* GetServerGame() { return _serverGame.get(); }
     ClientGame* GetClientGame() { return _clientGame.get(); }
     NeuralNetworkManager* GetNeuralNetworkManager() { return _neuralNetworkManager.get();  }
-    NewRenderer* GetNewRenderer() { return _newRenderer.get(); }
 
     bool ActiveGame() { return _activeGame; }
     void QuitGame() { _activeGame = false; }
@@ -100,7 +98,6 @@ private:
     std::unique_ptr<BlockAllocator> _defaultBlockAllocator;
     std::unique_ptr<SoundManager> _soundManager;
     std::unique_ptr<NeuralNetworkManager> _neuralNetworkManager;
-    std::unique_ptr<NewRenderer> _newRenderer;
 
     std::shared_ptr<ServerGame> _serverGame;
     std::shared_ptr<ClientGame> _clientGame;

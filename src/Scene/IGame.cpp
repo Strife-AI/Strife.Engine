@@ -34,7 +34,7 @@ void IGame::Run()
         if (_config.devConsoleFont.has_value())
         {
             auto font = GetResource<SpriteFontResource>(StringId(_config.devConsoleFont->c_str()));
-            _engine->GetConsole()->SetFont(FontSettings(font, 1));
+            _engine->GetConsole()->SetFont(FontSettings(font, 0.75));
         }
 
         if (_config.windowCaption.has_value())
@@ -54,4 +54,22 @@ void IGame::Run()
             _engine->RunFrame();
         }
     }
+}
+
+void IGame::Render(PipelineRunner& renderPipeline)
+{
+    renderPipeline
+        .ModifyRendererState([](RendererState& state)
+        {
+            state.SetDepthBufferEnabled(true);
+            state.ClearBuffers();
+        })
+        .UseSceneCamera()
+        .RenderEntities()
+        .RenderDebugPrimitives()
+        .RenderImgui();
+
+    renderPipeline
+        .UseUiCamera()
+        .RenderConsole();
 }

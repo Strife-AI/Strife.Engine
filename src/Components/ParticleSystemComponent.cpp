@@ -53,21 +53,18 @@ ParticleEffect::ParticleEffect(Sprite& sprite, int maxParticlesPerBatch)
     RenderVertex geometry[6];
     CreateRectangle(Rectangle(-sprite.Bounds().Size() / 2, sprite.Bounds().Size()),
         sprite.UVBounds(),
-        0,
+        -1,
         geometry,
         Color(r, r, r, 200));
 
     particleGeometryVbo->BufferSub(geometry);
+
+    spriteTexture = GetUniform<Texture>("spriteTexture");
 }
 
 void ParticleEffect::Start()
 {
-    glUniformMatrix4fv(glGetUniformLocation(ProgramId(), "view"), 1, GL_FALSE, &camera->ViewMatrix()[0][0]);
-    glBindVertexArray(vao);
-    shader->Use();
-    glUniform1i(glGetUniformLocation(ProgramId(), "spriteTexture"), 0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, sprite.GetTexture()->Id());
+    renderer->BindTexture(spriteTexture, sprite.GetTexture(), 0);
 }
 
 void ParticleEffect::DrawParticle(Vector3 position)
@@ -94,22 +91,16 @@ void ParticleEffect::Flush()
 
 void ParticleEffect::Stop()
 {
-    //glDisable(GL_BLEND);
+    glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
 }
 
 void ParticleSystemComponent::OnAdded()
 {
     effect.emplace(GetResource<SpriteResource>("particle")->sprite, 100);
-    effect.value().camera = owner->scene->GetCamera();
-
-    IRenderable::effect = &effect.value();
-
-    layer = 0;
-    owner->GetEngine()->GetNewRenderer()->AddRenderable(this);
 }
 
-void ParticleSystemComponent::Render()
+void ParticleSystemComponent::Render(Renderer* renderer)
 {
     for (auto& particle : particles)
     {
@@ -139,7 +130,7 @@ void ParticleSystemComponent::Update(float deltaTime)
     while (_particlesToSpawn >= 1)
     {
         Particle particle;
-        particle.position = Vector3(owner->Center() + Rand(relativeSpawnBounds.TopLeft(), relativeSpawnBounds.BottomRight()), 0);
+        particle.position = Vector3(owner->ScreenCenter() + Rand(relativeSpawnBounds.TopLeft(), relativeSpawnBounds.BottomRight()), 0);
 
         float angle = spawnAngle + Rand(-spawnAngleRange / 2, spawnAngleRange / 2);
         particle.velocity = Vector3(Vector2(cos(angle), sin(angle)) * Rand(minSpeed, maxSpeed), 0);

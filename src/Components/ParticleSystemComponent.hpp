@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Scene/EntityComponent.hpp"
-#include "Renderer/NewRenderer.hpp"
+#include "Renderer/RenderVertex.hpp"
 
 struct ParticleInstance
 {
@@ -25,7 +25,7 @@ struct ParticleEffect : Effect
     std::unique_ptr<ParticleInstance[]> particleBatch;
     int particleBatchSize = 0;
 
-    struct Camera* camera;
+    ShaderUniform<Texture> spriteTexture;
 };
 
 struct Particle
@@ -35,10 +35,10 @@ struct Particle
     float spawnTime;
 };
 
-DEFINE_COMPONENT(ParticleSystemComponent), IRenderable
+DEFINE_COMPONENT(ParticleSystemComponent)
 {
     void OnAdded() override;
-    void Render() override;
+    void Render(Renderer* renderer) override;
     void Update(float deltaTime) override;
 
     std::optional<ParticleEffect> effect;

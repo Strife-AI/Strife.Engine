@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Math/Rectangle.hpp>
-#include <Renderer/GL/LineRenderer.hpp>
-#include <Renderer/GL/SpriteBatcher.hpp>
+#include "Math/Rectangle.hpp"
+#include "Renderer/GL/LineRenderer.hpp"
+#include "Lighting.hpp"
 #include "Math/Vector2.hpp"
 #include "SpriteFont.hpp"
 #include "Color.hpp"
@@ -12,7 +12,8 @@ class NineSlice;
 class Sprite;
 class Scene;
 class Camera;
-struct ICustomTransparencyRenderer;
+struct RenderPipeline;
+struct RenderPipelineState;
 
 struct FontSettings
 {
@@ -74,30 +75,31 @@ public:
     float CurrentTime() const { return _absoluteTime; }
 
     void RenderSprite(const Sprite* sprite, Vector2 position, float depth, Vector2 scale = Vector2(1, 1), float angle = 0, bool flipHorizontal = false, Color blendColor = Color());
-    void RenderSpriteRepeated(const Sprite* sprite, const Rectangle& bounds, float depth, Vector2 center, float angle = 0);
 
-    void RenderNineSlice(const NineSlice* nineSlice, const Rectangle& bounds, float depth);
-    void RenderThreeSlice(const Sprite* sprite, float cornerXSize, const Rectangle& bounds, float depth, float angle);
+    void RenderPolygon(gsl::span<RenderVertex> vertices, Texture* texture);
+    void RenderSolidColorPolygon(gsl::span<Vector2> vertices, Color color, float depth);
+
     void RenderString(const FontSettings& fontSettings, const char* str, Vector2 topLeft, float depth);
     void RenderRectangle(const Rectangle& rect, Color color, float depth, float angle = 0);
 
-    void RenderLine(const Vector2 start, const Vector2 end, const Color color, float depth);
+    void RenderLine(Vector2 start, Vector2 end, Color color, float depth);
     void RenderCircleOutline(Vector2 center, float radius, Color color, float depth, float subdivide = 32);
-    void RenderCircle(Vector2 center, float radius, Color color, float depth, float subdivide = 32);
+    void RenderCircle(Vector2 center, float radius, Color color, float depth, int subdivide = 32);
     void RenderRectangleOutline(const Rectangle& rect, Color color, float depth);
 
-    void RenderCustomTransparency(const ICustomTransparencyRenderer* renderer, float depth);
-
-    void BeginRender(Scene* scene, Camera* camera, Vector2 renderOffset, float deltaTime, float absoluteTime);
-    void DoRendering();
-    void RenderSpriteBatch();
+    void BeginRender(Scene* scene, float deltaTime, float absoluteTime);
+    void RenderDebugPrimitives();
 
     Camera* GetCamera() const { return _camera; }
     void SetRenderOffset(Vector2 renderOffset) { _renderOffset = renderOffset; }
     Vector2 RenderOffset() const { return _renderOffset; }
 
-    SpriteBatcher* GetSpriteBatcher() { return &_spriteBatcher; }
+    Texture* SolidColorTexture() const { return _solidColor.get(); }
+
     LightManager* GetLightManager() { return &_lightManager; }
+
+    void SetCamera(Camera* camera);
+    RendererState* GetRendererState() { return &_rendererState; }
 
     static void DrawDebugLine(const DebugLine& line)
     {
@@ -109,8 +111,6 @@ public:
 
 private:
     void InitializeLineRenderer();
-    void InitializeSpriteBatcher();
-    void ResizeScreen(int w, int h);
 
     float _deltaTime;
     float _absoluteTime;
@@ -118,15 +118,14 @@ private:
     LineRenderer _lineRenderer;
     Shader _lineShader;
 
-    SpriteBatcher _spriteBatcher;
-
     LightManager _lightManager;
 
     Camera* _camera;
     Vector2 _renderOffset;
     Scene* _scene;
+    RendererState _rendererState;
 
-    std::unique_ptr<FrameBuffer> _deferredLightingColorBuffer;
+    std::unique_ptr<Texture> _solidColor;
 
     static std::vector<DebugLine> _debugLines;
     static std::vector<DebugRectangle> _debugRectangles;

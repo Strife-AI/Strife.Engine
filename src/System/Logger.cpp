@@ -72,14 +72,7 @@ void LoggingThread()
         {
             auto event = g_logMessages.Front();
 
-            std::string timeString(std::ctime(&event.time));
-
-            while(timeString.size() > 0 && (timeString[timeString.size() - 1] == '\n'))
-            {
-                timeString.pop_back();
-            }
-
-            auto message = (event.type == LogType::Info ? "[INFO " : "[ERR  ") + timeString + "] " + event.message;
+            auto message = (event.type == LogType::Info ? "[INFO] " : "[ERR] ") + event.message;
 
             g_logMessages.Dequeue();
 
