@@ -134,6 +134,7 @@ struct Texture;
 struct Effect;
 struct Camera;
 
+
 struct RendererState
 {
     RendererState();
@@ -142,6 +143,10 @@ struct RendererState
     void BindShader(int id);
     void BindVao(int id);
     void SetActiveEffect(Effect* effect);
+    void FlushActiveEffect();
+
+    void SetDepthBufferEnabled(bool enabled);
+    void ClearBuffers(bool clearColor = true, bool clearDepth = true, bool clearStencil = false);
 
     int activeTextureUnit = -1;
     int activeTextures[32];

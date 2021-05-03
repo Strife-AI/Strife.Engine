@@ -2,6 +2,9 @@
 
 #include <vector>
 #include <memory>
+#include <functional>
+
+#include "Renderer/Camera.hpp"
 
 struct Camera;
 struct Renderer;
@@ -18,21 +21,22 @@ struct RenderPipelineState
     float absoluteTime;
 };
 
-struct IRenderStage
+struct PipelineRunner
 {
-    void Run(const RenderPipelineState& state)
-    {
-        Execute(state);
-    }
+    PipelineRunner(RenderPipelineState& state);
 
-protected:
-    virtual void Execute(const RenderPipelineState& state) { }
-};
+    PipelineRunner& UseCamera(Camera* camera);
+    PipelineRunner& UseSceneCamera();
+    PipelineRunner& UseUiCamera();
 
+    PipelineRunner& ModifyRendererState(const std::function<void(RendererState& state)>& modifyState);
+    PipelineRunner& RunStage(const std::function<void(RenderPipelineState& state)>& executeStage);
 
-struct RenderPipeline
-{
-    void Execute(const RenderPipelineState& state);
+    PipelineRunner& RenderEntities();
+    PipelineRunner& RenderImgui();
+    PipelineRunner& RenderConsole();
+    PipelineRunner& RenderDebugPrimitives();
 
-    std::vector<std::unique_ptr<IRenderStage>> stages;
+    RenderPipelineState& state;
+    Camera uiCamera;
 };

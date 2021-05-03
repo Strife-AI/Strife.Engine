@@ -139,6 +139,27 @@ RendererState::RendererState()
     for (auto& texture : activeTextures) texture = -1;
 }
 
+void RendererState::FlushActiveEffect()
+{
+    if (activeEffect != nullptr) activeEffect->FlushEffect();
+}
+
+void RendererState::SetDepthBufferEnabled(bool enabled)
+{
+    if (enabled) glEnable(GL_DEPTH_TEST);
+    else glDisable(GL_DEPTH_TEST);
+}
+
+void RendererState::ClearBuffers(bool clearColor, bool clearDepth, bool clearStencil)
+{
+    unsigned int flags = 0;
+    if (clearColor) flags |= GL_COLOR_BUFFER_BIT;
+    if (clearDepth) flags |= GL_DEPTH_BUFFER_BIT;
+    if (clearStencil) flags |= GL_STENCIL_BUFFER_BIT;
+
+    glClear(flags);
+}
+
 void Effect::FlushEffect()
 {
     renderer->SetActiveEffect(this);

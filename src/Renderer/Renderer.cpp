@@ -174,12 +174,8 @@ void Renderer::RenderCircle(Vector2 center, float radius, Color color, float dep
     spriteEffect->RenderPolygon(gsl::span<RenderVertex>(v, subdivide), SolidColorTexture());
 }
 
-void Renderer::DoRendering()
+void Renderer::RenderDebugPrimitives()
 {
-    auto screenSize = _camera->ScreenSize();
-    glViewport(0, 0, screenSize.x, screenSize.y);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     // Only do debug rendering on the client
     if (!_scene->isServer)
     {
@@ -205,18 +201,6 @@ void Renderer::DoRendering()
 
         _debugLines.resize(aliveIndex);
     }
-
-    _scene->RenderEntities(this);
-    _rendererState.SetActiveEffect(nullptr);
-
-    _lineRenderer.Render(_camera->ViewMatrix());
-}
-
-void Renderer::RenderSpriteBatch()
-{
-    glEnable(GL_DEPTH_TEST);
-    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
 
     _lineRenderer.Render(_camera->ViewMatrix());
 }
@@ -306,7 +290,7 @@ void Renderer::RenderSolidColorPolygon(gsl::span<Vector2> vertices, Color color,
     spriteEffect->RenderPolygon(gsl::span<RenderVertex>(rv, vertices.size()), SolidColorTexture());
 }
 
-void Renderer::RenderCamera(Camera* camera, const std::function<void(RenderPipelineState& state)>& executePipeline)
+void Renderer::SetCamera(Camera* camera)
 {
     Effect::renderer = &_rendererState;
     _rendererState = RendererState();
@@ -314,13 +298,4 @@ void Renderer::RenderCamera(Camera* camera, const std::function<void(RenderPipel
 
     _camera = camera;
     _camera->RebuildViewMatrix();
-
-    RenderPipelineState state;
-    state.renderer = this;
-    state.absoluteTime = _absoluteTime;
-    state.deltaTime = _deltaTime;
-    state.scene = _scene;
-    state.rendererState = &_rendererState;
-
-    executePipeline(state);
 }

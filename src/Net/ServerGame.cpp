@@ -1,6 +1,7 @@
 #include "ServerGame.hpp"
 
 #include <thread>
+#include <Stage/RenderPipeline.hpp>
 
 
 #include "Engine.hpp"
@@ -138,9 +139,20 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
     scene->GetCamera()->SetScreenSize(screenSize);
     scene->GetCamera()->SetZoom(1);// screenSize.y / (1080 / 2));
 
+    console->Update();
+
 
     renderer->BeginRender(scene, renderDeltaTime, scene->relativeTime);
-    engine->Game()->Render(renderer);
+
+    RenderPipelineState state;
+    state.renderer = renderer;
+    state.absoluteTime = scene->relativeTime;
+    state.deltaTime = renderDeltaTime;
+    state.scene = scene;
+    state.rendererState = renderer->GetRendererState();
+
+    PipelineRunner runner(state);
+    engine->Game()->Render(runner);
 
     auto camera = scene->GetCamera();
 
@@ -187,9 +199,6 @@ void BaseGameInstance::Render(Scene* scene, float deltaTime, float renderDeltaTi
 //    }
 
     plotManager->RenderPlots();
-
-    engine->GetNewRenderer()->Render();
-
     sdlManager->EndRender();
 }
 

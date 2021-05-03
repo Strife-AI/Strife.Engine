@@ -88,8 +88,7 @@ public:
     void RenderRectangleOutline(const Rectangle& rect, Color color, float depth);
 
     void BeginRender(Scene* scene, float deltaTime, float absoluteTime);
-    void DoRendering();
-    void RenderSpriteBatch();
+    void RenderDebugPrimitives();
 
     Camera* GetCamera() const { return _camera; }
     void SetRenderOffset(Vector2 renderOffset) { _renderOffset = renderOffset; }
@@ -99,7 +98,8 @@ public:
 
     LightManager* GetLightManager() { return &_lightManager; }
 
-    void RenderCamera(Camera* camera, const std::function<void(RenderPipelineState& state)>& executePipeline);
+    void SetCamera(Camera* camera);
+    RendererState* GetRendererState() { return &_rendererState; }
 
     static void DrawDebugLine(const DebugLine& line)
     {

@@ -64,9 +64,6 @@ ParticleEffect::ParticleEffect(Sprite& sprite, int maxParticlesPerBatch)
 
 void ParticleEffect::Start()
 {
-    glUniformMatrix4fv(glGetUniformLocation(ProgramId(), "view"), 1, GL_FALSE, &camera->ViewMatrix()[0][0]);
-    glBindVertexArray(vao);
-    shader->Use();
     renderer->BindTexture(spriteTexture, sprite.GetTexture(), 0);
 }
 
@@ -101,15 +98,9 @@ void ParticleEffect::Stop()
 void ParticleSystemComponent::OnAdded()
 {
     effect.emplace(GetResource<SpriteResource>("particle")->sprite, 100);
-    effect.value().camera = owner->scene->GetCamera();
-
-    IRenderable::effect = &effect.value();
-
-    layer = 0;
-    owner->GetEngine()->GetNewRenderer()->AddRenderable(this);
 }
 
-void ParticleSystemComponent::Render()
+void ParticleSystemComponent::Render(Renderer* renderer)
 {
     for (auto& particle : particles)
     {
