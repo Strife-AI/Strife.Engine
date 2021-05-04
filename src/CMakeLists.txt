@@ -193,7 +193,7 @@ target_link_libraries(Strife.Engine PUBLIC
     OALWrapper
     SLikeNet
     Strife.ML
-	robin_hood
+	robin_hood::robin_hood
     )
 
 if(APPLE)
