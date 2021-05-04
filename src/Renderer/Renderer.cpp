@@ -124,15 +124,17 @@ void Renderer::RenderString(const FontSettings& fontSettings, const char* str, V
 
 void Renderer::RenderRectangle(const Rectangle& rect, Color color, float depth, float angle)
 {
-//    _spriteBatcher.RenderSolidColor(
-//        color,
-//        Vector3(
-//            rect.topLeft.x + _renderOffset.x,
-//            rect.topLeft.y + _renderOffset.y,
-//            depth),
-//        rect.Size(),
-//        nullptr,
-//        angle);
+    RenderVertex v[4];
+    Vector2 points[4];
+    rect.GetPoints(points);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        v[i].position = Vector3(points[i], depth);
+        v[i].color = color.ToVector4();
+    }
+
+    spriteEffect->RenderPolygon(v, _solidColor.get());
 }
 
 void Renderer::RenderLine(Vector2 start, Vector2 end, Color color, float depth)

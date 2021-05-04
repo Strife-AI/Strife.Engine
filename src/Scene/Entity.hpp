@@ -16,6 +16,7 @@
 
 #include "Sound/SoundManager.hpp"
 #include "EntitySerializer.hpp"
+#include "Memory/DLinkNode.hpp"
 
 class b2Body;
 
@@ -63,7 +64,7 @@ struct ISyncVar;
 /// <summary>
 /// The base class of all entities. Do not inherit from this directly. Instead, use the macro <see cref="DEFINE_ENTITY"/>
 /// </summary>
-struct Entity
+struct Entity : DLinkedNode<Entity>
 {
     static const int InvalidEntityId = -1;
 

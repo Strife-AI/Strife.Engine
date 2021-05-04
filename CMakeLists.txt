@@ -2,23 +2,9 @@ cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 
 project(Engine VERSION 1 LANGUAGES C CXX)
 
-message(${CMAKE_TOOLCHAIN_FILE})
-
 if (UNIX AND NOT APPLE)
 	set(LINUX TRUE)
 endif()
-
-find_program(VCPKG_EXECUTABLE
-		vcpkg PATHS "${CMAKE_CURRENT_LIST_DIR}")
-if (NOT VCPKG_EXECUTABLE)
-	if (WIN32)
-		execute_process(COMMAND "${CMAKE_CURRENT_LIST_DIR}/bootstrap-vcpkg.bat"
-				WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
-	else ()
-		execute_process(COMMAND  "${CMAKE_CURRENT_LIST_DIR}/bootstrap-vcpkg.sh"
-				WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
-	endif ()
-endif ()
 
 # Enable exception unwind semantics
 if(MSVC)

@@ -183,6 +183,7 @@ target_include_directories(Strife.Engine
 
 find_package(Vorbis REQUIRED)
 find_package(Torch REQUIRED)
+find_package(robin_hood REQUIRED)
 
 target_link_libraries(Strife.Engine PUBLIC
     SDL2::SDL2
@@ -192,6 +193,7 @@ target_link_libraries(Strife.Engine PUBLIC
     OALWrapper
     SLikeNet
     Strife.ML
+	robin_hood
     )
 
 if(APPLE)

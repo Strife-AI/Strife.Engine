@@ -98,13 +98,10 @@ void TilemapRenderer::Render(Renderer* renderer) const
                     TileProperties* tile = tileMap[i][j];
                     if (tile != nullptr)
                     {
-//                        renderer->GetSpriteBatcher()->RenderSprite(
-//                            tile->sprite,
-//                            Vector3(layer.Offset() + Vector2(j, i) * tileSize, depth),
-//                            Vector2(1, 1),
-//                            0,
-//                            false,
-//                            Color());
+                        renderer->RenderSprite(
+                            &tile->sprite,
+                            Vector2(layer.Offset() + Vector2(j, i) * tileSize),
+                            depth);
                     }
                 }
             }
