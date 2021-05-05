@@ -250,7 +250,7 @@ private:
                                SyncVarDeltaMode::Full };
 
     Vector2 _dimensions;
-    float _rotation;
+    float _rotation = 0;
     SoundEmitter _soundEmitter;
 
     IEntityComponent* _componentList = nullptr;

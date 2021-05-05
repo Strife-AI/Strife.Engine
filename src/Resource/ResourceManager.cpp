@@ -7,7 +7,7 @@
 #include "Tools/Console.hpp"
 #include "Resource/ScriptResource.hpp"
 
-ConsoleVar<std::string> assetPath("asset-path", "../assets", true);
+ConsoleVar<std::string> assetPath("asset-path", "assets", true);
 
 void ResourceManager::LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType)
 {
