@@ -18,31 +18,6 @@ elseif(APPLE)
 	set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0")
 endif()
 
-if (MSVC)
-	if (defined ${CMAKE_BUILD_TYPE})
-		message("============================Type is ${CMAKE_BUILD_TYPE}")
-		set(BUILD_TYPE ${CMAKE_BUILD_TYPE})
-	else()
-		set(BUILD_TYPE ${CMAKE_CONFIGURATION_TYPES})
-	endif()
-
-	if (${BUILD_TYPE} STREQUAL "Debug")
-		if (NOT DEFINED ENV{TORCH_DEBUG_DIR})
-			message(FATAL_ERROR "Environment variable TORCH_DEBUG_DIR not set to location of debug torch")
-		endif()
-
-		set(TORCH_DIR $ENV{TORCH_DEBUG_DIR} CACHE STRING "Path to torch")
-	else()
-		if (NOT DEFINED ENV{TORCH_RELEASE_DIR})
-			message(FATAL_ERROR "Environment variable TORCH_RELEASE_DIR not set to location of release torch")
-		endif()
-
-		set(TORCH_DIR $ENV{TORCH_RELEASE_DIR} CACHE STRING "Path to torch")
-	endif()
-
-	list(APPEND CMAKE_PREFIX_PATH "${TORCH_DIR}/share/cmake/Torch")
-endif()
-
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}")
 
