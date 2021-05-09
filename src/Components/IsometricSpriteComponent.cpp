@@ -5,11 +5,11 @@
 
 void IsometricSpriteComponent::Render(Renderer* renderer)
 {
-    auto spriteBounds = sprite->sprite.Bounds().Size();
+    auto spriteBounds = sprite->Get().Bounds().Size();
     auto position = owner->ScreenCenter() + offsetFromCenter - spriteBounds + baseSize / 2;
     int layer = GetScene()->GetService<PathFinderService>()->GetCell(GetScene()->isometricSettings.WorldToTile(owner->Center())).height;
 
     auto depth = GetScene()->isometricSettings.GetTileDepth(owner->Center(), layer + 1, layerOffset);
 
-    renderer->RenderSprite(&sprite->sprite, position, depth);
+    renderer->RenderSprite(&sprite->Get(), position, depth);
 }

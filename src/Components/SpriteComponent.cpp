@@ -15,8 +15,8 @@ void SpriteComponent::Render(Renderer* renderer)
         : scene->isometricSettings.GetTileDepth(owner->Center(), depth);
 
     renderer->RenderSprite(
-        &sprite->sprite,
-        owner->Center() + offsetFromCenter - sprite->sprite.Bounds().Size() * scale / 2,
+        &sprite->Get(),
+        owner->Center() + offsetFromCenter - sprite->Get().Bounds().Size() * scale / 2,
         spriteDepth,
         scale,
         owner->Rotation(),

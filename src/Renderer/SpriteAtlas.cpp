@@ -17,7 +17,7 @@ void SpriteAtlas::GetFrame(const int frameIndex, Sprite* outSprite) const
     const Vector2 cell(col, row);
 
     *outSprite = Sprite(
-        _atlas->sprite.GetTexture(),
+        _atlas->Get().GetTexture(),
         Rectangle(
             cell * (_cellSize + Vector2(8, 8)),
             _cellSize));

@@ -510,7 +510,7 @@ void DtoToSegment(MapSegment* segment, MapSegmentDto& segmentDto)
     {
         auto tileBounds = tilePropertiesDto.bounds.As<float>();
 
-        Sprite* tileSprite = &GetResource<SpriteResource>(tilePropertiesDto.spriteResource.c_str())->sprite;
+        Sprite* tileSprite = &GetResource<SpriteResource>(tilePropertiesDto.spriteResource.c_str())->Get();
         segment->tileProperties.push_back(new TileProperties(
             Sprite(tileSprite->GetTexture(), tileBounds, tilePropertiesDto.bounds.As<float>()),
             0,

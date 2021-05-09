@@ -8,6 +8,8 @@
 #include <optional>
 
 struct Engine;
+class BinaryStreamWriter;
+class BinaryStreamReader;
 
 struct ResourceSettings
 {
@@ -23,6 +25,9 @@ struct BaseResource
 {
 public:
     virtual bool LoadFromFile(const ResourceSettings& settings) { return false; }
+    virtual bool WriteToBinary(const ResourceSettings& settings, BinaryStreamWriter& writer) { return false; }
+    virtual bool LoadFromBinary(BinaryStreamReader& reader) { return false; }
+
     virtual bool TryCleanup() { return false; }
 
     template<typename TResource>
