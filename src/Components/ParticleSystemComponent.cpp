@@ -97,7 +97,7 @@ void ParticleEffect::Stop()
 
 void ParticleSystemComponent::OnAdded()
 {
-    effect.emplace(GetResource<SpriteResource>("particle")->sprite, 100);
+    effect.emplace(GetResource<SpriteResource>("particle")->Get(), 100);
 }
 
 void ParticleSystemComponent::Render(Renderer* renderer)

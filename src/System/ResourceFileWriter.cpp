@@ -7,8 +7,10 @@
 
 void ResourceFileWriter::Initialize(const char* outputFileName)
 {
+    const char* signature = "STRF";
+
 	_outputFileName = outputFileName;
-	_writer.WriteBlob("STRF", 4);
+	_writer.WriteBlob({ reinterpret_cast<const unsigned char*>(signature), 4 });
 	_writer.WriteInt(0);
 	_writer.WriteInt(0); // Reserve space for header offset in file
 }
@@ -53,7 +55,7 @@ StringId ResourceFileWriter::WriteResource(void* data, int size, const std::stri
 	_resources[name] = header;
 	_keysByName[name] = key;
 
-	_writer.WriteBlob(data, size);
+	_writer.WriteBlob({ reinterpret_cast<const unsigned char*>(data), (size_t)size });
 
 	return key;
 }

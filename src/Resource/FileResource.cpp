@@ -1,5 +1,6 @@
 #include "FileResource.hpp"
 #include "System/FileSystem.hpp"
+#include "ResourceSettings.hpp"
 
 bool FileResource::LoadFromFile(const ResourceSettings& settings)
 {

@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "ResourceManager.hpp"
 #include "SpriteResource.hpp"
 #include "TilemapResource.hpp"
@@ -6,29 +8,30 @@
 #include "FileResource.hpp"
 #include "Tools/Console.hpp"
 #include "Resource/ScriptResource.hpp"
+#include "ResourceSettings.hpp"
+#include "System/FileSystem.hpp"
+#include "SpriteAtlasResource.hpp"
 
-ConsoleVar<std::string> assetPath("asset-path", "assets", true);
+ConsoleVar<std::string> assetPath("asset-path", "../assets", true);
 
-void ResourceManager::LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType)
+void ResourceManager::LoadResourceFromFile(const ResourceSettings& settings)
 {
-    std::filesystem::path path = std::filesystem::path(assetPath.Value())/std::filesystem::path(filePath);
-    auto pathString = path.string();
+    if (_resourcesByStringId.count(StringId(settings.resourceName)) != 0)
+    {
+        return;
+    }
 
-    ResourceSettings settings;
-    settings.path = pathString.c_str();
-    settings.isHeadlessServer = false;
-    settings.resourceName = resourceName;
+    auto resourceType = settings.resourceType;
 
     BaseResource* resource = nullptr;
 
-    std::string type = resourceType != nullptr ? std::string(resourceType) : path.extension().string();
-
-    if (type == ".png") resource = new SpriteResource;
-    else if (type == ".tmx") resource = new TilemapResource;
-    else if (type == ".sfnt") resource = new SpriteFontResource;
-    else if (type == ".shader") resource = new ShaderResource;
-    else if (type == ".txt" || type == ".file") resource = new FileResource;
-    else if (type == ".c") resource = new ScriptResource;
+    if (strcmp(resourceType, "sprite") == 0) resource = new SpriteResource;
+    else if (strcmp(resourceType, "map") == 0) resource = new TilemapResource;
+    else if (strcmp(resourceType, "sprite-font") == 0) resource = new SpriteFontResource;
+    else if (strcmp(resourceType, "shader") == 0) resource = new ShaderResource;
+    else if (strcmp(resourceType, "file") == 0) resource = new FileResource;
+    else if (strcmp(resourceType, "script") == 0) resource = new ScriptResource;
+    else if (strcmp(resourceType, "atlas") == 0) resource = new SpriteAtlasResource;
 
     if (resource == nullptr)
     {
@@ -37,13 +40,13 @@ void ResourceManager::LoadResourceFromFile(const char* filePath, const char* res
 
     if (!resource->LoadFromFile(settings))
     {
-        Log("Failed to load resource %s\n", settings.path);
+        FatalError("Failed to load resource %s\n", settings.path);
     }
     else
     {
-        resource->name = resourceName;
-        resource->path = pathString;
-        AddResource(resource, resourceName);
+        resource->name = settings.resourceName;
+        resource->path = settings.path;
+        AddResource(resource, settings.resourceName);
     }
 }
 
@@ -62,6 +65,57 @@ ResourceManager* ResourceManager::GetInstance()
 std::string ResourceManager::GetBaseAssetPath() const
 {
     return assetPath.Value();
+}
+
+void ResourceManager::LoadContentFile(const char* filePath)
+{
+    auto absolutePath = GetAssetPath(filePath);
+    std::ifstream file(absolutePath);
+
+    if (!file.is_open())
+    {
+        FatalError("Failed to open content file: %s", absolutePath.c_str());
+    }
+
+    nlohmann::json json = nlohmann::json::parse(file);
+
+    auto resources = json["resources"].get<std::vector<nlohmann::json>>();
+
+    for (const auto& resourceJson : resources)
+    {
+        auto type = resourceJson["type"].get<std::string>();
+        auto name = resourceJson["name"].get<std::string>();
+        auto path = GetAssetPath(resourceJson["path"].get<std::string>());
+        std::optional<nlohmann::json> attributes;
+
+        if (resourceJson.contains("data"))
+        {
+            auto& dataSection = resourceJson["data"];
+
+            if (dataSection.is_string())
+            {
+                std::ifstream attributeFile(dataSection.get<std::string>());
+                attributes = nlohmann::json::parse(attributeFile);
+            }
+            else if (dataSection.is_object())
+            {
+                attributes = dataSection;
+            }
+        }
+
+        ResourceSettings settings;
+        settings.resourceName = name.c_str();
+        settings.path = path.c_str();
+        settings.resourceType = type.c_str();
+        settings.attributes = attributes;
+
+        LoadResourceFromFile(settings);
+    }
+}
+
+std::filesystem::path ResourceManager::GetAssetPath(const std::string& relativePath)
+{
+    return std::filesystem::path(assetPath.Value()) / std::filesystem::path(relativePath);
 }
 
 static void ReloadResources(ConsoleCommandBinder& binder)
@@ -83,7 +137,6 @@ static void ReloadResources(ConsoleCommandBinder& binder)
             ResourceSettings settings;
             settings.resourceName = resource->name.c_str();
             settings.path = resource->path.c_str();
-            settings.isHeadlessServer = false;
             if (!resource->LoadFromFile(settings))
             {
                 binder.GetConsole()->Log("Failed to reload resource\n");

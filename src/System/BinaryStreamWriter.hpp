@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <vector>
+#include <gsl/span>
 
 class Cipher;
 
@@ -10,7 +11,9 @@ class BinaryStreamWriter
 public:
     void WriteInt(int value);
     void WriteFloat(float value);
-    void WriteBlob(const void* data, int size);
+    void WriteBlob(gsl::span<const unsigned char> data);
+    void WriteBlob(const void* data, size_t bytes);
+    bool TryWriteFile(const char* path);
     void Seek(int offset);
     [[nodiscard]] int CurrentPosition() const;
     void WriteToFile(const char* fileName);
@@ -26,5 +29,5 @@ private:
     void ExpandBuffer(int newMinSize);
 
     std::vector<unsigned char> _data;
-    int _currentPosition = 0;
+    size_t _currentPosition = 0;
 };

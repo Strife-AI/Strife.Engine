@@ -22,18 +22,18 @@ void Read(BinaryStreamReader& reader, SpriteSheetDto& outSpriteSheet)
     ::Read(reader, outSpriteSheet.cellSize);
 }
 
-void Write(BinaryStreamWriter& writer, const AtlasAnimationDto& atlasAnimationDto)
+void Write(BinaryStreamWriter& writer, const AtlasAnimation& atlasAnimationDto)
 {
     writer.WriteInt(atlasAnimationDto.fps);
     WriteVector(writer, atlasAnimationDto.frames);
-    writer.WriteInt(atlasAnimationDto.animationName.key);
+    writer.WriteInt(atlasAnimationDto.name.key);
 }
 
-void Read(BinaryStreamReader& reader, AtlasAnimationDto& outAtlasAnimation)
+void Read(BinaryStreamReader& reader, AtlasAnimation& outAtlasAnimation)
 {
     outAtlasAnimation.fps = reader.ReadInt();
     ReadVector(reader, outAtlasAnimation.frames);
-    outAtlasAnimation.animationName = StringId(reader.ReadInt());
+    outAtlasAnimation.name = StringId(reader.ReadInt());
 }
 
 void SpriteAtlasDto::Write(BinaryStreamWriter &writer) const

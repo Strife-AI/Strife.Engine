@@ -8,22 +8,28 @@
 
 void BinaryStreamWriter::WriteInt(int value)
 {
-	WriteBlob(&value, sizeof(int));
+    WriteBlob({ reinterpret_cast<unsigned char*>(&value), sizeof(value) });
 }
 
 void BinaryStreamWriter::WriteFloat(float value)
 {
-    WriteBlob(&value, sizeof(float));
+    WriteBlob({ reinterpret_cast<unsigned char*>(&value), sizeof(value) });
 }
 
-void BinaryStreamWriter::WriteBlob(const void* data, int size)
+void BinaryStreamWriter::WriteBlob(gsl::span<const unsigned char> data)
 {
-	ExpandBuffer(size);
+	ExpandBuffer(data.size_bytes());
+	memcpy(&_data[_currentPosition], data.data(), data.size_bytes());
 
-    const auto bytes = static_cast<const unsigned char*>(data);
-	memcpy(&_data[_currentPosition], data, size);
+	_currentPosition += data.size_bytes();
+}
 
-	_currentPosition += size;
+void BinaryStreamWriter::WriteBlob(const void* data, size_t bytes)
+{
+    ExpandBuffer(bytes);
+    memcpy(&_data[_currentPosition], data, bytes);
+
+    _currentPosition += bytes;
 }
 
 void BinaryStreamWriter::Seek(int offset)
@@ -59,8 +65,20 @@ void BinaryStreamWriter::EncryptRange(int startInclusive, int endExclusive, Ciph
 
 void BinaryStreamWriter::ExpandBuffer(int newMinSize)
 {
-	while ((int)_data.size() < _currentPosition + newMinSize)
-	{
-		_data.push_back(0);
-	}
+    size_t newSize = Max(_data.size(), _currentPosition + newMinSize);
+    _data.resize(newSize);
+}
+
+bool BinaryStreamWriter::TryWriteFile(const char* path)
+{
+    std::vector<unsigned char> contents;
+    if (!TryReadFileContents(path, contents))
+    {
+        return false;
+    }
+
+    _data.insert(_data.end(), contents.begin(), contents.end());
+    _currentPosition += contents.size();
+
+    return true;
 }

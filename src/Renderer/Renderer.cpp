@@ -94,7 +94,7 @@ void Renderer::RenderString(const FontSettings& fontSettings, const char* str, V
         return;
     }
 
-    auto characterSize = fontSettings.spriteFont->GetFont()->CharacterDimension(fontSettings.scale);
+    auto characterSize = fontSettings.spriteFont->Get().CharacterDimension(fontSettings.scale);
     Vector2 position = topLeft;
 
     while (*str != '\0')
@@ -107,7 +107,7 @@ void Renderer::RenderString(const FontSettings& fontSettings, const char* str, V
         else
         {
             Sprite characterSprite;
-            fontSettings.spriteFont->GetFont()->GetCharacter((unsigned char)*str, &characterSprite);
+            fontSettings.spriteFont->Get().GetCharacter((unsigned char)*str, &characterSprite);
 
             RenderSprite(
                 &characterSprite,

@@ -3,31 +3,11 @@
 #include <vector>
 #include <Memory/StringId.hpp>
 #include "Math/Vector2.hpp"
-
 #include "Math/Vector2.hpp"
+#include "Renderer/SpriteAtlas.hpp"
 
 class BinaryStreamWriter;
 class BinaryStreamReader;
-
-struct AtlasAnimationDto
-{
-    AtlasAnimationDto()
-    {
-
-    }
-
-    AtlasAnimationDto(StringId animationName_, int fps_, std::vector<int> frames_)
-        : animationName(animationName_),
-        fps(fps_),
-        frames(frames_)
-    {
-
-    }
-
-    StringId animationName;
-    int fps;
-    std::vector<int> frames;
-};
 
 struct SpriteSheetDto
 {
@@ -65,7 +45,7 @@ struct SpriteAtlasDto
     Vector2i topLeftCornerSize = Vector2::Zero().AsVectorOfType<int>();
 
     SpriteSheetDto spriteSheet;
-    std::vector<AtlasAnimationDto> animations;
+    std::vector<AtlasAnimation> animations;
 };
 
 struct SpriteFontDto

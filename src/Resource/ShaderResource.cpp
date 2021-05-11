@@ -1,6 +1,7 @@
 #include <fstream>
 
 #include "ShaderResource.hpp"
+#include "ResourceSettings.hpp"
 
 enum class ShaderType
 {

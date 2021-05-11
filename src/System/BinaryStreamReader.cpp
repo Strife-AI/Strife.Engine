@@ -34,7 +34,7 @@ void BinaryStreamReader::Open(const char* fileName)
 	_bufferIndex = 0;
 }
 
-void BinaryStreamReader::Open(const unsigned char* buffer, int size)
+void BinaryStreamReader::Open(const unsigned char* buffer, size_t size)
 {
 	_freeOnClose = false;
 	_bufferSize = size;

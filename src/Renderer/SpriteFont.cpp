@@ -6,7 +6,7 @@ SpriteFont::SpriteFont(SpriteResource* fontSprite, int rows, int cols)
         : _characterAtlas(fontSprite, std::vector<AtlasAnimation>(), rows, cols, Vector2(0, 0), Vector2(16, 16)),
           _characterDimensions({ 16, 16})
 {
-    auto size = fontSprite->sprite.Bounds().Size();
+    auto size = fontSprite->Get().Bounds().Size();
     //Assert((int)size.x % cols == 0, "Font sprite not multiple of character width");
     //Assert((int)size.y % rows == 0, "Font sprite not multiple of character height");
 }

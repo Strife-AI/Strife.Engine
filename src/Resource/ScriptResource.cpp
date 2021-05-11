@@ -1,5 +1,6 @@
 #include "ScriptResource.hpp"
 #include "System/FileSystem.hpp"
+#include "ResourceSettings.hpp"
 
 bool ScriptResource::LoadFromFile(const ResourceSettings& settings)
 {
