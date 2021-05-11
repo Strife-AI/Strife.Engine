@@ -103,7 +103,7 @@ struct EntityManager
 
     FixedSizeVector<EntityHeader, MaxEntities> entityHeaders;
 
-	robin_hood::unordered_flat_set<Entity*> entities;
+    robin_hood::unordered_flat_set<Entity*> entities;
     robin_hood::unordered_flat_set<EntityGroup*> updatables;
     robin_hood::unordered_flat_set<EntityGroup*> serverUpdatables;
     robin_hood::unordered_flat_set<EntityGroup*> fixedUpdatables;

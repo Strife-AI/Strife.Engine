@@ -195,7 +195,7 @@ struct Entity : DLinkedNode<Entity>
     Entity* parent = nullptr;
     Entity* nextSibling = nullptr;
     Entity* children = nullptr;
-    EntityGroup* entityGroup;
+    EntityGroup* entityGroup = nullptr;
 
     ISyncVar* syncVarHead = nullptr;
 
