@@ -11,19 +11,15 @@ struct DLinkedNode
 
     void Unlink()
     {
-        if (owner != nullptr)
-        {
-            prev->next = next;
-            next->prev = prev;
+        prev->next = next;
+        next->prev = prev;
 
-            next = nullptr;
-            prev = nullptr;
-        }
+        next = nullptr;
+        prev = nullptr;
     }
 
-    TElement* next;
-    TElement* prev;
-    DLinkedList<TElement>* owner;
+    DLinkedNode<TElement>* next = nullptr;
+    DLinkedNode<TElement>* prev = nullptr;
 };
 
 template<typename T>
@@ -45,7 +41,7 @@ struct DLinkedListIterator
         return !(*this == rhs);
     }
 
-    T& operator*()
+    T* operator*()
     {
         return current->GetElement();
     }
@@ -73,6 +69,7 @@ struct DLinkedList
     using Node = DLinkedNode<T>;
 
     DLinkedList();
+    DLinkedList(const DLinkedList& rhs) = delete;
 
     DLinkedListIterator<T> begin()
     {
@@ -85,7 +82,6 @@ struct DLinkedList
     }
 
     void Append(Node* node);
-    void Remove(Node* node);
     void InsertBefore(Node* node, Node* before);
 
     Node head;
@@ -95,21 +91,12 @@ struct DLinkedList
 template<typename T>
 void DLinkedList<T>::Append(DLinkedList::Node* node)
 {
-    node->owner = this;
-    InsertBefore(&tail);
-}
-
-template<typename T>
-void DLinkedList<T>::Remove(DLinkedList::Node* node)
-{
-    assert(node->owner == this);
+    InsertBefore(node, &tail);
 }
 
 template<typename T>
 void DLinkedList<T>::InsertBefore(Node* node, Node* before)
 {
-    assert(node->owner == nullptr);
-
     before->prev->next = node;
     node->prev = before->prev;
 

@@ -171,7 +171,7 @@ public:
 			const std::function<bool(ColliderHandle handle)>& includeFixture = nullptr) const;
 
 	template<typename TEntity>
-	std::vector<TEntity*> GetEntitiesOfType();
+	EntityList<TEntity> GetEntitiesOfType();
 
 	template<typename TEntity>
 	TEntity* GetFirstNamedEntityOfType(StringId name);
@@ -233,7 +233,6 @@ private:
 	void RemoveEntity(Entity* entity);
 	void DestroyScheduledEntities();
 	void UpdateEntities(float deltaTime);
-	void RenderHud(Renderer* renderer);
 	void NotifyUpdate(float deltaTime);
 	void NotifyServerUpdate(float deltaTime);
 	void NotifyFixedUpdate();
@@ -344,20 +343,9 @@ TService* Scene::GetService()
 }
 
 template<typename TEntity>
-std::vector<TEntity*> Scene::GetEntitiesOfType()
+EntityList<TEntity> Scene::GetEntitiesOfType()
 {
-	std::vector<TEntity*> foundEntities;
-
-	for (auto entity : _entityManager.entities)
-	{
-		TEntity* tEntity;
-		if (entity->Is<TEntity>(tEntity))
-		{
-			foundEntities.push_back(tEntity);
-		}
-	}
-
-	return foundEntities;
+    return _entityManager.GetEntitiesOfType<TEntity>();
 }
 
 template<typename TEntity>

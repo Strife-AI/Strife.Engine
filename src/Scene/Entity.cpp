@@ -194,57 +194,41 @@ void Entity::NotifyMovement()
 }
 
 Entity::Entity()
-    : flags{
-    EntityFlags::EnableUpdate,
-    EntityFlags::EnableFixedUpdate,
-    EntityFlags::EnableServerUpdate,
-    EntityFlags::EnableServerFixedUpdate,
-    EntityFlags::EnableRender,
-    EntityFlags::EnableRenderHud
-}
 {
 
+}
+
+template<typename THookSelector>
+static void DisableHook(Entity* entity, THookSelector selector)
+{
+    auto& entityManager = entity->scene->GetEntityManager();
+    auto set = selector(entityManager);
+    entityManager.scheduledHookRemovals.emplace_back(set, entity->entityGroup);
 }
 
 void Entity::Update(float deltaTime)
 {
-    flags.ResetFlag(EntityFlags::EnableUpdate);
-    FlagsChanged();
+    DisableHook(this, [](auto& em) { return &em.updatables; });
 }
 
 void Entity::ServerUpdate(float deltaTime)
 {
-    flags.ResetFlag(EntityFlags::EnableServerUpdate);
-    FlagsChanged();
+    DisableHook(this, [](auto& em) { return &em.serverUpdatables; });
 }
 
 void Entity::FixedUpdate(float deltaTime)
 {
-    flags.ResetFlag(EntityFlags::EnableFixedUpdate);
-    FlagsChanged();
+    DisableHook(this, [](auto& em) { return &em.fixedUpdatables; });
 }
 
 void Entity::ServerFixedUpdate(float deltaTime)
 {
-    flags.ResetFlag(EntityFlags::EnableServerUpdate);
-    FlagsChanged();
+    DisableHook(this, [](auto& em) { return &em.serverFixedUpdatables; });
 }
 
 void Entity::Render(Renderer* renderer)
 {
-    flags.ResetFlag(EntityFlags::EnableRender);
-    FlagsChanged();
-}
-
-void Entity::RenderHud(Renderer* renderer)
-{
-    flags.ResetFlag(EntityFlags::EnableRenderHud);
-    FlagsChanged();
-}
-
-void Entity::FlagsChanged()
-{
-    scene->GetEntityManager().ScheduleUpdateInterfaces(this);
+    DisableHook(this, [](auto& em) { return &em.renderables; });
 }
 
 Vector2 Entity::ScreenCenter() const

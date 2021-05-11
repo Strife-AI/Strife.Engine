@@ -20,51 +20,50 @@ void EntityManager::RegisterEntity(Entity* entity)
 
     entity->id = header->id;
     entity->header = header;
+
+    // Put into entity group
+    {
+        auto groupIt = entitiesByType.find(entity->type.key);
+
+        if (groupIt == entitiesByType.end())
+        {
+            // We don't know whether the entity is updatable, renderable, etc since there's no way to introspect the vtable
+            // to see if the methods are overridden. So, assume it implements those things and let the base class implementation
+            // turn them off for the group.
+            auto[it, inserted] = entitiesByType.try_emplace(entity->type.key);
+            groupIt = it;
+
+            EntityGroup* group = &it->second;
+
+            updatables.insert(group);
+            fixedUpdatables.insert(group);
+            renderables.insert(group);
+
+            serverUpdatables.insert(group);
+            serverFixedUpdatables.insert(group);
+        }
+
+        groupIt->second.entities.Append(entity);
+        entity->entityGroup = &groupIt->second;
+    }
 }
 
 void EntityManager::UnregisterEntity(Entity* entity)
 {
     entities.erase(entity);
-
-    updatables.erase(entity);
-    fixedUpdatables.erase(entity);
-    serverUpdatables.erase(entity);
-    serverFixedUpdatables.erase(entity);
-    renderables.erase(entity);
-    hudRenderables.erase(entity);
+    entity->Unlink();
 
     EntityHeader* header = entity->header;
     header->id = InvalidEntityHeaderId;
     freeEntityHeaders.Return(header);
 }
 
-static void SetOwnershipBasedOnFlag(std::unordered_set<Entity*>& set, Entity* entity, EntityFlags flag)
+void EntityManager::RunHookRemovals()
 {
-	if(entity->flags.HasFlag(flag)) set.insert(entity);
-	else set.erase(entity);
-}
+    for (auto& removal : scheduledHookRemovals)
+    {
+        removal.hookSet->erase(removal.entityGroup);
+    }
 
-void EntityManager::AddInterfaces(Entity* entity)
-{
-	SetOwnershipBasedOnFlag(updatables, entity, EntityFlags::EnableUpdate);
-	SetOwnershipBasedOnFlag(fixedUpdatables, entity, EntityFlags::EnableFixedUpdate);
-	SetOwnershipBasedOnFlag(serverUpdatables, entity, EntityFlags::EnableServerUpdate);
-	SetOwnershipBasedOnFlag(serverFixedUpdatables, entity, EntityFlags::EnableServerFixedUpdate);
-	SetOwnershipBasedOnFlag(renderables, entity, EntityFlags::EnableRender);
-	SetOwnershipBasedOnFlag(hudRenderables, entity, EntityFlags::EnableRenderHud);
-}
-
-void EntityManager::ScheduleUpdateInterfaces(Entity* entity)
-{
-	needsUpdatedInterfaces.insert(entity);
-}
-
-void EntityManager::UpdateInterfaces()
-{
-	for (auto entity : needsUpdatedInterfaces)
-	{
-		AddInterfaces(entity);
-	}
-
-	needsUpdatedInterfaces.clear();
+    scheduledHookRemovals.clear();
 }

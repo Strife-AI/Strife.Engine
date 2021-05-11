@@ -52,7 +52,6 @@ void Scene::RegisterEntity(Entity* entity)
 {
     _entityManager.RegisterEntity(entity);
     _engine->GetSoundManager()->AddSoundEmitter(&entity->_soundEmitter, entity);
-    _entityManager.AddInterfaces(entity);
 }
 
 void Scene::RemoveEntity(Entity* entity)
@@ -131,14 +130,22 @@ void Scene::SetSoundListener(Entity* entity)
 
 ConsoleVar<bool> g_drawColliders("colliders", false);
 
+static void RunHook(const robin_hood::unordered_flat_set<EntityGroup*>& hook, const std::function<void(Entity*)>& func)
+{
+    for (auto group : hook)
+    {
+        for (auto entity : group->entities)
+        {
+            func(entity);
+        }
+    }
+}
+
 void Scene::RenderEntities(Renderer* renderer)
 {
     SendEvent(RenderEvent(renderer));
 
-    for (auto renderable : _entityManager.renderables)
-    {
-        renderable->Render(renderer);
-    }
+    RunHook(_entityManager.renderables, [=](Entity* entity) { entity->Render(renderer); });
 
     for (auto component : _componentManager.renderables)
     {
@@ -149,16 +156,6 @@ void Scene::RenderEntities(Renderer* renderer)
     {
         _collisionManager.RenderColliderOutlines(renderer);
     }
-}
-
-void Scene::RenderHud(Renderer* renderer)
-{
-    for (auto hudRenderable : _entityManager.hudRenderables)
-    {
-        hudRenderable->RenderHud(renderer);
-    }
-
-    SendEvent(RenderHudEvent(renderer));
 }
 
 void Scene::StepPhysicsSimulation()
@@ -304,9 +301,9 @@ void Scene::UpdateEntities(float deltaTime)
     _timerManager.TickTimers(deltaTime);
 
     _cameraFollower.Update(deltaTime);
-
-    _entityManager.UpdateInterfaces();
     _componentManager.UpdateScheduledComponents();
+
+    _entityManager.RunHookRemovals();
     DestroyScheduledEntities();
 }
 
@@ -316,10 +313,7 @@ void Scene::NotifyFixedUpdate()
 
     if (!isServer)
     {
-        for (auto fixedUpdatable : _entityManager.fixedUpdatables)
-        {
-            fixedUpdatable->FixedUpdate(PhysicsDeltaTime);
-        }
+        RunHook(_entityManager.fixedUpdatables, [=](Entity* entity) { entity->FixedUpdate(PhysicsDeltaTime); });
     }
 
     for (auto component : _componentManager.fixedUpdatables)
@@ -332,10 +326,7 @@ void Scene::NotifyServerFixedUpdate()
 {
     if (isServer)
     {
-        for (auto serverFixedUpdatable : _entityManager.serverFixedUpdatables)
-        {
-            serverFixedUpdatable->ServerFixedUpdate(PhysicsDeltaTime);
-        }
+        RunHook(_entityManager.serverFixedUpdatables, [=](Entity* entity) { entity->ServerFixedUpdate(PhysicsDeltaTime); });
     }
 }
 
@@ -343,10 +334,7 @@ void Scene::NotifyUpdate(float deltaTime)
 {
     if (!isServer)
     {
-        for (auto updatable : _entityManager.updatables)
-        {
-            updatable->Update(deltaTime);
-        }
+        RunHook(_entityManager.updatables, [=](Entity* entity) { entity->Update(deltaTime); });
     }
 
     for (auto component : _componentManager.updatables)
@@ -359,10 +347,7 @@ void Scene::NotifyServerUpdate(float deltaTime)
 {
     if (isServer)
     {
-        for (auto serverUpdatable : _entityManager.serverUpdatables)
-        {
-            serverUpdatable->ServerUpdate(deltaTime);
-        }
+        RunHook(_entityManager.serverUpdatables, [=](Entity* entity) { entity->ServerUpdate(deltaTime); });
     }
 }
 
