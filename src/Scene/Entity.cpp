@@ -209,7 +209,6 @@ static void DisableHook(Entity* entity, THookSelector selector)
 void Entity::Update(float deltaTime)
 {
     DisableHook(this, [](auto& em) { return &em.updatables; });
-    Log("Disable update hook for %s\n", DebugName());
 }
 
 void Entity::ServerUpdate(float deltaTime)
