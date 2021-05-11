@@ -10,7 +10,7 @@ using namespace nlohmann;
 json LoadJsonFromFile(const std::filesystem::path& path)
 {
     std::fstream file(path.string());
-    if (file.bad())
+    if (!file.is_open())
     {
         file.close();
         FatalError("Failed to open file %s", path.c_str());
@@ -50,9 +50,9 @@ Project::Project(const std::filesystem::path& path)
         }
         else
         {
-            resourceManager->LoadResourceFromFile(
-                resource["path"].get<std::string>().c_str(),
-                resource["name"].get<std::string>().c_str());
+//            resourceManager->LoadResourceFromFile(
+//                resource["path"].get<std::string>().c_str(),
+//                resource["name"].get<std::string>().c_str());
         }
     }
 

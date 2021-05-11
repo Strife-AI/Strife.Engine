@@ -6,20 +6,12 @@
 #include <filesystem>
 #include "System/Logger.hpp"
 #include <optional>
+#include <nlohmann/json_fwd.hpp>
 
 struct Engine;
 class BinaryStreamWriter;
 class BinaryStreamReader;
-
-struct ResourceSettings
-{
-    const char* path;
-    bool isHeadlessServer;
-    std::string assetSettings;
-    Engine* engine;
-    const char* resourceName;
-};
-
+struct ResourceSettings;
 
 struct BaseResource
 {
@@ -64,7 +56,8 @@ TResource* BaseResource::As()
 class ResourceManager
 {
 public:
-    void LoadResourceFromFile(const char* filePath, const char* resourceName, const char* resourceType = nullptr);
+    void LoadContentFile(const char* filePath);
+    void LoadResourceFromFile(const ResourceSettings& settings);
     void AddResource(const char* name, BaseResource* resource)
     {
         _resourcesByStringId[StringId(name)] = std::unique_ptr<BaseResource>(resource);
@@ -87,6 +80,8 @@ public:
 
     static ResourceManager* GetInstance();
     bool EnableDefaultAssets() const { return _replaceWithDefault; }
+
+    std::filesystem::path GetAssetPath(const std::string& relativePath);
 
 private:
     void AddResource(BaseResource* resource, const char* name);

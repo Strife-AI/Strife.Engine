@@ -1,11 +1,10 @@
 #pragma once
 
-#include <optional>
-
-#include "Renderer/SpriteFont.hpp"
 #include "ResourceManager.hpp"
+#include "Renderer/SpriteAtlas.hpp"
 
-struct SpriteFontResource : ResourceTemplate<SpriteFont>
+struct SpriteAtlasResource : ResourceTemplate<SpriteAtlas>
 {
     bool LoadFromFile(const ResourceSettings& settings) override;
+
 };

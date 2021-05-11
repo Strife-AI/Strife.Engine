@@ -5,6 +5,7 @@
 #include "SpriteResource.hpp"
 #include "System/Logger.hpp"
 #include "Renderer/Texture.hpp"
+#include "ResourceSettings.hpp"
 
 struct TextureManager
 {
@@ -22,11 +23,6 @@ static TextureManager g_textureManager;
 
 bool SpriteResource::LoadFromFile(const ResourceSettings& settings)
 {
-    if (settings.isHeadlessServer)
-    {
-        return true;
-    }
-
     auto surface = IMG_Load(settings.path);
 
     if (surface == nullptr)

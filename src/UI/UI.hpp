@@ -49,8 +49,8 @@ private:
 
     void UpdateSize() override
     {
-        _size = _labelStyle->font.spriteFont->GetFont()
-            ->MeasureStringWithNewlines(_text.c_str(), 1)
+        _size = _labelStyle->font.spriteFont->Get()
+            .MeasureStringWithNewlines(_text.c_str(), 1)
             .AsVectorOfType<float>();
     }
 
