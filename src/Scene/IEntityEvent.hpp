@@ -147,28 +147,6 @@ DEFINE_EVENT(PreSolveEvent)
 
 class Renderer;
 
-DEFINE_EVENT(RenderHudEvent)
-{
-    RenderHudEvent(Renderer* renderer_)
-        : renderer(renderer_)
-    {
-
-    }
-
-    Renderer* renderer;
-};
-
-DEFINE_EVENT(RenderUiEvent)
-{
-    RenderUiEvent(Renderer* renderer_)
-        : renderer(renderer_)
-    {
-
-    }
-
-    Renderer* renderer;
-};
-
 DEFINE_EVENT(RenderEvent)
 {
     RenderEvent(Renderer* renderer_)

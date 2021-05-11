@@ -19,19 +19,14 @@
 #include "Memory/DLinkNode.hpp"
 
 class b2Body;
-
 struct IEntityEvent;
 struct MoveResult;
-
 class Renderer;
-
 class Scene;
-
 struct Entity;
-
 class Engine;
-
 struct EntityInstance;
+struct EntityGroup;
 
 struct EntityHeader
 {
@@ -49,13 +44,6 @@ enum class EntityFlags
     EnableBuoyancy = 1,
     WasTeleported = 2,
     CastsShadows = 4,
-
-    EnableUpdate = 8,
-    EnableServerUpdate = 16,
-    EnableFixedUpdate = 32,
-    EnableServerFixedUpdate = 64,
-    EnableRender = 128,
-    EnableRenderHud = 256
 };
 
 struct Entity;
@@ -131,7 +119,6 @@ struct Entity : DLinkedNode<Entity>
     virtual void ServerFixedUpdate(float deltaTime);
 
     virtual void Render(Renderer* renderer);
-    virtual void RenderHud(Renderer* renderer);
 
     /// <summary>
     /// Called when an entity has been added to the scene.
@@ -208,6 +195,7 @@ struct Entity : DLinkedNode<Entity>
     Entity* parent = nullptr;
     Entity* nextSibling = nullptr;
     Entity* children = nullptr;
+    EntityGroup* entityGroup;
 
     ISyncVar* syncVarHead = nullptr;
 
