@@ -107,10 +107,11 @@ void SdlManager::Init()
         fwprintf(stderr, L"SetProcessDpiAwareness: %hs\n", err.ErrorMessage());
     }
 #endif
-
-    if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+    
+    unsigned int flags = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_TIMER;    
+    if (SDL_Init(flags) < 0)
     {
-        FatalError("Failed to initialize SDL");
+        FatalError("Failed to initialize SDL: %s", SDL_GetError());
     }
 
     SetDefaultValuesOnFirstRun();
