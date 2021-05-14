@@ -105,7 +105,7 @@ void ResourceManager::LoadContentFile(const char* filePath)
 
         ResourceSettings settings;
         settings.resourceName = name.c_str();
-        settings.path = path.c_str();
+        settings.path = path.string().c_str();
         settings.resourceType = type.c_str();
         settings.attributes = attributes;
 
