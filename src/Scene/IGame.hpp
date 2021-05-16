@@ -54,12 +54,6 @@ struct GameConfig
         return *this;
     }
 
-    GameConfig& SetProjectFile(const std::filesystem::path& path)
-    {
-        projectFilePath = path;
-        return *this;
-    }
-
     GameConfig& EnableMultiplayer()
     {
         isMultiplayer = true;
@@ -74,7 +68,6 @@ struct GameConfig
 
     StringId defaultScene = "empty-map"_sid;
     std::string gameName;
-    std::filesystem::path projectFilePath;
     std::optional<std::string> windowCaption;
     std::optional<std::string> userConfigFile;
     std::optional<std::string> devConsoleFont;
@@ -118,7 +111,6 @@ public:
         return _config;
     }
 
-    std::shared_ptr<Project> project;
 private:
     std::unique_ptr<Engine> _engine = nullptr;
     GameConfig _config;

@@ -1,8 +1,7 @@
 #pragma once
 #include <functional>
 #include <optional>
-#include <Project/Project.hpp>
-
+#include <memory>
 
 #include "Memory/BlockAllocator.hpp"
 #include "Tools/ConsoleVar.hpp"
@@ -105,8 +104,6 @@ private:
     IGame* _game = nullptr;
     bool _activeGame = true;
     EngineConfig _config;
-
-    Project _project;
 
     std::function<void()> _loadResources;
 };

@@ -6,7 +6,7 @@ class Engine;
 class StringId;
 class Scene;
 struct Entity;
-struct SceneModel;
+struct TilemapResource;
 
 class SceneManager
 {
@@ -25,7 +25,7 @@ protected:
 private:
     friend struct BaseGameInstance;
 
-    void BuildNewScene(const SceneModel* sceneModel);
+    void BuildNewScene(TilemapResource* tilemap);
 
     std::shared_ptr<Scene> _scene = nullptr;
     bool _isServer = false;

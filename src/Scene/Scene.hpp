@@ -68,15 +68,14 @@ struct Transform
 
 	}
 
-	constexpr Transform(Vector2 position, float rotation = 0)
-			: position(position),
-			  rotation(rotation)
+	constexpr Transform(Vector2 position)
+			: position(position)
 	{
 
 	}
 
 	Vector2 position;
-	float rotation;
+	float rotation = 0;
 };
 
 class ReplicationManager;

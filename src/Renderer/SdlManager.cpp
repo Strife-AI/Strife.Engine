@@ -100,7 +100,12 @@ SdlManager::SdlManager(Input* input, bool isHeadless)
 void SdlManager::Init()
 {
 #ifdef _WIN32
-    HRESULT hr = SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+    HRESULT hr = SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);unsigned int flags = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_TIMER;
+
+    if (SDL_Init(flags) < 0)
+    {
+        FatalError("Failed to initialize SDL: %s", SDL_GetError());
+    }
     if (FAILED(hr))
     {
         _com_error err(hr);
@@ -108,9 +113,11 @@ void SdlManager::Init()
     }
 #endif
 
-    if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+    unsigned int flags = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_TIMER;
+
+    if (SDL_Init(flags) < 0)
     {
-        FatalError("Failed to initialize SDL");
+        FatalError("Failed to initialize SDL: %s", SDL_GetError());
     }
 
     SetDefaultValuesOnFirstRun();

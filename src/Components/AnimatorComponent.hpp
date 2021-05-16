@@ -33,7 +33,6 @@ public:
 
     bool AnimationComplete() const { return _animationComplete; }
 
-
     void PlayAnimation(StringId name, AnimationPlayMode mode);
 
     void Render(Renderer* renderer) override;

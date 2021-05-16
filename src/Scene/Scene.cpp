@@ -200,7 +200,7 @@ void Scene::LoadMapSegment(const char* name)
 
 void Scene::LoadMapSegment(const MapSegment& segment)
 {
-    auto tileMap = CreateEntity<TilemapEntity>({ 0, 0 });
+    auto tileMap = CreateEntity<TilemapEntity>(Vector2(0, 0 ));
     tileMap->SetMapSegment(segment);
 
 }

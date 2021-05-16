@@ -1,4 +1,3 @@
-#include <chrono>
 #include <Resource/TilemapResource.hpp>
 #include <Net/PlayerCommandRunner.hpp>
 #include "Tools/Console.hpp"
@@ -10,7 +9,6 @@
 #include "Scene.hpp"
 #include "SdlManager.hpp"
 #include "IEntityEvent.hpp"
-#include "Project/Project.hpp"
 
 void MapCmd(ConsoleCommandBinder& binder)
 {
@@ -46,12 +44,10 @@ bool SceneManager::TrySwitchScene(const char* name)
 
 bool SceneManager::TrySwitchScene(StringId id)
 {
-    auto scene = _engine->Game()->project->scenes.find(id);
-
-    if (scene != _engine->Game()->project->scenes.end())
+    TilemapResource* tilemap = GetResource<TilemapResource>(id, false);
+    if (tilemap != nullptr)
     {
-        SceneModel& model = _engine->Game()->project->scenes[id];
-        BuildNewScene(&model);
+        BuildNewScene(tilemap);
         return true;
     }
     else
@@ -61,9 +57,9 @@ bool SceneManager::TrySwitchScene(StringId id)
     }
 }
 
-void SceneManager::BuildNewScene(const SceneModel* sceneModel)
+void SceneManager::BuildNewScene(TilemapResource* tilemap)
 {
-    _scene = std::make_shared<Scene>(_engine, StringId(sceneModel->sceneName), _isServer);
+    _scene = std::make_shared<Scene>(_engine, StringId(tilemap->name), _isServer);
 
     auto screenSize = (_engine->GetSdlManager() != nullptr ? _engine->GetSdlManager()->WindowSize().AsVectorOfType<float>() : Vector2(0, 0));
     _scene->GetCamera()->SetScreenSize(screenSize);
@@ -79,25 +75,12 @@ void SceneManager::BuildNewScene(const SceneModel* sceneModel)
         _scene->AddService<PlayerCommandRunner>(_scene->isServer);
     }
 
-    game->BuildScene(_scene.get());
-
-    for (auto& entity : sceneModel->entities)
+    if (_scene->SceneName() != "empty-map"_sid)
     {
-        EntitySerializer serializer {
-            EntitySerializerMode::Read,
-            entity.properties
-        };
-
-        if (entity.type == "tilemap"_sid)
-        {
-            TilemapResource* mapSegment = GetResource<TilemapResource>(entity.name.c_str(), false);
-            _scene->LoadMapSegment(mapSegment->mapSegment);
-        }
-        else
-        {
-            _scene->CreateEntity(entity.type, serializer);
-        }
+        game->BuildScene(_scene.get());
     }
+
+    _scene->LoadMapSegment(tilemap->mapSegment);
 
     _scene->SendEvent(SceneLoadedEvent());
 }

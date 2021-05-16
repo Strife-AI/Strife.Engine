@@ -184,3 +184,10 @@ bool IsContactBeginWith(const IEntityEvent& ev, TEntity*& outEntity)
     const ContactBeginEvent* contactBegin;
     return ev.Is(contactBegin) && contactBegin->other.OwningEntity()->Is<TEntity>(outEntity);
 }
+
+template<typename TEntity>
+bool IsContactBeginWith(const IEntityEvent& ev)
+{
+    const ContactBeginEvent* contactBegin;
+    return ev.Is(contactBegin) && contactBegin->other.OwningEntity()->Is<TEntity>();
+}

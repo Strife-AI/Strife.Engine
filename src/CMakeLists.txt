@@ -160,8 +160,6 @@ add_library(Strife.Engine STATIC
 		Net/FileTransfer.hpp
 		Net/FileTransfer.cpp
         Net/SyncVar.cpp
-		Project/Project.cpp
-		Project/Project.hpp
 		Resource/ResourceManager.hpp Resource/SpriteResource.hpp Resource/SpriteResource.cpp Resource/ResourceManager.cpp Resource/TilemapResource.hpp Resource/TilemapResource.cpp Resource/SpriteFontResource.hpp Resource/SpriteFontResource.cpp
 		Resource/ShaderResource.cpp Resource/ShaderResource.hpp Components/ParticleSystemComponent.hpp Components/ParticleSystemComponent.cpp Scene/Isometric.hpp Scene/Isometric.cpp Components/IsometricSpriteComponent.hpp Components/IsometricSpriteComponent.cpp Resource/FileResource.hpp Resource/FileResource.cpp ML/UtilityAI.hpp Resource/ScriptResource.hpp Resource/ScriptResource.cpp ML/GridSensor.hpp Renderer/SpriteEffect.hpp Renderer/SpriteEffect.cpp Renderer/Stage/RenderPipeline.hpp Renderer/Stage/RenderPipeline.cpp Resource/SpriteAtlasResource.hpp Resource/SpriteAtlasResource.cpp Resource/ResourceSettings.hpp Components/AnimatorComponent.hpp Components/AnimatorComponent.cpp)
 
