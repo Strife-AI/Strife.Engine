@@ -95,7 +95,8 @@ void SceneManager::BuildNewScene(const SceneModel* sceneModel)
         }
         else
         {
-            _scene->CreateEntity(entity.type, serializer);
+            Entity* createdEntity = _scene->CreateEntity(entity.type, serializer);
+            createdEntity->name = StringId(entity.name);
         }
     }
 
