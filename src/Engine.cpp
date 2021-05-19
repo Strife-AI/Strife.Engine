@@ -31,6 +31,8 @@ extern ConsoleVar<bool> g_developerMode("developer-mode", true, true);
 #endif
 
 ConsoleVar<bool> g_isServer("server", false);
+extern ConsoleVar<bool> g_fastUpdate("fast-update", false);
+extern ConsoleVar<float> g_trainDeltaTime("train-dt", 1 / 60.f, true);
 
 static ConcurrentQueue<std::function<void()>> g_workQueue;
 
@@ -193,11 +195,18 @@ void Engine::RunFrame()
 
     float now = GetTimeSeconds();
     float timeUntilUpdate = nextGameToRun->nextUpdateTime - now;
+    
+    if (!g_fastUpdate.Value() && timeUntilUpdate > 0)
+    {
+        AccurateSleepFor(timeUntilUpdate);
+    }
+    else
+    {
+        nextGameToRun->nextUpdateTime = now;
+    }
 
-    AccurateSleepFor(timeUntilUpdate);
-    nextGameToRun->RunFrame(GetTimeSeconds());
+    nextGameToRun->RunFrame(GetTimeSeconds());    
     nextGameToRun->nextUpdateTime = nextGameToRun->nextUpdateTime + 1.0f / nextGameToRun->targetTickRate;
-
     ScriptCompiler::GetInstance()->Update();
 }
 

@@ -277,6 +277,8 @@ struct BaseGameInstance
     float targetTickRate;
     float nextUpdateTime = 0;
     FileTransferService fileTransferService;
+
+    std::chrono::steady_clock::time_point lastRenderTime;    
 };
 
 struct ServerGame : BaseGameInstance
