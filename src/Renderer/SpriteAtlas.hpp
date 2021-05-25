@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <functional>
 #include <utility>
 
@@ -8,10 +9,17 @@
 #include "Memory/StringId.hpp"
 #include "Math/Vector2.hpp"
 
+
 class Renderer;
 class Sprite;
-struct AtlasAnimation;
 struct SpriteResource;
+
+struct AtlasAnimation
+{
+    StringId name;
+    int fps;
+    std::vector<int> frames;
+};
 
 class SpriteAtlas
 {
@@ -45,11 +53,4 @@ private:
     const StringId _atlasType;
     const Vector2 _topLeftCornerSize;
     Vector2 _cellSize;
-};
-
-struct AtlasAnimation
-{
-    StringId name;
-    int fps;
-    std::vector<int> frames;
 };
