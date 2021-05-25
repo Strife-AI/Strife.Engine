@@ -132,7 +132,7 @@ std::string SerializeEntityProperty(const bool& value)
 template<>
 bool DeserializeEntityProperty(const std::string& value)
 {
-    if (value == "true" || value != "0")
+    if (value == "true" || value == "1")
     {
         return true;
     }
