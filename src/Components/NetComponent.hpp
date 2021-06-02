@@ -130,7 +130,7 @@ struct PlayerCommandHandler
     std::unordered_map<PlayerCommand::Metadata*, std::function<void(const PlayerCommand&)>> handlerByMetadata;
 
     BlockAllocator* blockAllocator;
-    CircularQueue<ScheduledCommand, 32> localCommands;
+    FixedSizeCircularQueue<ScheduledCommand, 32> localCommands;
     unsigned int fixedUpdateCount = 0;
     unsigned int nextCommandSequenceNumber = 0;
 };

@@ -2,6 +2,7 @@
 #include <unordered_set>
 #include <vector>
 #include <robin_hood.h>
+#include <list>
 
 #include "Entity.hpp"
 #include "Memory/FreeList.hpp"
@@ -65,9 +66,18 @@ private:
     DLinkedList<Entity>* _list;
 };
 
+struct IEntityObserver
+{
+    virtual ~IEntityObserver() = default;
+
+    virtual void OnEntityAdded(Entity* entity) { }
+    virtual void OnEntityRemoved(Entity* entity) { }
+};
+
 struct EntityGroup
 {
     DLinkedList<Entity> entities;
+    std::vector<IEntityObserver*> observers;
 };
 
 struct ScheduledHookRemoval
@@ -96,6 +106,8 @@ struct EntityManager
 
     template<typename TEntity>
     EntityList<TEntity> GetEntitiesOfType();
+
+    EntityGroup* GetOrCreateEntityGroup(StringId type);
 
     FreeList<EntityHeader> freeEntityHeaders;
 

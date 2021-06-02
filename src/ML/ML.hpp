@@ -253,7 +253,7 @@ struct NeuralNetworkManager
     }
 
     template<typename TDecider, typename TTrainer>
-    void CreateNetwork(const char* name, TDecider* decider, TTrainer* trainer)
+    StrifeML::NetworkContext<typename TDecider::NetworkType>* CreateNetwork(const char* name, TDecider* decider, TTrainer* trainer)
     {
         static_assert(std::is_same_v<typename TDecider::NetworkType, typename TTrainer::NetworkType>, "Trainer and decider must accept the same type of neural network");
 
@@ -272,6 +272,8 @@ struct NeuralNetworkManager
         trainer->OnCreateNewNetwork(trainer->network);
 
         newContext->decider->networkContext = newContext;
+
+        return newContext.get();
     }
 
     // TODO remove network method

@@ -21,35 +21,24 @@ void EntityManager::RegisterEntity(Entity* entity)
     entity->id = header->id;
     entity->header = header;
 
-    // Put into entity group
+    auto entityGroup = GetOrCreateEntityGroup(entity->type);
+
+    entityGroup->entities.Append(entity);
+    entity->entityGroup = entityGroup;
+
+    for (auto& observer : entity->entityGroup->observers)
     {
-        auto groupIt = entitiesByType.find(entity->type.key);
-
-        if (groupIt == entitiesByType.end())
-        {
-            // We don't know whether the entity is updatable, renderable, etc since there's no way to introspect the vtable
-            // to see if the methods are overridden. So, assume it implements those things and let the base class implementation
-            // turn them off for the group.
-            auto[it, inserted] = entitiesByType.try_emplace(entity->type.key);
-            groupIt = it;
-
-            EntityGroup* group = &it->second;
-
-            updatables.insert(group);
-            fixedUpdatables.insert(group);
-            renderables.insert(group);
-
-            serverUpdatables.insert(group);
-            serverFixedUpdatables.insert(group);
-        }
-
-        groupIt->second.entities.Append(entity);
-        entity->entityGroup = &groupIt->second;
+        observer->OnEntityAdded(entity);
     }
 }
 
 void EntityManager::UnregisterEntity(Entity* entity)
 {
+    for (auto& observer : entity->entityGroup->observers)
+    {
+        observer->OnEntityRemoved(entity);
+    }
+
     entities.erase(entity);
     entity->Unlink();
 
@@ -66,4 +55,33 @@ void EntityManager::RunHookRemovals()
     }
 
     scheduledHookRemovals.clear();
+}
+
+EntityGroup* EntityManager::GetOrCreateEntityGroup(StringId type)
+{
+    auto groupIt = entitiesByType.find(type);
+
+    if (groupIt == entitiesByType.end())
+    {
+        // We don't know whether the entity is updatable, renderable, etc since there's no way to introspect the vtable
+        // to see if the methods are overridden. So, assume it implements those things and let the base class implementation
+        // turn them off for the group.
+        auto[it, inserted] = entitiesByType.try_emplace(type);
+        groupIt = it;
+
+        EntityGroup* group = &it->second;
+
+        updatables.insert(group);
+        fixedUpdatables.insert(group);
+        renderables.insert(group);
+
+        serverUpdatables.insert(group);
+        serverFixedUpdatables.insert(group);
+
+        return &it->second;
+    }
+    else
+    {
+        return &groupIt->second;
+    }
 }

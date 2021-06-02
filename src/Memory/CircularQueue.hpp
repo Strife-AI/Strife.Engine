@@ -2,13 +2,14 @@
 
 #include "System/Logger.hpp"
 
-template<typename T, int Size>
+template<typename T>
 class CircularQueueIterator
 {
 public:
-    CircularQueueIterator(T* begin_, T* current_)
+    CircularQueueIterator(T* begin_, T* current_, int capacity)
         : begin(begin_),
-        current(current_)
+          current(current_),
+          _capacity(capacity)
     {
 
     }
@@ -30,37 +31,57 @@ public:
 
     CircularQueueIterator operator++()
     {
-        current = current + 1 == begin + Size
+        current = current + 1 == begin + _capacity
             ? begin
             : current + 1;
 
-        return CircularQueueIterator(begin, current);
+        return CircularQueueIterator(begin, current, _capacity);
     }
 
     CircularQueueIterator operator--()
     {
         current = current == begin
-            ? current + Size - 1
+            ? current + _capacity - 1
             : current - 1;
 
-        return CircularQueueIterator(begin, current);
+        return CircularQueueIterator(begin, current, _capacity);
     }
 
 private:
     T* begin;
     T* current;
+    int _capacity;
 };
 
-template<typename T, int size>
+template<typename T>
 class CircularQueue
 {
 public:
     CircularQueue()
-        : head(items),
-        tail(items)
-    { }
+        : head(nullptr),
+        tail(nullptr),
+        items(nullptr),
+        capacity(0)
+    {
 
-    static constexpr int Capacity() { return size; }
+    }
+
+    CircularQueue(T* items, int capacity)
+        : head(items),
+        tail(items),
+        items(items),
+        capacity(capacity)
+    {
+
+    }
+
+    void SetStorage(T* items, int capacity)
+    {
+        head = tail = this->items = items;
+        this->capacity = capacity;
+    }
+
+    int Capacity() const { return capacity; }
 
     bool IsFull()
     {
@@ -97,6 +118,16 @@ public:
         return ptr;
     }
 
+    T* DequeueHeadIfFullAndAllocate()
+    {
+        if (IsFull())
+        {
+            Dequeue();
+        }
+
+        return Allocate();
+    }
+
     T* Dequeue()
     {
         if (IsEmpty())
@@ -121,14 +152,14 @@ public:
         return *head;
     }
 
-    CircularQueueIterator<T, size> begin()
+    CircularQueueIterator<T> begin()
     {
-        return CircularQueueIterator<T, size>(items, head);
+        return CircularQueueIterator<T>(items, head, capacity);
     }
 
-    CircularQueueIterator<T, size> end()
+    CircularQueueIterator<T> end()
     {
-        return CircularQueueIterator<T, size>(items, tail);
+        return CircularQueueIterator<T>(items, tail, capacity);
     }
 
     void Clear()
@@ -144,13 +175,30 @@ public:
 private:
     T* Next(T* ptr)
     {
-        return ptr + 1 == items + size
+        return ptr + 1 == items + capacity
             ? items
             : ptr + 1;
     }
 
-    T items[size];
     T* head;
     T* tail;
+    T* items;
+    int capacity;
     int count = 0;
+};
+
+template<typename T, int QueueCapacity>
+class FixedSizeCircularQueue : public CircularQueue<T>
+{
+public:
+    FixedSizeCircularQueue()
+        : CircularQueue<T>(_data, QueueCapacity)
+    {
+
+    }
+
+    static constexpr int Capacity() { return QueueCapacity; }
+
+private:
+    T _data[QueueCapacity];
 };
