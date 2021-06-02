@@ -19,18 +19,7 @@ struct InputCircularBufferAllocator
 
     }
 
-    InputCircularBuffer* Allocate()
-    {
-        auto buffer = freeBuffers.Borrow();
-
-        // Returning a node to the free list overwrites its data, so this has to be initialized every time its allocated
-        int sampleId = buffer - bufferPool.get();
-        TInput* storageStart = inputs.get() + sampleId * circularBufferSize;
-
-        new (buffer) InputCircularBuffer(storageStart, circularBufferSize);
-
-        return buffer;
-    }
+    InputCircularBuffer* Allocate();
 
     void Free(InputCircularBuffer* buffer)
     {
@@ -42,6 +31,20 @@ struct InputCircularBufferAllocator
     FreeList<InputCircularBuffer> freeBuffers;
     int circularBufferSize;
 };
+
+template<typename TInput>
+CircularQueue<TInput>* InputCircularBufferAllocator<TInput>::Allocate()
+{
+    auto buffer = freeBuffers.Borrow();
+
+    // Returning a node to the free list overwrites its data, so this has to be initialized every time its allocated
+    int sampleId = buffer - bufferPool.get();
+    TInput* storageStart = inputs.get() + sampleId * circularBufferSize;
+
+    new (buffer) InputCircularBuffer(storageStart, circularBufferSize);
+
+    return buffer;
+}
 
 template<typename TNetwork>
 struct DecisionBatch
@@ -59,24 +62,8 @@ struct DecisionBatch
         entitiesInBatch.reserve(maxBatchSize);
     }
 
-    void ResetBatch()
-    {
-        entitiesInBatch.clear();
-        decisionInProgress = nullptr;
-    }
-
-    void AddToBatch(Entity* entity, InputCircularBuffer& buffer)
-    {
-        int row = entitiesInBatch.size();
-        entitiesInBatch.emplace_back(entity);
-
-        int col = 0;
-        for (PlayerInput& sample : buffer)
-        {
-            decisionInput.data.get()[row * sequenceLength + col] = sample;
-            ++col;
-        }
-    }
+    void ResetBatch();
+    void AddToBatch(Entity* entity, InputCircularBuffer& buffer);
 
     bool HasBatchInProgress() const
     {
@@ -88,17 +75,7 @@ struct DecisionBatch
         return decisionInProgress->IsComplete();
     }
 
-    void StartBatchIfAnyEntities()
-    {
-        if (entitiesInBatch.size() > 0)
-        {
-            decisionInProgress = networkContext->decider->MakeDecision(
-                decisionInput,
-                decisionOutput,
-                networkContext->sequenceLength,
-                entitiesInBatch.size());
-        }
-    }
+    void StartBatchIfAnyEntities();
 
     int sequenceLength;
     std::vector<EntityReference<Entity>> entitiesInBatch;
@@ -107,6 +84,40 @@ struct DecisionBatch
     StrifeML::MlUtil::SharedArray<OutputType> decisionOutput;
     StrifeML::NetworkContext<TNetwork>* networkContext;
 };
+
+template<typename TNetwork>
+void DecisionBatch<TNetwork>::ResetBatch()
+{
+    entitiesInBatch.clear();
+    decisionInProgress = nullptr;
+}
+
+template<typename TNetwork>
+void DecisionBatch<TNetwork>::AddToBatch(Entity* entity, DecisionBatch::InputCircularBuffer& buffer)
+{
+    int row = entitiesInBatch.size();
+    entitiesInBatch.emplace_back(entity);
+
+    int col = 0;
+    for (PlayerInput& sample : buffer)
+    {
+        decisionInput.data.get()[row * sequenceLength + col] = sample;
+        ++col;
+    }
+}
+
+template<typename TNetwork>
+void DecisionBatch<TNetwork>::StartBatchIfAnyEntities()
+{
+    if (entitiesInBatch.size() > 0)
+    {
+        decisionInProgress = networkContext->decider->MakeDecision(
+            decisionInput,
+            decisionOutput,
+            networkContext->sequenceLength,
+            entitiesInBatch.size());
+    }
+}
 
 template<typename TEntity, typename TNetwork>
 struct NeuralNetworkService : ISceneService, IEntityObserver
@@ -125,58 +136,8 @@ struct NeuralNetworkService : ISceneService, IEntityObserver
 
     }
 
-    void OnAdded() override
-    {
-        scene->AddEntityObserver<TEntity>(this);
-    }
-
-    void ReceiveEvent(const IEntityEvent& ev) override
-    {
-        if (ev.Is<UpdateEvent>())
-        {
-            // Collect inputs
-            {
-                collectInputTimer -= scene->deltaTime;
-                if (collectInputTimer <= 0)
-                {
-                    CollectInputs();
-                    collectInputTimer = 1.0f / collectInputFrequency;
-                }
-            }
-
-            // Make decisions
-            {
-                makeDecisionTimer -= scene->deltaTime;
-
-                if (decisionBatch.HasBatchInProgress())
-                {
-                    if (decisionBatch.BatchIsComplete())
-                    {
-                        BroadcastDecisions();
-                        decisionBatch.ResetBatch();
-                    }
-                }
-                else
-                {
-                    if (makeDecisionTimer <= 0)
-                    {
-                        StartMakingDecision();
-                        makeDecisionTimer = 1.0f / makeDecisionFrequency;
-                    }
-                }
-            }
-
-            // Collect training samples
-            {
-                collectTrainingSampleTimer -= scene->deltaTime;
-                if (collectTrainingSampleTimer <= 0.0f)
-                {
-                    CollectTrainingSamples(networkContext->trainer);
-                    collectTrainingSampleTimer = 1.0f / collectTrainingSampleFrequency;
-                }
-            }
-        }
-    }
+    void OnAdded() override;
+    void ReceiveEvent(const IEntityEvent& ev) override;
 
 protected:
     virtual void CollectInput(TEntity* entity, InputType& input)
@@ -184,70 +145,14 @@ protected:
 
     }
 
-    void ForEachEntity(const std::function<void(TEntity*)>& func)
-    {
-        for (auto& entityBufferPair : samplesByEntity)
-        {
-            func(entityBufferPair.first);
-        }
-    }
+    void ForEachEntity(const std::function<void(TEntity*)>& func);
 
 private:
-    void CollectInputs()
-    {
-        for (auto& entityBufferPair : samplesByEntity)
-        {
-            TEntity* entity = entityBufferPair.first;
-
-            if (!IncludeEntityInBatch(entity))
-            {
-                continue;
-            }
-
-            InputCircularBuffer* buffer = entityBufferPair.second;
-            InputType* input = buffer->DequeueHeadIfFullAndAllocate();
-            CollectInput(entityBufferPair.first, *input);
-        }
-    }
-
-    void StartMakingDecision()
-    {
-        for (auto entityBufferPair : samplesByEntity)
-        {
-            TEntity* entity = entityBufferPair.first;
-
-            if (!IncludeEntityInBatch(entity))
-            {
-                continue;
-            }
-
-            InputCircularBuffer* buffer = entityBufferPair.second;
-
-            // Include in batch if there are enough inputs in the sequence
-            bool includeInBatch = buffer->IsFull();
-            if (includeInBatch)
-            {
-                decisionBatch.AddToBatch(entity, *buffer);
-            }
-        }
-
-        decisionBatch.StartBatchIfAnyEntities();
-    }
-
-    void BroadcastDecisions()
-    {
-        for (int i = 0; i < decisionBatch.entitiesInBatch.size(); ++i)
-        {
-            Entity* entity;
-
-            // Make sure the entity wasn't destroyed in the middle of making a decision
-            if (decisionBatch.entitiesInBatch[i].TryGetValue(entity))
-            {
-                TEntity* entityAsTEntity = static_cast<TEntity*>(entity);
-                ReceiveDecision(entityAsTEntity, decisionBatch.decisionOutput.data.get()[i]);
-            }
-        }
-    }
+    void CollectInputs();
+    void StartMakingDecision();
+    void BroadcastDecisions();
+    void OnEntityAdded(Entity* entity) override;
+    void OnEntityRemoved(Entity* entity) override;
 
     virtual void ReceiveDecision(TEntity* entity, OutputType& output)
     {
@@ -257,29 +162,6 @@ private:
     virtual void CollectTrainingSamples(TrainerType* trainer)
     {
 
-    }
-
-    void OnEntityAdded(Entity* entity) override
-    {
-        // Safe to do static_cast<> since we're only subscribing to entities of one type
-        TEntity* entityAsTEntity = static_cast<TEntity*>(entity);
-        if (TrackEntity(entityAsTEntity))
-        {
-            auto buffer = bufferAllocator.Allocate();
-            samplesByEntity[entityAsTEntity] = buffer;
-        }
-    }
-
-    void OnEntityRemoved(Entity* entity) override
-    {
-        TEntity* entityAsTEntity = static_cast<TEntity*>(entity);
-        auto it = samplesByEntity.find(entityAsTEntity);
-        if (it != samplesByEntity.end())
-        {
-            bufferAllocator.Free(it->second);
-        }
-
-        samplesByEntity.erase(it);
     }
 
     virtual bool IncludeEntityInBatch(TEntity* entity)
@@ -308,3 +190,151 @@ private:
     InputCircularBufferAllocator<InputType> bufferAllocator;
     DecisionBatch<TNetwork> decisionBatch;
 };
+
+template<typename TEntity, typename TNetwork>
+void NeuralNetworkService<TEntity, TNetwork>::OnAdded()
+{
+    scene->AddEntityObserver<TEntity>(this);
+}
+
+template<typename TEntity, typename TNetwork>
+void NeuralNetworkService<TEntity, TNetwork>::ReceiveEvent(const IEntityEvent& ev)
+{
+    if (ev.Is<UpdateEvent>())
+    {
+        // Collect inputs
+        {
+            collectInputTimer -= scene->deltaTime;
+            if (collectInputTimer <= 0)
+            {
+                CollectInputs();
+                collectInputTimer = 1.0f / collectInputFrequency;
+            }
+        }
+
+        // Make decisions
+        {
+            makeDecisionTimer -= scene->deltaTime;
+
+            if (decisionBatch.HasBatchInProgress())
+            {
+                if (decisionBatch.BatchIsComplete())
+                {
+                    BroadcastDecisions();
+                    decisionBatch.ResetBatch();
+                }
+            }
+            else
+            {
+                if (makeDecisionTimer <= 0)
+                {
+                    StartMakingDecision();
+                    makeDecisionTimer = 1.0f / makeDecisionFrequency;
+                }
+            }
+        }
+
+        // Collect training samples
+        {
+            collectTrainingSampleTimer -= scene->deltaTime;
+            if (collectTrainingSampleTimer <= 0.0f)
+            {
+                CollectTrainingSamples(networkContext->trainer);
+                collectTrainingSampleTimer = 1.0f / collectTrainingSampleFrequency;
+            }
+        }
+    }
+}
+
+template<typename TEntity, typename TNetwork>
+void NeuralNetworkService<TEntity, TNetwork>::ForEachEntity(const std::function<void(TEntity*)>& func)
+{
+    for (auto& entityBufferPair : samplesByEntity)
+    {
+        func(entityBufferPair.first);
+    }
+}
+
+template<typename TEntity, typename TNetwork>
+void NeuralNetworkService<TEntity, TNetwork>::CollectInputs()
+{
+    for (auto& entityBufferPair : samplesByEntity)
+    {
+        TEntity* entity = entityBufferPair.first;
+
+        if (!IncludeEntityInBatch(entity))
+        {
+            continue;
+        }
+
+        InputCircularBuffer* buffer = entityBufferPair.second;
+        InputType* input = buffer->DequeueHeadIfFullAndAllocate();
+        CollectInput(entityBufferPair.first, *input);
+    }
+}
+
+template<typename TEntity, typename TNetwork>
+void NeuralNetworkService<TEntity, TNetwork>::StartMakingDecision()
+{
+    for (auto entityBufferPair : samplesByEntity)
+    {
+        TEntity* entity = entityBufferPair.first;
+
+        if (!IncludeEntityInBatch(entity))
+        {
+            continue;
+        }
+
+        InputCircularBuffer* buffer = entityBufferPair.second;
+
+        // Include in batch if there are enough inputs in the sequence
+        bool includeInBatch = buffer->IsFull();
+        if (includeInBatch)
+        {
+            decisionBatch.AddToBatch(entity, *buffer);
+        }
+    }
+
+    decisionBatch.StartBatchIfAnyEntities();
+}
+
+template<typename TEntity, typename TNetwork>
+void NeuralNetworkService<TEntity, TNetwork>::BroadcastDecisions()
+{
+    for (int i = 0; i < decisionBatch.entitiesInBatch.size(); ++i)
+    {
+        Entity* entity;
+
+        // Make sure the entity wasn't destroyed in the middle of making a decision
+        if (decisionBatch.entitiesInBatch[i].TryGetValue(entity))
+        {
+            TEntity* entityAsTEntity = static_cast<TEntity*>(entity);
+            ReceiveDecision(entityAsTEntity, decisionBatch.decisionOutput.data.get()[i]);
+        }
+    }
+}
+
+template<typename TEntity, typename TNetwork>
+void NeuralNetworkService<TEntity, TNetwork>::OnEntityAdded(Entity* entity)
+{
+    // Safe to do static_cast<> since we're only subscribing to entities of one type
+    TEntity* entityAsTEntity = static_cast<TEntity*>(entity);
+    if (TrackEntity(entityAsTEntity))
+    {
+        auto buffer = bufferAllocator.Allocate();
+        samplesByEntity[entityAsTEntity] = buffer;
+    }
+}
+
+template<typename TEntity, typename TNetwork>
+void NeuralNetworkService<TEntity, TNetwork>::OnEntityRemoved(Entity* entity)
+{
+    TEntity* entityAsTEntity = static_cast<TEntity*>(entity);
+    auto it = samplesByEntity.find(entityAsTEntity);
+    if (it != samplesByEntity.end())
+    {
+        bufferAllocator.Free(it->second);
+    }
+
+    samplesByEntity.erase(it);
+}
