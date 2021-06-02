@@ -92,8 +92,6 @@ struct DecisionBatch
     {
         if (entitiesInBatch.size() > 0)
         {
-            printf("Start making decision\n");
-
             decisionInProgress = networkContext->decider->MakeDecision(
                 decisionInput,
                 decisionOutput,
