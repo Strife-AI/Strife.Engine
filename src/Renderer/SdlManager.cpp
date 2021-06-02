@@ -178,7 +178,7 @@ void SdlManager::SetupOpenGl(bool isHeadless)
 
 #if __APPLE__
     float defaultDpi = 72;
-    fullscreenType = SDL_WINDOW_FULLSCREEN_DESKTOP;
+    auto fullscreenType = SDL_WINDOW_FULLSCREEN_DESKTOP;
 #else
     float defaultDpi = 96;
 #endif
