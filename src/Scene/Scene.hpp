@@ -184,8 +184,10 @@ public:
 
 	Entity* CreateEntity(StringId type, EntitySerializer& serializer);
 
-	void* AllocateMemory(int size) const;
+	template<typename TEntity>
+	void AddEntityObserver(IEntityObserver* observer);
 
+	void* AllocateMemory(int size) const;
 	void FreeMemory(void* mem, int size) const;
 
 	EntityManager& GetEntityManager()
@@ -264,7 +266,7 @@ TEntity* Scene::CreateEntity(const Transform& transform, Args&& ... constructorA
 	entity->scene = this;
 
 	entityUnderConstruction = entity;
-	new(entity) TEntity(std::forward<Args>(constructorArgs) ...);
+	new (entity) TEntity(std::forward<Args>(constructorArgs) ...);
 
 	entity->_position = transform.position;
 	entity->_rotation = transform.rotation;
@@ -360,4 +362,10 @@ TEntity* Scene::GetFirstNamedEntityOfType(StringId name)
 	}
 
 	return nullptr;
+}
+
+template<typename TEntity>
+void Scene::AddEntityObserver(IEntityObserver* observer)
+{
+    _entityManager.GetOrCreateEntityGroup(TEntity::Type)->observers.push_back(observer);
 }

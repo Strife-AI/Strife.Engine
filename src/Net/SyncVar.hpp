@@ -311,7 +311,7 @@ struct SyncVar final : ISyncVar
 
     T currentValue;
 
-    CircularQueue<Snapshot, 256> snapshots;
+    FixedSizeCircularQueue<Snapshot, 256> snapshots;
     SyncVarInterpolation interpolation;
     SyncVarDeltaMode deltaMode = SyncVarDeltaMode::Full;
 

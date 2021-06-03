@@ -85,7 +85,7 @@ struct ClientState
     unsigned int lastServerExecutedCommandId = 0;
     int fixedUpdateCountWithMissingCommand = 0;
 
-    CircularQueue<PlayerCommand*, 128> commands;
+    FixedSizeCircularQueue<PlayerCommand*, 128> commands;
     std::string clientName;
 };
 
@@ -180,5 +180,5 @@ private:
     float _sendUpdateTimer = 0;
 
     uint32 _currentSnapshotId = 0;
-    CircularQueue<WorldState, 32> _worldSnapshots;
+    FixedSizeCircularQueue<WorldState, 32> _worldSnapshots;
 };
