@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <Math/Polygon.hpp>
+#include <robin_hood.h>
 
 #include "BinaryStreamReader.hpp"
 #include "Math/Rectangle.hpp"
@@ -77,13 +78,13 @@ struct EntityInstanceDto
 	    
 	}
 
-    EntityInstanceDto(const std::map<std::string, std::string>& properties_)
+    EntityInstanceDto(const robin_hood::unordered_flat_map<std::string, std::string>& properties_)
         : properties(properties_)
 	{
 
 	}
 
-    std::map<std::string, std::string> properties;
+    robin_hood::unordered_flat_map<std::string, std::string> properties;
 };
 
 struct MapSegmentDto

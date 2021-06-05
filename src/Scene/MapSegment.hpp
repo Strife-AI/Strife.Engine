@@ -46,7 +46,8 @@ struct MapLayer
 
 struct EntityInstance
 {
-    int totalProperties;
+    StringId type;
+    robin_hood::unordered_flat_map<std::string, std::string> properties;
 };
 
 struct MapSegment
@@ -59,12 +60,5 @@ struct MapSegment
     std::vector<MapLayer> layers;
     std::vector<EntityInstance> entities;
     std::vector<TileProperties*> tileProperties;
-
-
-    // TODO: deprecate
-    Vector2 startMarker;
-    Vector2 endMarker;
-
-private:
 };
 

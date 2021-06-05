@@ -202,7 +202,6 @@ void Scene::LoadMapSegment(const MapSegment& segment)
 {
     auto tileMap = CreateEntity<TilemapEntity>(Vector2(0, 0 ));
     tileMap->SetMapSegment(segment);
-
 }
 
 void Scene::StartTimer(float timeSeconds, const std::function<void()>& callback)

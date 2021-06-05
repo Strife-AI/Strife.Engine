@@ -407,6 +407,32 @@ void LoadObjectGroup(tmx::Map& map, tmx::ObjectGroup& layer, MapSegmentDto* mapS
             return;
         }
     }
+
+    for (const auto& object : layer.getObjects())
+    {
+        auto newEntityInstanceDto = EntityInstanceDto();
+
+        newEntityInstanceDto.properties.emplace("name", object.getName());
+        newEntityInstanceDto.properties.emplace("type", object.getType());
+
+        {
+            float x = object.getPosition().x;
+            float y = object.getPosition().y;
+
+            auto positionValue = std::to_string(x) + " " + std::to_string(y);
+
+            newEntityInstanceDto.properties.emplace("position", positionValue);
+        }
+
+        newEntityInstanceDto.properties.emplace("rotation", std::to_string(object.getRotation()));
+
+        for (const auto& prop : object.getProperties())
+        {
+            newEntityInstanceDto.properties.emplace(prop.getName(),GetTmxPropertyValue(prop));
+        }
+
+        mapSegmentDto->entities.push_back(std::move(newEntityInstanceDto));
+    }
 }
 
 MapSegmentDto ProcessMap(const std::string& path)
@@ -548,6 +574,17 @@ void DtoToSegment(MapSegment* segment, MapSegmentDto& segmentDto)
             layerDto.dimensions.x,
             layerDto.tileSize,
             layerDto.layerName);
+    }
+
+    for (auto& entity : segmentDto.entities)
+    {
+        if (!entity.properties.contains("type")) continue;
+
+        EntityInstance entityInstance;
+        entityInstance.type = StringId(entity.properties["type"]);
+        entityInstance.properties = std::move(entity.properties);
+
+        segment->entities.push_back(entityInstance);
     }
 }
 
