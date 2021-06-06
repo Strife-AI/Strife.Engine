@@ -55,16 +55,20 @@ void IGame::Run()
 
 void IGame::Render(PipelineRunner& renderPipeline)
 {
-    renderPipeline
-        .ModifyRendererState([](RendererState& state)
-        {
-            state.SetDepthBufferEnabled(true);
-            state.ClearBuffers();
-        })
-        .UseSceneCamera()
-        .RenderEntities()
-        .RenderDebugPrimitives()
-        .RenderImgui();
+    renderPipeline.ModifyRendererState([](RendererState& state)
+    {
+        state.SetDepthBufferEnabled(true);
+        state.ClearBuffers();
+    });
+
+    if (!(g_fastUpdate.Value()))
+    {
+        renderPipeline
+            .UseSceneCamera()
+            .RenderEntities()
+            .RenderDebugPrimitives()
+            .RenderImgui();
+    }
 
     renderPipeline
         .UseUiCamera()

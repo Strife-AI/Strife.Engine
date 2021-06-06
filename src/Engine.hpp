@@ -109,3 +109,5 @@ private:
 };
 
 extern ConsoleVar<bool> g_developerMode;
+extern ConsoleVar<bool> g_fastUpdate;
+extern ConsoleVar<float> g_trainDeltaTime;

@@ -25,17 +25,20 @@ void BaseGameInstance::RunFrame(float currentTime)
     auto input = engine->GetInput();
     auto sdlManager = engine->GetSdlManager();
 
-    if (!isHeadless)
+    const bool fastUpdate = g_fastUpdate.Value();
+    const float trainDt = g_trainDeltaTime.Value();
+    auto currentFrameStart = std::chrono::high_resolution_clock::now();
+
+    if (!isHeadless && !fastUpdate)
     {
         input->Update();
         sdlManager->Update();
+        lastRenderTime = currentFrameStart;
     }
 
     auto scene = sceneManager.GetSceneShared();
 
     scene->absoluteTime = currentTime;
-
-    auto currentFrameStart = std::chrono::high_resolution_clock::now();
 
     if (scene->isFirstFrame)
     {
@@ -45,13 +48,21 @@ void BaseGameInstance::RunFrame(float currentTime)
 
     auto realDeltaTime = currentTime - scene->lastFrameStart;
 
-    float renderDeltaTime = !engine->IsPaused()
-                            ? realDeltaTime
-                            : realDeltaTime; //0;
+    float renderDeltaTime;
+    if (fastUpdate)
+    {
+        renderDeltaTime = trainDt;
+    }
+    else
+    {
+        renderDeltaTime = !engine->IsPaused()
+            ? realDeltaTime
+            : realDeltaTime; //0;
+    }
 
     scene->deltaTime = renderDeltaTime;
 
-    if (!isHeadless)
+    if (!isHeadless && !fastUpdate)
     {
         engine->GetSoundManager()->UpdateActiveSoundEmitters(scene->deltaTime);
     }
@@ -70,34 +81,20 @@ void BaseGameInstance::RunFrame(float currentTime)
     bool allowConsole = !isHeadless && g_developerMode.Value();
     auto console = engine->GetConsole();
 
-    if (allowConsole)
+    std::chrono::duration<float> timeSinceLastRender = std::chrono::duration_cast<std::chrono::duration<float>>(currentFrameStart - lastRenderTime);
+
+    if (!isHeadless && (!fastUpdate || (timeSinceLastRender.count() >= trainDt)))
     {
-        if (console->IsOpen())
+        if (fastUpdate)
         {
-            console->HandleInput(input);
+            input->Update();
+            sdlManager->Update();
         }
 
-        bool tildePressed = InputButton(SDL_SCANCODE_GRAVE).IsPressed();
-
-        if (tildePressed)
-        {
-            if (console->IsOpen())
-            {
-                console->Close();
-                engine->ResumeGame();
-            }
-            else
-            {
-                console->Open();
-                engine->PauseGame();
-            }
-        }
-    }
-
-    if (!isHeadless)
-    {
         Render(scene.get(), realDeltaTime, renderDeltaTime);
+        lastRenderTime = currentFrameStart;
 
+        if (!fastUpdate)
         {
             static int count = 0;
 
@@ -112,6 +109,30 @@ void BaseGameInstance::RunFrame(float currentTime)
         }
 
         input->GetMouse()->SetMouseScale(Vector2::Unit() * scene->GetCamera()->Zoom());
+
+        if (allowConsole)
+        {
+            if (console->IsOpen())
+            {
+                console->HandleInput(input);
+            }
+
+            bool tildePressed = InputButton(SDL_SCANCODE_GRAVE).IsPressed();
+
+            if (tildePressed)
+            {
+                if (console->IsOpen())
+                {
+                    console->Close();
+                    engine->ResumeGame();
+                }
+                else
+                {
+                    console->Open();
+                    engine->PauseGame();
+                }
+            }
+        }
     }
 
     scene->lastFrameStart = currentTime;
