@@ -70,6 +70,15 @@ void TilemapEntity::SetMapSegment(const MapSegment& mapSegment)
         scene->isometricSettings.tileSize = Vector2(64, 32);
     }
 
+    for (auto& entityDictionary : mapSegment.entities)
+    {
+        EntitySerializer entitySerializer;
+        entitySerializer.properties = entityDictionary.properties;
+        entitySerializer.mode = EntitySerializerMode::Read;
+
+        scene->CreateEntity(entityDictionary.type, entitySerializer);
+    }
+
     _mapSegment = &mapSegment;
 
     scene->isometricSettings.BuildFromMapSegment(mapSegment, pathFinder, this);

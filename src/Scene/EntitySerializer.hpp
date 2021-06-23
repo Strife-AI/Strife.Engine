@@ -5,6 +5,7 @@
 
 #include <nlohmann/json.hpp>
 #include <Engine.hpp>
+#include <robin_hood.h>
 
 enum class EntitySerializerMode
 {
@@ -49,5 +50,5 @@ struct EntitySerializer
     }
 
     EntitySerializerMode mode;
-    std::unordered_map<std::string, std::string> properties;
+    robin_hood::unordered_flat_map<std::string, std::string> properties;
 };

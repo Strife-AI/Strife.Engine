@@ -286,10 +286,8 @@ TEntity* Scene::CreateEntity(EntitySerializer& serializer, Args&& ... constructo
 	auto oldEntityUnderConstruction = entityUnderConstruction;
 
 	TEntity* entity = (TEntity*)AllocateMemory(sizeof(TEntity));
-
-	entity->scene = this;
-
 	entityUnderConstruction = entity;
+
 	new(entity) TEntity(std::forward<Args>(constructorArgs) ...);
 
 	Vector2 position;
@@ -299,16 +297,16 @@ TEntity* Scene::CreateEntity(EntitySerializer& serializer, Args&& ... constructo
 	    .Add("position", position)
 	    .Add("rotation", rotation);
 
-	entity->_position = position;
-	entity->_rotation = rotation;
-	entity->type = TEntity::Type;
-	entity->scene = this;
+    entity->_position = position;
+    entity->_rotation = rotation;
+    entity->type = TEntity::Type;
+    entity->scene = this;
 
-	RegisterEntity(entity);
-    ((Entity*)entity)->DoSerialize(serializer);
+    entity->DoSerialize(serializer);
 
-	((Entity*)entity)->OnAdded();
-	entityUnderConstruction = oldEntityUnderConstruction;
+    RegisterEntity(entity);
+    ((Entity*)entity)->OnAdded();
+    entityUnderConstruction = oldEntityUnderConstruction;
 
 	return entity;
 }
@@ -349,6 +347,7 @@ EntityList<TEntity> Scene::GetEntitiesOfType()
     return _entityManager.GetEntitiesOfType<TEntity>();
 }
 
+// TODO: Deprecate
 template<typename TEntity>
 TEntity* Scene::GetFirstNamedEntityOfType(StringId name)
 {

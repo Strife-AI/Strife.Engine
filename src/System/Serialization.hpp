@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <robin_hood.h>
 
 #include "Math/Rectangle.hpp"
 #include "Math/Vector2.hpp"
@@ -38,19 +39,20 @@ void ReadVector(BinaryStreamReader& reader, std::vector<T>& outV)
 }
 
 template<typename TKey, typename TValue>
-void WriteMap(BinaryStreamWriter& writer, const std::map<TKey, TValue> m)
+void WriteMap(BinaryStreamWriter& writer, const std::map<TKey, TValue>& map)
 {
-    writer.WriteInt(m.size());
+    writer.WriteInt(map.size());
 
-    for (auto& item : m)
+    for (auto& pair
+    : map)
     {
-        Write(writer, item.first);
-        Write(writer, item.second);
+        Write(writer, pair.first);
+        Write(writer, pair.second);
     }
 }
 
 template<typename TKey, typename TValue>
-void ReadMap(BinaryStreamReader& reader, std::map<TKey, TValue>& m)
+void ReadMap(BinaryStreamReader& reader, std::map<TKey, TValue>& map)
 {
     int size = reader.ReadInt();
     for(int i = 0; i < size; ++i)
@@ -61,7 +63,35 @@ void ReadMap(BinaryStreamReader& reader, std::map<TKey, TValue>& m)
         Read(reader, key);
         Read(reader, value);
 
-        m.insert({key, value});
+        map.insert({ key, value});
+    }
+}
+
+template<typename TKey, typename TValue>
+void WriteMap(BinaryStreamWriter& writer, const robin_hood::unordered_flat_map<TKey, TValue>& map)
+{
+    writer.WriteInt(map.size());
+
+    for (auto& pair : map)
+    {
+        Write(writer, pair.first);
+        Write(writer, pair.second);
+    }
+}
+
+template<typename TKey, typename TValue>
+void ReadMap(BinaryStreamReader& reader, robin_hood::unordered_flat_map<TKey, TValue>& map)
+{
+    auto size = reader.ReadInt();
+    for (int i = 0; i < size; ++i)
+    {
+        TKey key;
+        TValue value;
+
+        Read(reader, key);
+        Read(reader, value);
+
+        map.insert({key, value});
     }
 }
 
