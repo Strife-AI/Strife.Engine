@@ -7,7 +7,6 @@
 #include "ShaderResource.hpp"
 #include "FileResource.hpp"
 #include "Tools/Console.hpp"
-#include "Resource/ScriptResource.hpp"
 #include "ResourceSettings.hpp"
 #include "System/FileSystem.hpp"
 #include "SpriteAtlasResource.hpp"
@@ -30,7 +29,6 @@ void ResourceManager::LoadResourceFromFile(const ResourceSettings& settings)
     else if (strcmp(resourceType, "sprite-font") == 0) resource = new SpriteFontResource;
     else if (strcmp(resourceType, "shader") == 0) resource = new ShaderResource;
     else if (strcmp(resourceType, "file") == 0) resource = new FileResource;
-    else if (strcmp(resourceType, "script") == 0) resource = new ScriptResource;
     else if (strcmp(resourceType, "atlas") == 0) resource = new SpriteAtlasResource;
 
     if (resource == nullptr)
