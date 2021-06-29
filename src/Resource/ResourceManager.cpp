@@ -11,7 +11,7 @@
 #include "System/FileSystem.hpp"
 #include "SpriteAtlasResource.hpp"
 
-ConsoleVar<std::string> assetPath("asset-path", "../assets", true);
+ConsoleVar<std::string> assetPath("asset-path", "./assets", true);
 
 void ResourceManager::LoadResourceFromFile(const ResourceSettings& settings)
 {
