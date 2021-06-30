@@ -292,12 +292,14 @@ TEntity* Scene::CreateEntity(EntitySerializer& serializer, Args&& ... constructo
 
 	Vector2 position;
 	float rotation;
+	Vector2 dimensions;
 
 	serializer
 	    .Add("position", position)
-	    .Add("rotation", rotation);
+	    .Add("rotation", rotation)
+		.Add("dimensions", dimensions);
 
-    entity->_position = position;
+    entity->_position = position + (dimensions / 2);
     entity->_rotation = rotation;
     entity->type = TEntity::Type;
     entity->scene = this;

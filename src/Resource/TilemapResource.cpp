@@ -426,6 +426,9 @@ void LoadObjectGroup(tmx::Map& map, tmx::ObjectGroup& layer, MapSegmentDto* mapS
 
         newEntityInstanceDto.properties.emplace("rotation", std::to_string(object.getRotation()));
 
+        auto dimensions = std::to_string(object.getAABB().width) + " " + std::to_string(object.getAABB().height);
+    	newEntityInstanceDto.properties.emplace("dimensions", dimensions);
+    	
         for (const auto& prop : object.getProperties())
         {
             newEntityInstanceDto.properties.emplace(prop.getName(),GetTmxPropertyValue(prop));
