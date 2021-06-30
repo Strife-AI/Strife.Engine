@@ -99,7 +99,7 @@ void DecisionBatch<TNetwork>::AddToBatch(Entity* entity, DecisionBatch::InputCir
     entitiesInBatch.emplace_back(entity);
 
     int col = 0;
-    for (PlayerInput& sample : buffer)
+    for (InputType& sample : buffer)
     {
         decisionInput.data.get()[row * sequenceLength + col] = sample;
         ++col;
@@ -124,6 +124,7 @@ struct NeuralNetworkService : ISceneService, IEntityObserver
 {
     using InputType = typename TNetwork::InputType;
     using OutputType = typename TNetwork::OutputType;
+	using SampleType = typename TNetwork::SampleType;
     using TrainerType = StrifeML::Trainer<TNetwork>;
 
     using InputCircularBuffer = CircularQueue<InputType>;
@@ -140,10 +141,7 @@ struct NeuralNetworkService : ISceneService, IEntityObserver
     void ReceiveEvent(const IEntityEvent& ev) override;
 
 protected:
-    virtual void CollectInput(TEntity* entity, InputType& input)
-    {
-
-    }
+    virtual void CollectInput(TEntity* entity, InputType& input) = 0;
 
     void ForEachEntity(const std::function<void(TEntity*)>& func);
 

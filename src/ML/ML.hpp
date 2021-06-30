@@ -18,141 +18,6 @@ struct StrifeML::Serializer<Vector2>
     }
 };
 
-enum class NeuralNetworkMode
-{
-    Disabled,
-    Deciding,
-    CollectingSamples,
-	ReinforcementLearning,
-};
-
-template<typename TNeuralNetwork>
-struct NeuralNetworkComponent : ComponentTemplate<NeuralNetworkComponent<TNeuralNetwork>>
-{
-    using InputType = typename TNeuralNetwork::InputType;
-    using OutputType = typename TNeuralNetwork::OutputType;
-    using NetworkType = TNeuralNetwork;
-    using SampleType = StrifeML::Sample<InputType, OutputType>;
-
-    explicit NeuralNetworkComponent(float decisionsPerSecond_ = 1)
-        : decisionInput(StrifeML::MlUtil::SharedArray<InputType>(TNeuralNetwork::SequenceLength)),
-          decisionsPerSecond(decisionsPerSecond_)
-    {
-
-    }
-
-    virtual ~NeuralNetworkComponent() = default;
-
-    void Update(float deltaTime) override;
-
-    void SetNetwork(const char* name);
-
-    bool StartMakingDecision();
-
-    StrifeML::NetworkContext<NetworkType>* networkContext = nullptr;
-    std::shared_ptr<StrifeML::MakeDecisionWorkItem<TNeuralNetwork>> decisionInProgress;
-    StrifeML::MlUtil::SharedArray<InputType> decisionInput;
-    float makeDecisionsTimer = 0;
-    float decisionsPerSecond;
-
-    std::shared_ptr<StrifeML::RunTrainingBatchWorkItem<TNeuralNetwork>> trainingInProgress;
-
-	int inputsCollected = 0;
-	InputType previousInput;
-    std::function<void(InputType& input)> collectInput;
-    std::function<void(OutputType& decision)> collectDecision;
-
-    std::function<void(OutputType& decision)> receiveDecision;
-
-    NeuralNetworkMode mode = NeuralNetworkMode::Disabled;
-};
-
-template <typename TNeuralNetwork>
-void NeuralNetworkComponent<TNeuralNetwork>::Update(float deltaTime)
-{
-    if (mode == NeuralNetworkMode::Disabled)
-    {
-        return;
-    }
-    else if (mode == NeuralNetworkMode::Deciding || mode == NeuralNetworkMode::ReinforcementLearning)
-    {
-        OutputType output;
-        if (decisionInProgress != nullptr && decisionInProgress->TryGetResult(output))
-        {
-            if (receiveDecision != nullptr)
-            {
-                receiveDecision(output);
-            }
-
-            decisionInProgress = nullptr;
-        }
-
-        makeDecisionsTimer -= deltaTime;
-
-        if (makeDecisionsTimer <= 0)
-        {      	
-            makeDecisionsTimer = 1.0f / decisionsPerSecond;
-            auto wasStarted = StartMakingDecision();
-
-        	if (wasStarted && mode == NeuralNetworkMode::ReinforcementLearning && inputsCollected > TNeuralNetwork::SequenceLength)
-	        {
-		        SampleType sample;
-	        	sample.input = previousInput;
-		        collectDecision(sample.output);
-		        networkContext->trainer->AddSample(sample);
-	        }
-        }
-    }
-    else if (mode == NeuralNetworkMode::CollectingSamples)
-    {
-        SampleType sample;
-        collectInput(sample.input);
-        collectDecision(sample.output);
-        networkContext->trainer->AddSample(sample);
-    }
-}
-
-template <typename TNeuralNetwork>
-bool NeuralNetworkComponent<TNeuralNetwork>::StartMakingDecision()
-{
-    // Don't allow making more than one decision at a time
-    if (decisionInProgress != nullptr
-        && !decisionInProgress->IsComplete())
-    {
-        return false;
-    }
-
-    if (collectInput == nullptr
-        || networkContext == nullptr
-        || networkContext->decider == nullptr)
-    {
-        return false;
-    }
-
-	if (mode == NeuralNetworkMode::ReinforcementLearning && inputsCollected > TNeuralNetwork::SequenceLength)
-	{
-		previousInput = decisionInput.data.get()[TNeuralNetwork::SequenceLength - 1];
-	}
-
-    // Expire oldest input
-    for (int i = 0; i < TNeuralNetwork::SequenceLength - 1; ++i)
-    {
-        decisionInput.data.get()[i] = std::move(decisionInput.data.get()[i + 1]);
-    }
-
-    // Collect new input
-    collectInput(decisionInput.data.get()[TNeuralNetwork::SequenceLength - 1]);
-	inputsCollected++;
-
-    // Start making decision if we have enough data
-    if (inputsCollected >= TNeuralNetwork::SequenceLength)
-    {
-	    decisionInProgress = networkContext->decider->MakeDecision(decisionInput, TNeuralNetwork::SequenceLength);
-    }
-	
-	return true;
-}
-
 struct SensorObjectDefinition
 {
     SensorObjectDefinition()
@@ -253,7 +118,7 @@ struct NeuralNetworkManager
     }
 
     template<typename TDecider, typename TTrainer>
-    StrifeML::NetworkContext<typename TDecider::NetworkType>* CreateNetwork(const char* name, TDecider* decider, TTrainer* trainer)
+    StrifeML::NetworkContext<typename TDecider::NetworkType>* CreateNetwork(const char* name, TDecider* decider, TTrainer* trainer, int sequenceLength)
     {
         static_assert(std::is_same_v<typename TDecider::NetworkType, typename TTrainer::NetworkType>, "Trainer and decider must accept the same type of neural network");
 
@@ -263,7 +128,7 @@ struct NeuralNetworkManager
             throw StrifeML::StrifeException("Network already exists: " + std::string(name));
         }
 
-        auto newContext = std::make_shared<StrifeML::NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
+        auto newContext = std::make_shared<StrifeML::NetworkContext<typename TDecider::NetworkType>>(decider, trainer, sequenceLength);
         _networksByName[name] = newContext;
 
         trainer->networkContext = newContext;
@@ -302,13 +167,6 @@ private:
     std::unordered_set<std::shared_ptr<StrifeML::ITrainer>> _trainers;
     std::unordered_map<std::string, std::shared_ptr<StrifeML::INetworkContext>> _networksByName;
 };
-
-template<typename TNeuralNetwork>
-void NeuralNetworkComponent<TNeuralNetwork>::SetNetwork(const char* name)
-{
-    auto nnManager = this->owner->GetEngine()->GetNeuralNetworkManager();
-    networkContext = nnManager->template GetNetwork<TNeuralNetwork>(name);
-}
 
 gsl::span<uint64_t> ReadGridSensorRectangles(
     Scene* scene,

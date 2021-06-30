@@ -19,7 +19,6 @@
 #include "Tools/MetricsManager.hpp"
 #include "Sound/SoundManager.hpp"
 #include "UI/UI.hpp"
-#include "Scripting/ScriptCompiler.hpp"
 #include "Net/ServerGame.hpp"
 
 using namespace std::chrono;
@@ -39,8 +38,6 @@ void ExecuteOnGameThread(const std::function<void()>& function)
     g_workQueue.Enqueue(function);
 }
 
-void RegisterScriptFunctions();
-
 static void StrifeMlLog(const char* message)
 {
     Log("%s", message);
@@ -48,9 +45,6 @@ static void StrifeMlLog(const char* message)
 
 Engine::Engine(const EngineConfig& config)
 {
-    StrifeML::SetLogFunction(StrifeMlLog);
-    RegisterScriptFunctions();
-
     _config = config;
     _defaultBlockAllocator = std::make_unique<BlockAllocator>(config.blockAllocatorSizeBytes);
 
@@ -197,8 +191,6 @@ void Engine::RunFrame()
     AccurateSleepFor(timeUntilUpdate);
     nextGameToRun->RunFrame(GetTimeSeconds());
     nextGameToRun->nextUpdateTime = nextGameToRun->nextUpdateTime + 1.0f / nextGameToRun->targetTickRate;
-
-    ScriptCompiler::GetInstance()->Update();
 }
 
 void Engine::PauseGame()
