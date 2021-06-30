@@ -21,7 +21,7 @@
 #endif
 
 ConsoleVar<Vector2> g_Resolution("pResolution", Vector2(1024, 728), true);
-ConsoleVar<bool> g_FullscreenOnStart("pFullscreen", true, true);
+ConsoleVar<bool> g_FullscreenOnStart("pFullscreen", false, true);
 ConsoleVar<bool> g_EnableVsync("pVsync", true, true);
 
 static ConsoleCmd g_vidrestart("vidrestart", [](ConsoleCommandBinder& binder)
