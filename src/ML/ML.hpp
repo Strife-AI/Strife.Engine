@@ -118,7 +118,7 @@ struct NeuralNetworkManager
     }
 
     template<typename TDecider, typename TTrainer>
-    StrifeML::NetworkContext<typename TDecider::NetworkType>* CreateNetwork(const char* name, TDecider* decider, TTrainer* trainer)
+    StrifeML::NetworkContext<typename TDecider::NetworkType>* CreateNetwork(const char* name, TDecider* decider, TTrainer* trainer, int sequenceLength)
     {
         static_assert(std::is_same_v<typename TDecider::NetworkType, typename TTrainer::NetworkType>, "Trainer and decider must accept the same type of neural network");
 
@@ -128,7 +128,7 @@ struct NeuralNetworkManager
             throw StrifeML::StrifeException("Network already exists: " + std::string(name));
         }
 
-        auto newContext = std::make_shared<StrifeML::NetworkContext<typename TDecider::NetworkType>>(decider, trainer);
+        auto newContext = std::make_shared<StrifeML::NetworkContext<typename TDecider::NetworkType>>(decider, trainer, sequenceLength);
         _networksByName[name] = newContext;
 
         trainer->networkContext = newContext;
